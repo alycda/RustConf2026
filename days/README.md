@@ -5,6 +5,7 @@
 | Day | Problem | Boundary shape | Status |
 |-----|---------|----------------|--------|
 | [2024-12-01](2024-12-01/) 🥇 | Historian Hysteria | two int lists in → `i32` out; sort-and-zip, then a frequency map | Golden — Rust reference here |
+| [2024-12-03](2024-12-03/) 🥇 | Mull It Over | raw string scan → `usize`; stateful parse (`do()` / `don't()`) | Golden (in progress) — Rust reference here |
 | [2015-12-01](2015-12-01/) | Not Quite Lisp | char stream → `i32`; part 2 returns a position, not a total | Rust reference — the live-demo day |
 | [2015-12-05](2015-12-05/) | Doesn't He Have Intern-Elves For This? | lines → `usize` count; one predicate per line, the ruleset swapped by function pointer | Rust reference |
 | [2020-12-02](2020-12-02/) | Password Philosophy | `1-3 a: abcde` lines → struct → `usize` count | Rust reference |
@@ -30,3 +31,6 @@
   C-glue stage has to strip a real crate's trait and error type at the boundary, which is
   the thing worth watching happen. It is the boundary layer's job to be small, not the
   day's.
+- **This tree is the reference library, not scratch space.** These are solved days, read
+  as the model to copy — which is also why CI lints them with `-D warnings`. Warnings in
+  the sample are warnings in thirty forks of it.
