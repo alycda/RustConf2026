@@ -81,6 +81,13 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: cbindgen
+      # The dart cell gets the SDK from the official action — the
+      # workshop's own answer (`just setup-dart`) is brew/website guidance
+      # written for humans, not runners.
+      - uses: dart-lang/setup-dart@v1
+        if: matrix.track == 'dart'
+        with:
+          sdk: stable
       # The python cell provisions its track the way `just setup-python`
       # does — a repo-local .venv — because that is the path self-check
       # probes first (it prefers ./.venv/bin/python even when the venv is
