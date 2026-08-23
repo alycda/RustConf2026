@@ -51,7 +51,11 @@
     "**/.dart_tool": true,
 
     // --- OS ------------------------------------------------------------------
-    "**/.DS_Store": true
+    "**/.DS_Store": true,
+
+    // --- Docs ----------------------------------------------------------------
+    // book/ is the mdBook project; book/book is what `mdbook build` renders.
+    "book/book": true
   },
 
   // Adds to files.exclude — everything above is already out of search.
@@ -87,6 +91,7 @@
     "**/DerivedData/**": true,
     "**/.gradle/**": true,
     "**/build/**": true,
-    "**/.dart_tool/**": true
+    "**/.dart_tool/**": true,
+    "book/book/**": true
   }
 }
