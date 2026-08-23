@@ -35,7 +35,11 @@
 
     // --- Python bytecode -----------------------------------------------------
     "**/__pycache__": true,
-    "**/*.py[cod]": true
+    "**/*.py[cod]": true,
+
+    // --- Swift ---------------------------------------------------------------
+    "**/.build": true,
+    "**/DerivedData": true
   },
 
   // Adds to files.exclude — everything above is already out of search.
@@ -66,6 +70,8 @@
     "**/.venv/**": true,
     "**/target/**": true,
     "**/uniffi/bindings/**": true,
-    "**/__pycache__/**": true
+    "**/__pycache__/**": true,
+    "**/.build/**": true,
+    "**/DerivedData/**": true
   }
 }
