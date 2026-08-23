@@ -1,0 +1,59 @@
+// Copy of ../git/devcontainer.json plus a name and the WORKSHOP_HOME_NIX
+// override pointing at ./home.nix (which imports the shared ../home.nix and
+// adds swift + Foundation from nixpkgs). devcontainer.json has no "extends" —
+// keep in sync by hand. Caveats live in ./README.md.
+{
+    "name": "FFI playground (Swift track — experimental)",
+    "image": "debian:bookworm-slim",
+    "mounts": [
+        "source=claude-auth,target=/root/.claude,type=volume"
+    ],
+    "features": {
+        "ghcr.io/devcontainers/features/nix:1": {
+            "packages": []  // home-manager handles packages
+        }
+    },
+    "secrets": {
+        "ANTHROPIC_API_KEY": {
+            "description": "Claude session key from Claude Console (for Claude Code CLI)"
+        }
+    },
+    "containerEnv": {
+        "WORKSHOP_HOME_NIX": "${containerWorkspaceFolder}/.devcontainer/swift/home.nix"
+    },
+    "remoteEnv": {
+        // home-manager installs direnv (and hx, just, claude) into the USER
+        // nix profile. That only reaches PATH via .bashrc, i.e. interactive
+        // shells. VS Code's extension host is not one, so mkhl.direnv reports
+        // "direnv: command not found" while the integrated terminal works
+        // fine. The nix feature's own profile is already on PATH; this is the
+        // separate user profile that home-manager writes to.
+        "PATH": "/root/.nix-profile/bin:${containerEnv:PATH}"
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "alefragnani.bookmarks",
+                "anthropic.claude-code",
+                "editorconfig.editorconfig",
+                "jnoortheen.nix-ide",
+                "mk12.better-git-line-blame",
+                "mkhl.direnv",
+                "tamasfe.even-better-toml",
+                "rust-lang.rust-analyzer",
+                "skellock.just"
+            ],
+            "settings": {
+                "chat.disableAIFeatures": true,
+                "editor.wordWrap": "on",
+                "git.autofetch": true,
+                "git.confirmSync": false,
+                // "nix.enableLanguageServer": true, Command nil not found in $PATH (because it's installed later by direnv)
+                // "nix.serverPath": "rnix-lsp",
+                "workbench.secondarySideBar.defaultVisibility": "hidden"
+            }
+        }
+    },
+    "postCreateCommand": "bash ${containerWorkspaceFolder}/.devcontainer/setup.sh",
+    "postStartCommand": "bash ${containerWorkspaceFolder}/.devcontainer/poststart.sh"
+}
