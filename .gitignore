@@ -58,3 +58,11 @@ __pycache__/
 .build/
 DerivedData/
 
+# Kotlin/JNA (*.jar is ignored as a build output; vendor deps would need an exception)
+# Source: https://github.com/github/gitignore/blob/main/Kotlin.gitignore (trimmed)
+# Pulled: 2026-08-08
+*.class
+*.jar
+.gradle/
+build/
+
