@@ -5,6 +5,7 @@
 | Day | Problem | Boundary shape | Status |
 |-----|---------|----------------|--------|
 | [2015-12-01](2015-12-01/) | Not Quite Lisp | char stream → `i32`; part 2 returns a position, not a total | Rust reference — the live-demo day |
+| [2015-12-05](2015-12-05/) | Doesn't He Have Intern-Elves For This? | lines → `usize` count; one predicate per line, the ruleset swapped by function pointer | Rust reference |
 
 ## Rules
 
