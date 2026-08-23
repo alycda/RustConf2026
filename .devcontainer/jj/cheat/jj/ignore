@@ -1,0 +1,15 @@
+---
+syntax: bash
+---
+# unwanted file snapshotted into @? BOTH steps, this order --
+# untrack only works if the pattern is already ignored
+echo '<pattern>' >> .gitignore
+jj file untrack <path>
+
+# already in earlier local commits: insert an ignore commit before them
+jj new --no-edit --insert-before <earliest-tainted> -m "ignore <pattern>"
+jj squash .gitignore --from @ --into <new-id>
+# then, per tainted commit, delete the file from it:
+jj restore --from <new-id> --to <tainted> <path>
+
+# already PUSHED: stop -- that's a coordination problem, not a command

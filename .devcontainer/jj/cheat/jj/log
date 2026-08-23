@@ -1,0 +1,17 @@
+---
+syntax: bash
+---
+# everything, including hidden/abandoned heads
+jj log -r '::'
+
+# my local stack (what's not on trunk yet)
+jj log -r 'trunk()..@'
+
+# with diffs
+jj log -p -r 'trunk()..@'
+
+# which commits touch a file
+jj log -r 'files("path/to/file")'
+
+# what did I do today
+jj log -r 'author_date(after:"yesterday")'

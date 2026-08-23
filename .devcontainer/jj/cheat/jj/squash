@@ -1,0 +1,14 @@
+---
+syntax: bash
+---
+# fold @ into its parent
+jj squash -m "combined message"
+
+# move ONLY these files from @ into an earlier commit (@ stays put)
+jj squash <path>... --from @ --into <change-id>
+
+# auto-distribute @'s fixes into the ancestor commits that own those lines
+jj absorb
+
+# peel files out of @ into their own commit
+jj split <path>... -m "the part that leaves"

@@ -1,0 +1,17 @@
+---
+syntax: bash
+---
+# undo the last jj operation (non-destructive; can undo the undo)
+jj undo
+
+# what happened, operation by operation
+jj op log
+
+# time-travel the whole repo to before operation X
+jj op restore <op-id>
+
+# every past version of one change (after rewrites/squashes)
+jj evolog -r <change-id>
+
+# resurrect a file's old content from an evolog version
+jj restore --from <commit-id> <path>
