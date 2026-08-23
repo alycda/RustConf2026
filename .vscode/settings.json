@@ -40,7 +40,13 @@
     "**/*.so.*": true,
     "**/*.dylib": true,
     "**/*.dll": true,
-    "**/*.out": true
+    "**/*.out": true,
+
+    // Generated bindings: visible in the Explorer (attendees should read
+    // them), but they must not crowd out hand-written code in search. Named
+    // as narrowly as the .gitignore rule, so a hand-written */bindings/ dir
+    // is not swept up by a pattern aimed at machine output.
+    "**/uniffi/bindings/**": true
   },
 
   // The file watcher does NOT read .gitignore, so these must be spelled out
@@ -54,6 +60,7 @@
     "result/**": true,
     "**/.direnv/**": true,
     "**/.venv/**": true,
-    "**/target/**": true
+    "**/target/**": true,
+    "**/uniffi/bindings/**": true
   }
 }
