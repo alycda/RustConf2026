@@ -1,11 +1,21 @@
-# Verification matrix — PLACEHOLDER.
+# Verification matrix — bare-runner self-check map.
 #
-# The full grid this workshop's CI is expected to grow into: every language
-# track on every OS an attendee might bring. Each cell currently emits a
-# warning and exits green so the matrix SHAPE is visible in the Actions UI
-# before the cells are real; a green cell here means "placeholder ran",
-# not "track verified" — the ::warning:: annotation on every cell says so
-# until its real verification lands.
+# Every cell runs scripts/self-check.sh on an UNPROVISIONED runner: no
+# setup steps, no toolchain installs. The red/green grid that results is
+# the observation, not a regression gate — it maps which cells GitHub's
+# stock images cover for free and which need provisioning recipes, before
+# the matrix is trimmed for heavy testing.
+#
+# Cell verdicts:
+#   - rust, c   → the script's exit code (its required-toolchain contract:
+#                 rustc + cargo + cbindgen + a C compiler that links).
+#                 Both tracks share one verdict because the script does.
+#   - python, dart, kotlin, swift
+#               → green only if the script's own line for that track says
+#                 "ready". The script's exit code is ignored for these:
+#                 an optional track can be ready on a runner whose
+#                 required toolchain is not (and vice versa), and that
+#                 difference is signal.
 #
 #          | linux | macos | windows |
 #   rust   |   .   |   .   |    .    |
@@ -15,21 +25,12 @@
 #   kotlin |   .   |   .   |    .    |
 #   swift  |   .   |   .   |    ?    |
 #
-# Known-hard cells, so nobody is surprised when they grow real content:
-#
-#   - The windows column tests NATIVE Windows, which is more than the
-#     workshop currently promises — scripts/self-check.sh tells Windows
-#     attendees "use WSL2" (a WSL2 attendee is covered by the linux
-#     column). Making these cells real means either honouring that answer
-#     (drop the column) or raising the promise (bash-less scripts, MSVC or
-#     mingw for the C harness, .dll naming in every library lookup).
-#   - swift/linux: a runner has no nix profile, so the SWIFT_RT/libdispatch
-#     dance from main.swift's header needs swift-actions/setup-swift and a
-#     different runtime path than the one attendees are documented.
-#   - swift/windows: the official Windows toolchain exists but is the least
-#     travelled path in this grid; expect this cell to be the last one real.
-#   - c cells are the Ex 2 harness (build-and-test.sh), which is bash +
-#     cc — native windows needs a shell and compiler story first.
+# Expected reds (the "known failures"): cbindgen is preinstalled nowhere,
+# so rust/c fail everywhere until provisioned; macOS images dropped Rust.
+# The windows column is the "unknown" — the script runs under Git Bash
+# there, which is more than the workshop promises (self-check's own
+# Windows answer is WSL2), so whatever those cells report is new
+# information by definition.
 
 name: Verify
 
@@ -58,11 +59,34 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
         track: [rust, c, python, dart, kotlin, swift]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: placeholder
+      # shell: bash so the windows cells run under Git Bash rather than
+      # PowerShell — the closest a native-Windows runner gets to running
+      # this script at all.
+      - name: bare self-check
         shell: bash
         run: |
-          echo "::warning::${{ matrix.track }} on ${{ matrix.os }} is a placeholder — no verification happens here yet"
-          echo "TODO: verify the ${{ matrix.track }} track on ${{ matrix.os }}"
+          status=0
+          out=$(./scripts/self-check.sh 2>&1) || status=$?
+          printf '%s\n' "$out"
+          echo
+          echo "self-check exit code: $status"
+          # Strip ANSI colour codes so the track grep sees plain text.
+          plain=$(printf '%s\n' "$out" | sed 's/\x1b\[[0-9;]*m//g')
+          case "${{ matrix.track }}" in
+            rust|c)
+              exit "$status"
+              ;;
+            python) label='Python' ;;
+            dart)   label='Dart' ;;
+            kotlin) label='Kotlin/JNA' ;;
+            swift)  label='Swift' ;;
+          esac
+          if printf '%s\n' "$plain" | grep -E "${label}[[:space:]]+ready" >/dev/null; then
+            echo "${label}: ready on a bare runner"
+          else
+            echo "${label}: NOT ready on a bare runner"
+            exit 1
+          fi
