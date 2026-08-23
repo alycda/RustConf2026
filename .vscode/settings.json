@@ -39,7 +39,13 @@
 
     // --- Swift ---------------------------------------------------------------
     "**/.build": true,
-    "**/DerivedData": true
+    "**/DerivedData": true,
+
+    // --- Kotlin / Gradle -----------------------------------------------------
+    "**/*.class": true,
+    "**/*.jar": true,
+    "**/.gradle": true,
+    "**/build": true
   },
 
   // Adds to files.exclude — everything above is already out of search.
@@ -72,6 +78,8 @@
     "**/uniffi/bindings/**": true,
     "**/__pycache__/**": true,
     "**/.build/**": true,
-    "**/DerivedData/**": true
+    "**/DerivedData/**": true,
+    "**/.gradle/**": true,
+    "**/build/**": true
   }
 }
