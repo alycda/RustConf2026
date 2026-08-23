@@ -1,0 +1,49 @@
+# Not all of CI: the workflow also checks the workspace against rustc 1.85,
+# which needs a second toolchain installed, so this can pass while CI fails on
+# the floor. The recipes below take one day; this never does, because
+# `members = ["*"]` means a change to a shared dep breaks days you didn't touch.
+
+# every day at once: the three gates rust.yml runs on every push — run before pushing
+verify:
+    cargo test --workspace --locked
+    cargo fmt --all --check
+    cargo clippy --workspace --all-targets --locked -- -D warnings
+
+check day:
+    cd {{day}} && cargo check
+
+test day:
+    cd {{day}} && cargo test
+
+run day:
+    cd {{day}} && cargo run
+
+# scaffold a new day from _template, e.g. `just new 2022-12-01`
+new day:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # Bare YYYY-MM-DD only: {{day}} lands in paths, a sed expression, and a
+    # crate name, so anything else (a trailing slash, say) dies mid-scaffold
+    # and leaves a half-renamed crate that breaks the whole workspace.
+    if [[ ! "{{day}}" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+        echo "day must be YYYY-MM-DD (e.g. 2022-12-01), got '{{day}}'" >&2
+        exit 1
+    fi
+    if [ -e "{{day}}" ]; then
+        echo "days/{{day}} already exists" >&2
+        exit 1
+    fi
+    cp -R _template "{{day}}"
+    rm -rf "{{day}}/target"
+    ident="$(printf '%s' "{{day}}" | tr - _)"
+    # `sed -i` takes an argument on BSD but not GNU, so write via a temp file
+    find "{{day}}" -type f \( -name '*.rs' -o -name '*.toml' \) | while read -r f; do
+        sed -e "s/day-template/{{day}}/g" -e "s/day_template/${ident}/g" "$f" > "$f.new"
+        mv "$f.new" "$f"
+    done
+    # The new member has to appear in days/Cargo.lock before anything runs
+    # --locked, which verify and CI both do. Without this the first command
+    # after scaffolding fails on the lockfile rather than on the puzzle.
+    # `cargo metadata` is the cheapest thing that resolves the workspace.
+    cargo metadata --format-version 1 >/dev/null
+    echo "created days/{{day}} — now: just test {{day}} (and commit Cargo.lock)"
