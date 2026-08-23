@@ -1,0 +1,68 @@
+# Verification matrix — PLACEHOLDER.
+#
+# The full grid this workshop's CI is expected to grow into: every language
+# track on every OS an attendee might bring. Each cell currently emits a
+# warning and exits green so the matrix SHAPE is visible in the Actions UI
+# before the cells are real; a green cell here means "placeholder ran",
+# not "track verified" — the ::warning:: annotation on every cell says so
+# until its real verification lands.
+#
+#          | linux | macos | windows |
+#   rust   |   .   |   .   |    .    |
+#   c      |   .   |   .   |    .    |
+#   python |   .   |   .   |    .    |
+#   dart   |   .   |   .   |    .    |
+#   kotlin |   .   |   .   |    .    |
+#   swift  |   .   |   .   |    ?    |
+#
+# Known-hard cells, so nobody is surprised when they grow real content:
+#
+#   - The windows column tests NATIVE Windows, which is more than the
+#     workshop currently promises — scripts/self-check.sh tells Windows
+#     attendees "use WSL2" (a WSL2 attendee is covered by the linux
+#     column). Making these cells real means either honouring that answer
+#     (drop the column) or raising the promise (bash-less scripts, MSVC or
+#     mingw for the C harness, .dll naming in every library lookup).
+#   - swift/linux: a runner has no nix profile, so the SWIFT_RT/libdispatch
+#     dance from main.swift's header needs swift-actions/setup-swift and a
+#     different runtime path than the one attendees are documented.
+#   - swift/windows: the official Windows toolchain exists but is the least
+#     travelled path in this grid; expect this cell to be the last one real.
+#   - c cells are the Ex 2 harness (build-and-test.sh), which is bash +
+#     cc — native windows needs a shell and compiler story first.
+
+name: Verify
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch: {}
+
+# Least privilege: this workflow only reads the repo.
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  verify:
+    name: ${{ matrix.track }} / ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        track: [rust, c, python, dart, kotlin, swift]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: placeholder
+        shell: bash
+        run: |
+          echo "::warning::${{ matrix.track }} on ${{ matrix.os }} is a placeholder — no verification happens here yet"
+          echo "TODO: verify the ${{ matrix.track }} track on ${{ matrix.os }}"
