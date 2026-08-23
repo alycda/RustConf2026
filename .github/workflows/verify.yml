@@ -81,6 +81,38 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: cbindgen
+      # ON ICE: kotlin and swift provisioning. Those cells are green today
+      # only because GitHub's stock images happen to ship the toolchains
+      # (kotlinc + a JDK on all three OSes, Swift on ubuntu and macos).
+      # When either cell goes red with no change on our side, an upstream
+      # image update dropped them — the fix is uncommenting the matching
+      # block, not archaeology. The kotlin block is the exact recipe
+      # validated green in kotlin.yml (pinned zip, checksum computed from
+      # that download); the swift block is the standard action but is
+      # UNVERIFIED by us — expect to pin a version that matches whatever
+      # the image shipped last.
+      #
+      # - uses: actions/setup-java@v4
+      #   if: matrix.track == 'kotlin'
+      #   with:
+      #     distribution: temurin
+      #     java-version: '17'
+      # - name: provision kotlinc (pinned release zip)
+      #   if: matrix.track == 'kotlin'
+      #   shell: bash
+      #   run: |
+      #     curl -fsSL -o kotlin-compiler.zip \
+      #       "https://github.com/JetBrains/kotlin/releases/download/v2.1.0/kotlin-compiler-2.1.0.zip"
+      #     echo "b6698d5728ad8f9edcdd01617d638073191d8a03139cc538a391b4e3759ad297  kotlin-compiler.zip" \
+      #       | shasum -a 256 -c -
+      #     unzip -q kotlin-compiler.zip -d "${RUNNER_TEMP}"
+      #     echo "${RUNNER_TEMP}/kotlinc/bin" >> "$GITHUB_PATH"
+      #
+      # - uses: swift-actions/setup-swift@v2
+      #   if: matrix.track == 'swift' && runner.os == 'Linux'
+      #   with:
+      #     swift-version: '6.0'
+      #
       # The dart cell gets the SDK from the official action — the
       # workshop's own answer (`just setup-dart`) is brew/website guidance
       # written for humans, not runners.
