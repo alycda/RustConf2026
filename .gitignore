@@ -11,3 +11,6 @@ result-*
 # clone.
 .claude/settings.local.json
 
+# Python track venv (created by `just setup-python`)
+.venv/
+
