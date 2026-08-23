@@ -13,7 +13,10 @@
     // --- Nix -------------------------------------------------------------
     "result": true,
     "result-*": true,
-    "**/.direnv": true
+    "**/.direnv": true,
+
+    // --- Python venv ---------------------------------------------------------
+    "**/.venv": true
   },
 
   // The file watcher does NOT read .gitignore, so these must be spelled out
@@ -25,6 +28,7 @@
     "**/.git/objects/**": true,
     "**/.git/subtree-cache/**": true,
     "result/**": true,
-    "**/.direnv/**": true
+    "**/.direnv/**": true,
+    "**/.venv/**": true
   }
 }

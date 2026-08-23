@@ -14,3 +14,9 @@ result-*
 # Python track venv (created by `just setup-python`)
 .venv/
 
+# --- Language tracks ---
+# All tracks are ignored up front, even though Exercise 3 is pick-one:
+# trying another language is an extension exercise, and spare ignore
+# rules cost nothing. This is the book's "step zero" principle applied —
+# which is why the workshop skips the git step: it's already done here.
+
