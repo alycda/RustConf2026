@@ -1,4 +1,12 @@
 {
+  // The extension host inherits none of direnv's env — its PATH is the nix
+  // profile plus the system dirs — so rust-analyzer starts with no cargo or
+  // rustc and stays broken until something restarts it. mkhl.direnv (see
+  // extensions.json) does that itself with this set. It lives here rather
+  // than in the devcontainer.json files so attendees running VS Code against
+  // a local nix-shell get it too, not just the container ones.
+  "direnv.restart.automatic": true,
+
   // VS Code's Explorer and search already read .gitignore
   // (search.useIgnoreFiles is on by default), so this file carries only the
   // things .gitignore cannot cover.
