@@ -1,0 +1,105 @@
+# Rust CI for the day library (days/).
+#
+# Scope is deliberately just Rust: the days are pure-Rust AoC solutions today,
+# and the FFI steps that will need Python/Kotlin/Swift toolchains don't exist
+# on any branch yet. When they land they get their own workflow (or revive the
+# verifier in #7) rather than bloating this one.
+#
+# There is no discovery step and no per-day matrix, because days/Cargo.toml is
+# a virtual manifest with `members = ["*"]`: every day is already a workspace
+# member, so `cargo test --workspace` covers whatever the branch happens to
+# hold. A new `just days new` day is verified by existing, not by being
+# registered here — which is the property that matters for the solutions and
+# golden-days branches, where days arrive a few at a time.
+#
+# The flip side of `members = ["*"]` is that a non-crate directory dropped into
+# days/ breaks every cargo command in the workspace. That is a real failure and
+# CI should show it, so nothing here tries to route around it.
+
+name: Rust
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch: {}
+
+# Least privilege: this workflow only reads the repo and runs tests.
+permissions:
+  contents: read
+
+concurrency:
+  group: rust-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+defaults:
+  run:
+    working-directory: days
+
+jobs:
+  test:
+    name: test / ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: days
+      # macOS is in the matrix because most attendees are on it and the
+      # workshop's whole subject is linking — the platform where a toolchain
+      # goes wrong is the one worth testing on.
+      #
+      # --locked proves days/Cargo.lock is committed and current. Since the
+      # per-day lockfile model was dropped, one shared lock is what pins every
+      # day; if it can drift silently, it isn't pinning anything.
+      - run: cargo test --workspace --locked
+
+  lint:
+    name: fmt + clippy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: days
+      - run: cargo fmt --all --check
+      # --all-targets so tests and the bin are linted too, not just the lib.
+      # Attendees read this code as the model to copy; warnings in the sample
+      # are warnings in thirty forks of it.
+      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+  msrv:
+    name: rust 1.85 floor
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      # Pinned to the floor the day crates declare (rust-version = "1.85", the
+      # edition-2024 minimum) and that scripts/self-check.sh sends attendees
+      # away believing. Without this job that floor is a claim nobody tests:
+      # a dependency can raise its own MSRV in a patch release and the first
+      # person to find out is an attendee on exactly 1.85, mid-workshop.
+      #
+      # check, not test: this asks "does the floor still compile", and a
+      # second full test run on an old toolchain buys nothing for the minutes.
+      - uses: dtolnay/rust-toolchain@1.85
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: days
+      # --locked is load-bearing here: resolver "3" makes resolution
+      # MSRV-aware, so it is the committed lockfile that is under test. Let
+      # cargo re-resolve and it would quietly pick versions 1.85 can build,
+      # proving something no attendee's checkout will reproduce.
+      - run: cargo check --workspace --all-targets --locked
