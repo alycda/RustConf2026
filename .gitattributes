@@ -1,0 +1,12 @@
+# Git ships a built-in "rust" diff driver whose xfuncname regex knows what a
+# Rust item declaration looks like. Without this line `git check-attr diff`
+# reports "unspecified" for *.rs, git falls back to a generic funcname
+# heuristic that does not recognise `fn`, and function-scoped line-log fails
+# outright rather than returning nothing:
+#
+#   $ git log -L :from_str:days/2015-12-05/src/lib.rs
+#   fatal: -L parameter 'from_str' starting at line 1: no match
+#
+# With it, `git log -L :<fn>:<file>` walks the history of just that function,
+# and hunk headers name the enclosing item instead of showing `@@ ... @@` bare.
+*.rs diff=rust
