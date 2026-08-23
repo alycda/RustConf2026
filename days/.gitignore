@@ -1,0 +1,4 @@
+# Real puzzle inputs, whatever they were saved as — only the tracked
+# .gitkeep keeps the directory present.
+**/inputs/*
+!**/inputs/.gitkeep

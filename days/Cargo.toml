@@ -1,0 +1,22 @@
+# rust-analyzer discovers Cargo.toml only at a workspace root and one level
+# below it, so days/<date>/Cargo.toml is invisible to it, and its escape hatch
+# (rust-analyzer.linkedProjects) takes no globs — every day would have to be
+# listed by hand, in VS Code settings only. A virtual manifest here sits at the
+# depth RA does look at, so every day is loaded, `just new` days included, in
+# any editor that speaks RA.
+#
+# `*`, not `2*`: a glob that matches nothing is treated as a literal path and
+# errors, and days/ holds only _template until the first `just new`, whereas
+# `*` matching nothing is fine. The trade is that `*` claims every directory
+# here, dotted ones included, and a claimed directory without a Cargo.toml
+# fails every cargo command in the workspace — even one run from inside a
+# healthy day. So days/target is excluded (cargo creates it on the first
+# build), and anything else that lands here and isn't a day belongs in the
+# exclude list beside it.
+#
+# Days are members, so they share days/Cargo.lock and days/target rather than
+# locking and building one per day.
+[workspace]
+resolver = "3"
+members = ["*"]
+exclude = ["target", "inputs"]
