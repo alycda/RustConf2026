@@ -52,3 +52,9 @@ target/
 __pycache__/
 *.py[cod]
 
+# Swift
+# Source: https://github.com/github/gitignore/blob/main/Swift.gitignore (trimmed)
+# Pulled: 2026-08-08
+.build/
+DerivedData/
+

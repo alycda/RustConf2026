@@ -31,7 +31,11 @@
     "**/*.o": true,
     "**/*.obj": true,
     "**/*.a": true,
-    "**/*.lib": true
+    "**/*.lib": true,
+
+    // --- Python bytecode -----------------------------------------------------
+    "**/__pycache__": true,
+    "**/*.py[cod]": true
   },
 
   // Adds to files.exclude — everything above is already out of search.
@@ -61,6 +65,7 @@
     "**/.direnv/**": true,
     "**/.venv/**": true,
     "**/target/**": true,
-    "**/uniffi/bindings/**": true
+    "**/uniffi/bindings/**": true,
+    "**/__pycache__/**": true
   }
 }
