@@ -63,7 +63,19 @@
 
     // --- Docs ----------------------------------------------------------------
     // book/ is the mdBook project; book/book is what `mdbook build` renders.
-    "book/book": true
+    "book/book": true,
+
+    // --- No .gitignore counterpart -------------------------------------------
+    // Editor-only noise reduction: nothing here is build output this repo
+    // ignores, so these arrive together rather than on a ladder rung.
+    "**/.flutter-plugins": true,
+    "**/.flutter-plugins-dependencies": true,
+    "**/ios/Pods": true,
+    "**/ios/.symlinks": true,
+    "**/linux/flutter/ephemeral": true,
+    "**/macos/Flutter/ephemeral": true,
+    "**/windows/flutter/ephemeral": true,
+    "**/node_modules": true
   },
 
   // Adds to files.exclude — everything above is already out of search.
@@ -78,7 +90,13 @@
     // them), but they must not crowd out hand-written code in search. Named
     // as narrowly as the .gitignore rule, so a hand-written */bindings/ dir
     // is not swept up by a pattern aimed at machine output.
-    "**/uniffi/bindings/**": true
+    "**/uniffi/bindings/**": true,
+
+    // Lockfiles and wrappers: keep them tracked and openable, out of grep.
+    "**/Cargo.lock": true,
+    "**/pubspec.lock": true,
+    "**/Package.resolved": true,
+    "**/gradle/wrapper/**": true
   },
 
   // The file watcher does NOT read .gitignore, so these must be spelled out
@@ -100,6 +118,8 @@
     "**/.gradle/**": true,
     "**/build/**": true,
     "**/.dart_tool/**": true,
-    "book/book/**": true
+    "book/book/**": true,
+    "**/ios/Pods/**": true,
+    "**/node_modules/**": true
   }
 }
