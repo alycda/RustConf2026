@@ -48,7 +48,10 @@
     "**/build": true,
 
     // --- Flutter / Dart ------------------------------------------------------
-    "**/.dart_tool": true
+    "**/.dart_tool": true,
+
+    // --- OS ------------------------------------------------------------------
+    "**/.DS_Store": true
   },
 
   // Adds to files.exclude — everything above is already out of search.
