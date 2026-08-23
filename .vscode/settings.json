@@ -16,7 +16,13 @@
     "**/.direnv": true,
 
     // --- Python venv ---------------------------------------------------------
-    "**/.venv": true
+    "**/.venv": true,
+
+    // --- Rust ----------------------------------------------------------------
+    // Hidden from the Explorer only; rust-analyzer is unaffected by this.
+    "**/target": true,
+    "**/*.rs.bk": true,
+    "**/*.pdb": true
   },
 
   // The file watcher does NOT read .gitignore, so these must be spelled out
@@ -29,6 +35,7 @@
     "**/.git/subtree-cache/**": true,
     "result/**": true,
     "**/.direnv/**": true,
-    "**/.venv/**": true
+    "**/.venv/**": true,
+    "**/target/**": true
   }
 }

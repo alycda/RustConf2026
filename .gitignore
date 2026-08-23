@@ -27,3 +27,14 @@ target/
 **/*.rs.bk
 *.pdb
 
+# C build artifacts and shared libraries (every track links against these)
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.so.*
+*.dylib
+*.dll
+*.out
+
