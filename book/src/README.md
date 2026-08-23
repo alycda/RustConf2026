@@ -1,0 +1,9 @@
+# Workshop
+
+This half-day workshop transforms the "(ab)Using Advent of Code as an FFI Playground" [talk](https://github.com/alycda/aoc-ffi) into an active [learning experience](https://github.com/alycda/learning-in-public). Don't just watch me write FFI — write it for yourself and break something, on _purpose_. 
+
+Using Advent of Code [puzzles](https://adventofcode.com/) as the substrate, participants build a working Rust FFI library from scratch, wrapping a real AoC solution in a C glue layer and calling it from multiple different target languages. By the end of the session, attendees leave with a working multi-language project, a replicable methodology, and hands-on intuition for the pitfalls that make production FFI hard.
+
+The workshop is structured around the same core insight as the talk: AoC problems are uniquely well-suited for FFI practice because they have diverse input/output types (primitives, strings, iterators), a motivating narrative that makes repetition feel worthwhile, no production baggage — you can break things freely, and progressively increasing complexity across 12-25 days of problems each year.
+
+Unlike algorithm-focused competitive programming, this approach uses AoC’s rich problem variety to stress-test real cross-platform FFI patterns: [string encoding](https://github.com/android/ndk/issues/283) [mismatches between](https://wtf-8.codeberg.page/) [Java](https://docs.oracle.com/en/java/javase/21/docs/specs/jni/types.html#modified-utf-8-strings) and [Swift](https://www.swift.org/blog/utf8-string/) and the lowest-common-denominator constraints that make production FFI viable.
