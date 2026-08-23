@@ -22,7 +22,25 @@
     // Hidden from the Explorer only; rust-analyzer is unaffected by this.
     "**/target": true,
     "**/*.rs.bk": true,
-    "**/*.pdb": true
+    "**/*.pdb": true,
+
+    // --- C -------------------------------------------------------------------
+    // Object files and static archives only. Shared libraries (.so/.dylib/
+    // .dll) stay VISIBLE on purpose: watching the cdylib appear is the point
+    // of the workshop. They are kept out of search results instead.
+    "**/*.o": true,
+    "**/*.obj": true,
+    "**/*.a": true,
+    "**/*.lib": true
+  },
+
+  // Adds to files.exclude — everything above is already out of search.
+  "search.exclude": {
+    "**/*.so": true,
+    "**/*.so.*": true,
+    "**/*.dylib": true,
+    "**/*.dll": true,
+    "**/*.out": true
   },
 
   // The file watcher does NOT read .gitignore, so these must be spelled out
