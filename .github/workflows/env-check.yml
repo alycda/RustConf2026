@@ -1,0 +1,160 @@
+# Verification matrix — self-check map, bare except cbindgen.
+#
+# Every cell runs scripts/self-check.sh on a stock runner plus ONE install:
+# cbindgen. The first bare mapping run showed it is the single required
+# tool no runner image ships (rustc/cargo 1.97 and a linking C compiler
+# are on all three OSes), so with it provisioned the rust/c rows assert
+# the full required-toolchain contract per OS, and the optional-track rows
+# still report what the stock images cover. The red/green grid is the
+# observation, not a regression gate — it maps which cells need real
+# provisioning recipes, before the matrix is trimmed for heavy testing.
+#
+# Cell verdicts:
+#   - rust, c   → the script's exit code (its required-toolchain contract:
+#                 rustc + cargo + cbindgen + a C compiler that links).
+#                 Both tracks share one verdict because the script does.
+#   - python, dart, kotlin, swift
+#               → green only if the script's own line for that track says
+#                 "ready". The script's exit code is ignored for these:
+#                 an optional track can be ready on a runner whose
+#                 required toolchain is not (and vice versa), and that
+#                 difference is signal.
+#
+#          | linux | macos | windows |
+#   rust   |   .   |   .   |    .    |
+#   c      |   .   |   .   |    .    |
+#   python |   .   |   .   |    .    |
+#   dart   |   .   |   .   |    .    |
+#   kotlin |   .   |   .   |    .    |
+#   swift  |   .   |   .   |    ?    |
+#
+# Expected from the bare mapping run: rust/c green on all three OSes once
+# cbindgen lands; kotlin green everywhere (kotlinc + JDK ship on every
+# image); swift green on ubuntu and macos; python green only on macos
+# (its system python3 imports cffi); dart red everywhere. The windows
+# column runs under Git Bash, which is already more than the workshop
+# promises (self-check's own Windows answer is WSL2) — its results are
+# information, not commitments.
+
+name: Verify
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch: {}
+
+# Least privilege: this workflow only reads the repo.
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  verify:
+    name: ${{ matrix.track }} / ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # TEMPORARILY trimmed to the linux column for heavy iteration:
+        # linux is the 1x-billed runner, so the full track row costs ~6
+        # billed minutes per push instead of ~78 (macos is 10x, windows
+        # 2x, and billing rounds up per job). The full map has already
+        # been taken — its findings live in the header above. Restore the
+        # full grid by swapping the os line back to:
+        #   os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest]
+        track: [rust, c, python, dart, kotlin, swift]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      # Prebuilt binary for the same reason the track workflows give:
+      # `cargo install cbindgen` compiles from source for minutes; the
+      # install-action downloads in seconds. Verified on linux and macos
+      # runners already; windows is this step's own experiment — if the
+      # cell dies here, `cargo install cbindgen --locked` is the fallback.
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cbindgen
+      # ON ICE: kotlin and swift provisioning. Those cells are green today
+      # only because GitHub's stock images happen to ship the toolchains
+      # (kotlinc + a JDK on all three OSes, Swift on ubuntu and macos).
+      # When either cell goes red with no change on our side, an upstream
+      # image update dropped them — the fix is uncommenting the matching
+      # block, not archaeology. The kotlin block is the exact recipe
+      # validated green in kotlin.yml (pinned zip, checksum computed from
+      # that download); the swift block is the standard action but is
+      # UNVERIFIED by us — expect to pin a version that matches whatever
+      # the image shipped last.
+      #
+      # - uses: actions/setup-java@v4
+      #   if: matrix.track == 'kotlin'
+      #   with:
+      #     distribution: temurin
+      #     java-version: '17'
+      # - name: provision kotlinc (pinned release zip)
+      #   if: matrix.track == 'kotlin'
+      #   shell: bash
+      #   run: |
+      #     curl -fsSL -o kotlin-compiler.zip \
+      #       "https://github.com/JetBrains/kotlin/releases/download/v2.1.0/kotlin-compiler-2.1.0.zip"
+      #     echo "b6698d5728ad8f9edcdd01617d638073191d8a03139cc538a391b4e3759ad297  kotlin-compiler.zip" \
+      #       | shasum -a 256 -c -
+      #     unzip -q kotlin-compiler.zip -d "${RUNNER_TEMP}"
+      #     echo "${RUNNER_TEMP}/kotlinc/bin" >> "$GITHUB_PATH"
+      #
+      # - uses: swift-actions/setup-swift@v2
+      #   if: matrix.track == 'swift' && runner.os == 'Linux'
+      #   with:
+      #     swift-version: '6.0'
+      #
+      # The dart cell gets the SDK from the official action — the
+      # workshop's own answer (`just setup-dart`) is brew/website guidance
+      # written for humans, not runners.
+      - uses: dart-lang/setup-dart@v1
+        if: matrix.track == 'dart'
+        with:
+          sdk: stable
+      # The python cell provisions its track the way `just setup-python`
+      # does — a repo-local .venv — because that is the path self-check
+      # probes first (it prefers ./.venv/bin/python even when the venv is
+      # not activated, exactly the case here).
+      - name: provision cffi (the setup-python recipe)
+        if: matrix.track == 'python'
+        shell: bash
+        run: |
+          python3 -m venv .venv
+          ./.venv/bin/python -m pip install --upgrade pip cffi
+      # shell: bash so the windows cells run under Git Bash rather than
+      # PowerShell — the closest a native-Windows runner gets to running
+      # this script at all.
+      - name: self-check (stock image + cbindgen)
+        shell: bash
+        run: |
+          status=0
+          out=$(./scripts/self-check.sh 2>&1) || status=$?
+          printf '%s\n' "$out"
+          echo
+          echo "self-check exit code: $status"
+          # Strip ANSI colour codes so the track grep sees plain text.
+          plain=$(printf '%s\n' "$out" | sed 's/\x1b\[[0-9;]*m//g')
+          case "${{ matrix.track }}" in
+            rust|c)
+              exit "$status"
+              ;;
+            python) label='Python' ;;
+            dart)   label='Dart' ;;
+            kotlin) label='Kotlin/JNA' ;;
+            swift)  label='Swift' ;;
+          esac
+          if printf '%s\n' "$plain" | grep -E "${label}[[:space:]]+ready" >/dev/null; then
+            echo "${label}: ready on a bare runner"
+          else
+            echo "${label}: NOT ready on a bare runner"
+            exit 1
+          fi
