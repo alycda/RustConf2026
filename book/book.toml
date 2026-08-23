@@ -1,0 +1,5 @@
+[book]
+authors = ["Alyssa Evans"]
+language = "en"
+src = "src"
+title = "Using Advent of Code as an FFI Playground"
