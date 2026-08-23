@@ -1,0 +1,16 @@
+---
+syntax: bash
+tags: [ install ]
+---
+# this repo: enter the workshop toolchain
+nix-shell                      # or `direnv allow` once, then it's automatic
+
+# borrow a tool WITHOUT installing it (gone when the shell exits)
+nix-shell -p hyperfine         # shell with hyperfine on PATH
+nix-shell -p jq --run 'jq . data.json'   # one-shot
+
+# flakes-style one-shot (nix in the containers has flakes enabled)
+nix run nixpkgs#hyperfine -- --version
+
+# find the package name
+nix search nixpkgs <term>      # or https://search.nixos.org

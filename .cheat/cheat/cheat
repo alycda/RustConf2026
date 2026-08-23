@@ -1,0 +1,19 @@
+---
+syntax: bash
+---
+# list all sheets; a bare arg filters by TITLE substring (not tags!)
+cheat -l
+cheat -l summon
+
+# filter by TAG -- the flag you forget
+cheat -l -t install
+
+# search sheet CONTENT for a keyword (combines with -t)
+cheat -s nix-shell
+cheat -t install -s flakes
+
+# view: exact title required, no fuzzy match
+cheat nix/summon
+
+# sheets live in .cheat/ in this repo -- edit them there;
+# direnv re-copies on the next prompt
