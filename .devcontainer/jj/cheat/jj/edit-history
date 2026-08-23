@@ -1,0 +1,12 @@
+---
+syntax: bash
+---
+# fix something in a mid-stack commit without moving @
+jj new --no-edit --insert-before <change-id> -m "what this fixes"
+jj squash <path> --from @ --into <new-id>
+
+# or make the old commit the working copy (descendants auto-rebase as you type)
+jj edit <change-id>          # ...then jj new @+ / jj edit <original> to come back
+
+# reorder / re-parent
+jj rebase -s <src> -o <dest>   # v0.43: -o/--onto (was -d)

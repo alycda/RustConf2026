@@ -1,0 +1,17 @@
+---
+syntax: bash
+tags: [ bookmark ]
+---
+# in JJ branches are called bookmarks
+# bookmarks do NOT auto-advance when you commit -- move them yourself
+jj bookmark advance                       # nearest bookmark(s) behind @ jump to @
+jj bookmark move <name> --to @            # explicit form
+jj bookmark create <name> -r @
+
+# push (force-with-lease semantics by default)
+jj git push -b <name>
+jj git push --change @                    # auto-named bookmark for @
+jj git push --named <name>=@              # brand-new bookmark (v0.43: --allow-new is gone)
+
+jj git fetch
+jj bookmark track <name>@origin
