@@ -9,10 +9,11 @@
     // --- VCS -------------------------------------------------------------
     // Colocated jj + git. **/.git is excluded by VS Code's defaults already.
     "**/.jj": true,
-
+ 
     // --- Nix -------------------------------------------------------------
     "result": true,
     "result-*": true,
+    "**/.direnv": true
   },
 
   // The file watcher does NOT read .gitignore, so these must be spelled out
@@ -24,5 +25,6 @@
     "**/.git/objects/**": true,
     "**/.git/subtree-cache/**": true,
     "result/**": true,
+    "**/.direnv/**": true
   }
 }

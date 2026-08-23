@@ -5,3 +5,9 @@ result-*
 # Ignore automatically generated direnv output
 .direnv
 
+# Claude Code writes accepted permission grants here. Its sibling
+# .claude/settings.json is tracked (shared config), so the directory is already
+# in the repo and this file would otherwise ride along into a repo attendees
+# clone.
+.claude/settings.local.json
+
