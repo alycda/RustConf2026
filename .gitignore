@@ -151,3 +151,30 @@ tmbootpicker.efi
 # Log files created by default by the nohup command
 nohup.out
 
+# Source: https://github.com/github/gitignore/blob/main/Global/Windows.gitignore
+# Pulled: 2026-08-08
+# Windows thumbnail cache files
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+
+# Dump file
+*.stackdump
+
+# Folder config file
+[Dd]esktop.ini
+
+# Recycle Bin used on file shares
+$RECYCLE.BIN/
+
+# Windows Installer files
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+
+# Windows shortcuts
+*.lnk
+
