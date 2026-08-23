@@ -1,10 +1,13 @@
-# Verification matrix — bare-runner self-check map.
+# Verification matrix — self-check map, bare except cbindgen.
 #
-# Every cell runs scripts/self-check.sh on an UNPROVISIONED runner: no
-# setup steps, no toolchain installs. The red/green grid that results is
-# the observation, not a regression gate — it maps which cells GitHub's
-# stock images cover for free and which need provisioning recipes, before
-# the matrix is trimmed for heavy testing.
+# Every cell runs scripts/self-check.sh on a stock runner plus ONE install:
+# cbindgen. The first bare mapping run showed it is the single required
+# tool no runner image ships (rustc/cargo 1.97 and a linking C compiler
+# are on all three OSes), so with it provisioned the rust/c rows assert
+# the full required-toolchain contract per OS, and the optional-track rows
+# still report what the stock images cover. The red/green grid is the
+# observation, not a regression gate — it maps which cells need real
+# provisioning recipes, before the matrix is trimmed for heavy testing.
 #
 # Cell verdicts:
 #   - rust, c   → the script's exit code (its required-toolchain contract:
@@ -25,12 +28,13 @@
 #   kotlin |   .   |   .   |    .    |
 #   swift  |   .   |   .   |    ?    |
 #
-# Expected reds (the "known failures"): cbindgen is preinstalled nowhere,
-# so rust/c fail everywhere until provisioned; macOS images dropped Rust.
-# The windows column is the "unknown" — the script runs under Git Bash
-# there, which is more than the workshop promises (self-check's own
-# Windows answer is WSL2), so whatever those cells report is new
-# information by definition.
+# Expected from the bare mapping run: rust/c green on all three OSes once
+# cbindgen lands; kotlin green everywhere (kotlinc + JDK ship on every
+# image); swift green on ubuntu and macos; python green only on macos
+# (its system python3 imports cffi); dart red everywhere. The windows
+# column runs under Git Bash, which is already more than the workshop
+# promises (self-check's own Windows answer is WSL2) — its results are
+# information, not commitments.
 
 name: Verify
 
@@ -62,10 +66,18 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      # Prebuilt binary for the same reason the track workflows give:
+      # `cargo install cbindgen` compiles from source for minutes; the
+      # install-action downloads in seconds. Verified on linux and macos
+      # runners already; windows is this step's own experiment — if the
+      # cell dies here, `cargo install cbindgen --locked` is the fallback.
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cbindgen
       # shell: bash so the windows cells run under Git Bash rather than
       # PowerShell — the closest a native-Windows runner gets to running
       # this script at all.
-      - name: bare self-check
+      - name: self-check (stock image + cbindgen)
         shell: bash
         run: |
           status=0
