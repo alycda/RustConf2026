@@ -1,0 +1,23 @@
+{
+  // VS Code's Explorer and search already read .gitignore
+  // (search.useIgnoreFiles is on by default), so this file carries only the
+  // things .gitignore cannot cover.
+
+  // .jj is not gitignored — it is the repository itself, not build output.
+  // VS Code hides .git by default but knows nothing about .jj.
+  "files.exclude": {
+    // --- VCS -------------------------------------------------------------
+    // Colocated jj + git. **/.git is excluded by VS Code's defaults already.
+    "**/.jj": true
+  },
+
+  // The file watcher does NOT read .gitignore, so these must be spelled out
+  // even though .gitignore already lists them. jj re-snapshots the working
+  // copy on every command, which makes .jj/** the exclusion that pays for
+  // itself immediately.
+  "files.watcherExclude": {
+    "**/.jj/**": true,
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true
+  }
+}
