@@ -20,3 +20,10 @@ result-*
 # rules cost nothing. This is the book's "step zero" principle applied —
 # which is why the workshop skips the git step: it's already done here.
 
+# Rust
+# Source: https://github.com/github/gitignore/blob/main/Rust.gitignore (trimmed)
+# Pulled: 2026-08-08
+target/
+**/*.rs.bk
+*.pdb
+
