@@ -1,0 +1,13 @@
+[package]
+name = "aoc-2015-12-01"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+
+[dependencies]
+aoc-ornaments = "0.1.10"
+derive_more = { version = "1", features = ["deref"] }
+miette = { version = "7.4", features = ["fancy"] }
+
+[dev-dependencies]
+rstest = "0.24"
