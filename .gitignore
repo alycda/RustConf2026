@@ -46,3 +46,9 @@ target/
 # output.
 **/uniffi/bindings/
 
+# Python (venv above)
+# Source: https://github.com/github/gitignore/blob/main/Python.gitignore (trimmed)
+# Pulled: 2026-08-08
+__pycache__/
+*.py[cod]
+
