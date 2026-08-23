@@ -45,7 +45,10 @@
     "**/*.class": true,
     "**/*.jar": true,
     "**/.gradle": true,
-    "**/build": true
+    "**/build": true,
+
+    // --- Flutter / Dart ------------------------------------------------------
+    "**/.dart_tool": true
   },
 
   // Adds to files.exclude — everything above is already out of search.
@@ -80,6 +83,7 @@
     "**/.build/**": true,
     "**/DerivedData/**": true,
     "**/.gradle/**": true,
-    "**/build/**": true
+    "**/build/**": true,
+    "**/.dart_tool/**": true
   }
 }
