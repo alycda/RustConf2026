@@ -32,7 +32,16 @@ HEADER = DAY_DIR / "include" / "aoc_2015_12_01.h"
 
 def header_declarations() -> str:
     if not HEADER.exists():
-        subprocess.run(["just", "days", "bindgen", "2015-12-01"], cwd=REPO_ROOT, check=True)
+        try:
+            subprocess.run(["just", "days", "bindgen", "2015-12-01"], cwd=REPO_ROOT, check=True)
+        except FileNotFoundError:
+            sys.exit(
+                "no header and `just` not found — install just (>= 1.31), or generate it "
+                "directly: cd days/2015-12-01 && mkdir -p include && "
+                "cbindgen --config cbindgen.toml --output include/aoc_2015_12_01.h src/c_api.rs"
+            )
+        except subprocess.CalledProcessError as e:
+            sys.exit(f"header regeneration failed (exit {e.returncode}) — see the just output above")
 
     text = HEADER.read_text()
     text = re.sub(r"/\*.*?\*/", "", text, flags=re.DOTALL)  # cbindgen's doc comments
