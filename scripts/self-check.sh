@@ -6,7 +6,14 @@
 # Exit code is non-zero only when a REQUIRED tool is missing or broken —
 # pick ONE optional track; you do not need them all.
 #
-# Usage: ./scripts/self-check.sh   (or: just check)
+# Usage: ./scripts/self-check.sh            (or: just check)
+#        ./scripts/self-check.sh --track <swift|kotlin|python|dart>
+#
+# --track probes ONE optional track and says nothing else: exit 0 ready,
+# exit 1 not. It exists for CI (.github/workflows/env-check.yml), which
+# used to grep this script's human-facing labels — a reworded status line
+# would flip a CI cell red with no real change. The exit code is the
+# machine contract; the printed rows stay free to change.
 
 set -u
 
@@ -45,6 +52,82 @@ check_optional() { # track, command, install hint
     return 1
   fi
 }
+
+# Each probe prints its own row and returns 0 ready / 1 not — the single
+# source of truth for "is this track ready", shared by the full run below
+# and by --track. Keep the printf rows free-form; only the return codes
+# are contract.
+
+# `swiftc --version` instead of `command -v swiftc`: /usr/bin/swiftc is the
+# same OS-image xcrun stub as /usr/bin/java — present even without the CLT,
+# runnable only once a real toolchain is installed.
+probe_swift() {
+  if command -v swiftc >/dev/null 2>&1 && swiftc --version >/dev/null 2>&1; then
+    printf ' %s %-12s ready\n' "$PASS" "Swift"
+    return 0
+  elif command -v swiftc >/dev/null 2>&1; then
+    printf ' %s %-12s swiftc found, not runnable %s(macOS: install the CLT — run: just setup-swift)%s\n' "$SKIP" "Swift" "$DIM" "$NC"
+  else
+    printf ' %s %-12s not installed %s(only needed for this track — run: just setup-swift)%s\n' "$SKIP" "Swift" "$DIM" "$NC"
+  fi
+  return 1
+}
+
+# `java -version` instead of `command -v java`: macOS ships a /usr/bin/java
+# stub that exists but exits 1 ("Unable to locate a Java Runtime") until a
+# real JDK is linked — the keg-only case setup-kotlin's symlink hint covers.
+probe_kotlin() {
+  if command -v kotlinc >/dev/null 2>&1 && java -version >/dev/null 2>&1; then
+    printf ' %s %-12s ready\n' "$PASS" "Kotlin/JNA"
+    return 0
+  elif command -v kotlinc >/dev/null 2>&1; then
+    printf ' %s %-12s kotlinc found, java not runnable %s(macOS: link the keg-only JDK — re-run: just setup-kotlin for the command)%s\n' "$SKIP" "Kotlin/JNA" "$DIM" "$NC"
+  else
+    printf ' %s %-12s not installed %s(needs JDK 17+ and kotlinc — run: just setup-kotlin)%s\n' "$SKIP" "Kotlin/JNA" "$DIM" "$NC"
+  fi
+  return 1
+}
+
+# Prefer the repo-local venv even when it isn't activated: nix-shell prepends
+# its own python3 to the inherited PATH, shadowing an activated .venv — the
+# probe must not turn a completed `just setup-python` into a false "not ready".
+probe_python() {
+  local py venv_py
+  py=python3
+  venv_py="$(dirname "$0")/../.venv/bin/python"
+  [ -x "$venv_py" ] && py="$venv_py"
+  if command -v "$py" >/dev/null 2>&1; then
+    if "$py" -c 'import cffi' 2>/dev/null; then
+      if [ "$py" = "$venv_py" ] && [ -z "${VIRTUAL_ENV:-}" ]; then
+        printf ' %s %-12s ready %s(cffi in .venv — activate: source .venv/bin/activate)%s\n' "$PASS" "Python" "$DIM" "$NC"
+      else
+        printf ' %s %-12s ready (cffi installed)\n' "$PASS" "Python"
+      fi
+      return 0
+    fi
+    printf ' %s %-12s python3 found, cffi missing %s(run: just setup-python, then: source .venv/bin/activate)%s\n' "$SKIP" "Python" "$DIM" "$NC"
+  else
+    printf ' %s %-12s not installed %s(python.org, 3.10+, then: just setup-python)%s\n' "$SKIP" "Python" "$DIM" "$NC"
+  fi
+  return 1
+}
+
+probe_dart() {
+  check_optional "Dart" "dart" "run: just setup-dart"
+}
+
+# --track <name>: probe one optional track, exit with its status. Handled
+# before any required checks so CI track cells cost one probe, not a full run.
+if [ "${1:-}" = "--track" ]; then
+  case "${2:-}" in
+    swift)  probe_swift;  exit $? ;;
+    kotlin) probe_kotlin; exit $? ;;
+    python) probe_python; exit $? ;;
+    dart)   probe_dart;   exit $? ;;
+    *) echo "unknown track '${2:-}' — one of: swift kotlin python dart" >&2; exit 2 ;;
+  esac
+fi
+
 
 echo "Workshop self-check — Using Advent of Code as an FFI Playground"
 echo
@@ -110,49 +193,10 @@ tracks_ready=0
 
 echo
 echo "Optional language tracks (pick ONE for Exercise 3):"
-# `swiftc --version` instead of `command -v swiftc`: /usr/bin/swiftc is the
-# same OS-image xcrun stub as /usr/bin/java — present even without the CLT,
-# runnable only once a real toolchain is installed.
-if command -v swiftc >/dev/null 2>&1 && swiftc --version >/dev/null 2>&1; then
-  printf ' %s %-12s ready\n' "$PASS" "Swift"
-  tracks_ready=$((tracks_ready + 1))
-elif command -v swiftc >/dev/null 2>&1; then
-  printf ' %s %-12s swiftc found, not runnable %s(macOS: install the CLT — run: just setup-swift)%s\n' "$SKIP" "Swift" "$DIM" "$NC"
-else
-  printf ' %s %-12s not installed %s(only needed for this track — run: just setup-swift)%s\n' "$SKIP" "Swift" "$DIM" "$NC"
-fi
-# `java -version` instead of `command -v java`: macOS ships a /usr/bin/java
-# stub that exists but exits 1 ("Unable to locate a Java Runtime") until a
-# real JDK is linked — the keg-only case setup-kotlin's symlink hint covers.
-if command -v kotlinc >/dev/null 2>&1 && java -version >/dev/null 2>&1; then
-  printf ' %s %-12s ready\n' "$PASS" "Kotlin/JNA"
-  tracks_ready=$((tracks_ready + 1))
-elif command -v kotlinc >/dev/null 2>&1; then
-  printf ' %s %-12s kotlinc found, java not runnable %s(macOS: link the keg-only JDK — re-run: just setup-kotlin for the command)%s\n' "$SKIP" "Kotlin/JNA" "$DIM" "$NC"
-else
-  printf ' %s %-12s not installed %s(needs JDK 17+ and kotlinc — run: just setup-kotlin)%s\n' "$SKIP" "Kotlin/JNA" "$DIM" "$NC"
-fi
-# Prefer the repo-local venv even when it isn't activated: nix-shell prepends
-# its own python3 to the inherited PATH, shadowing an activated .venv — the
-# probe must not turn a completed `just setup-python` into a false "not ready".
-py=python3
-venv_py="$(dirname "$0")/../.venv/bin/python"
-[ -x "$venv_py" ] && py="$venv_py"
-if command -v "$py" >/dev/null 2>&1; then
-  if "$py" -c 'import cffi' 2>/dev/null; then
-    if [ "$py" = "$venv_py" ] && [ -z "${VIRTUAL_ENV:-}" ]; then
-      printf ' %s %-12s ready %s(cffi in .venv — activate: source .venv/bin/activate)%s\n' "$PASS" "Python" "$DIM" "$NC"
-    else
-      printf ' %s %-12s ready (cffi installed)\n' "$PASS" "Python"
-    fi
-    tracks_ready=$((tracks_ready + 1))
-  else
-    printf ' %s %-12s python3 found, cffi missing %s(run: just setup-python, then: source .venv/bin/activate)%s\n' "$SKIP" "Python" "$DIM" "$NC"
-  fi
-else
-  printf ' %s %-12s not installed %s(python.org, 3.10+, then: just setup-python)%s\n' "$SKIP" "Python" "$DIM" "$NC"
-fi
-if check_optional "Dart"    "dart"    "run: just setup-dart"; then tracks_ready=$((tracks_ready + 1)); fi
+if probe_swift;  then tracks_ready=$((tracks_ready + 1)); fi
+if probe_kotlin; then tracks_ready=$((tracks_ready + 1)); fi
+if probe_python; then tracks_ready=$((tracks_ready + 1)); fi
+if probe_dart;   then tracks_ready=$((tracks_ready + 1)); fi
 
 # Track readiness shapes the banner only, never the exit code: one ready
 # track is plenty, and an attendee with one track must never be blocked.

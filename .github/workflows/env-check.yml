@@ -135,26 +135,16 @@ jobs:
       # this script at all.
       - name: self-check (stock image + cbindgen)
         shell: bash
+        # rust/c assert the script's required-toolchain contract (its exit
+        # code); track cells ask the script itself via --track, whose exit
+        # code is the machine contract self-check.sh now owns — no more
+        # grepping human-facing labels that reword themselves red.
         run: |
-          status=0
-          out=$(./scripts/self-check.sh 2>&1) || status=$?
-          printf '%s\n' "$out"
-          echo
-          echo "self-check exit code: $status"
-          # Strip ANSI colour codes so the track grep sees plain text.
-          plain=$(printf '%s\n' "$out" | sed 's/\x1b\[[0-9;]*m//g')
           case "${{ matrix.track }}" in
             rust|c)
-              exit "$status"
+              ./scripts/self-check.sh
               ;;
-            python) label='Python' ;;
-            dart)   label='Dart' ;;
-            kotlin) label='Kotlin/JNA' ;;
-            swift)  label='Swift' ;;
+            *)
+              ./scripts/self-check.sh --track "${{ matrix.track }}"
+              ;;
           esac
-          if printf '%s\n' "$plain" | grep -E "${label}[[:space:]]+ready" >/dev/null; then
-            echo "${label}: ready on a bare runner"
-          else
-            echo "${label}: NOT ready on a bare runner"
-            exit 1
-          fi
