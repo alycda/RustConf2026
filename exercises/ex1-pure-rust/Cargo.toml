@@ -1,0 +1,10 @@
+[package]
+name = "ex1-pure-rust"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "ex1_pure_rust"
+
+[dependencies]

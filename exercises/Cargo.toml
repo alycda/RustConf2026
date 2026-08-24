@@ -1,0 +1,18 @@
+# Your working directory, deliberately NOT part of days/.
+#
+# Why a workspace at all, for a couple of small crates:
+# - One edition/rust-version pin below, instead of a copy per crate that
+#   drifts 
+# - One Cargo.lock and one target/
+# - rust-analyzer discovers manifests only at a workspace root and one level
+#   below it (days/Cargo.toml documents the same constraint) — without this
+#   file, exercises/ex1-pure-rust/Cargo.toml is invisible to the IDE
+#
+
+[workspace]
+resolver = "3"
+members = ["ex1-pure-rust"]
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.85"
