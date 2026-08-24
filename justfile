@@ -1,3 +1,6 @@
+# just >= 1.31 required: `mod? days` (1.31) and `shell()` (1.27) below both
+# predate what apt/dnf ship — the README's manual path says so too.
+
 # Containers start with USER unset — .devcontainer/setup.sh defaults it to
 # root for the same reason. Recipes below shell out to tools that read it,
 # so derive it here and they behave the same in and out of the container.
