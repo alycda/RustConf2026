@@ -107,7 +107,7 @@
     "**/.jj/**": true,
     "**/.git/objects/**": true,
     "**/.git/subtree-cache/**": true,
-    "result/**": true,
+    "**/result/**": true,
     "**/.direnv/**": true,
     "**/.venv/**": true,
     "**/target/**": true,
@@ -118,7 +118,7 @@
     "**/.gradle/**": true,
     "**/build/**": true,
     "**/.dart_tool/**": true,
-    "book/book/**": true,
+    "**/book/book/**": true,
     "**/ios/Pods/**": true,
     "**/node_modules/**": true
   }
