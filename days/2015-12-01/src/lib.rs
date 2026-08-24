@@ -117,7 +117,7 @@ impl Solution for Day {
     /// the basement. See [`basement_position_via_c`].
     fn part2(&mut self) -> miette::Result<Self::Output> {
         basement_position_via_c(&self.0)?
-            .ok_or_else(|| miette::miette!("Santa never enters the basement"))
+            .ok_or_else(|| miette::miette!("🦀 Santa never enters the basement"))
     }
 }
 

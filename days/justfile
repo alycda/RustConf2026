@@ -59,6 +59,25 @@ bindgen day:
     cbindgen --config cbindgen.toml --output "include/aoc_${ident}.h" src/c_api.rs
     echo "wrote {{day}}/include/aoc_${ident}.h"
 
+# Exercise 3 (Python/cffi track): call a day's cbindgen C API from Python.
+# `just setup-python` once (repo-local .venv) first. Depends on `bindgen`
+# rather than duplicating its cbindgen invocation — same bonus convention
+# as `bench`/`bindgen` otherwise.
+python-demo day: (bindgen day)
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -f "{{day}}/python/solve.py" ]; then
+        echo "days/{{day}} has no python/solve.py — not every day carries one" >&2
+        exit 1
+    fi
+    cd "{{day}}" && cargo build --lib
+    cd ..
+    # Prefer the repo-local venv even when it isn't activated — same
+    # reasoning as scripts/self-check.sh's probe_python.
+    py="$(pwd)/../.venv/bin/python"
+    [ -x "$py" ] || py=python3
+    "$py" "{{day}}/python/solve.py"
+
 # scaffold a new day from _template, e.g. `just new 2022-12-01`
 new day:
     #!/usr/bin/env bash
