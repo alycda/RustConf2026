@@ -24,3 +24,28 @@
   C-glue stage has to strip a real crate's trait and error type at the boundary, which is
   the thing worth watching happen. It is the boundary layer's job to be small, not the
   day's.
+
+## Benchmarks (bonus)
+
+The reference day carries a criterion benchmark; nothing in the workshop needs one.
+
+```sh
+just days bench 2015-12-01
+just days bench 2015-12-01 --save-baseline pure-rust   # criterion flags pass through
+```
+
+The bench times the parse and the parts separately, over the statement example, a
+generated input at roughly the scale of a real one, and — only if you have dropped one at
+`days/inputs/<day>.txt` — your own. The generated input exists because puzzle inputs
+cannot be committed here and the examples are far too small to time; it is built from a
+fixed seed, so two runs are comparable.
+
+The point of them is comparison, not absolute numbers. On `2015-12-01`, part 2 stops at
+the first basement entry, so its timing tracks where in the input that happens rather
+than how long the input is — the kind of shape you have to know before a number that
+crosses the C boundary can be read at all. Later, `--save-baseline` before a part goes
+out through C and `--baseline` after it is what turns "the boundary costs something"
+into a figure.
+
+`cargo test` skips bench targets entirely, so `just days verify` only proves a bench
+still compiles (via the clippy gate, which lints `--all-targets`). It never runs one.

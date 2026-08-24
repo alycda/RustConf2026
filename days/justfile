@@ -18,6 +18,25 @@ test day:
 run day:
     cd {{day}} && cargo run
 
+# criterion benchmarks, where a day has them — a bonus, and not every day
+# carries one. `cargo test` skips bench targets, so what keeps these from
+# rotting is the clippy gate in `verify`: --all-targets compiles and lints a
+# bench without running it. Timings only ever come from here.
+#
+# criterion's own flags go on the end — `just days bench 2015-12-01
+# --save-baseline pure-rust`, then `--baseline pure-rust` once that day runs
+# through C. `--bench day` is what lets them through: it skips the libtest
+# bench targets cargo generates for the lib and the bin, which reject any
+# flag they do not recognise.
+bench day *args:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -f "{{day}}/benches/day.rs" ]; then
+        echo "days/{{day}} has no benchmark — not every day carries one" >&2
+        exit 1
+    fi
+    cd "{{day}}" && cargo bench --bench day -- {{args}}
+
 # scaffold a new day from _template, e.g. `just new 2022-12-01`
 new day:
     #!/usr/bin/env bash
