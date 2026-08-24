@@ -181,4 +181,4 @@ $RECYCLE.BIN/
 # Attendee puzzle inputs. days/.gitignore covers days/inputs/; this covers a
 # stray <repo>/inputs/ from running a day binary with a different working
 # directory, which in a jj repo would be auto-snapshotted on the next command.
-inputs/
+/inputs/
