@@ -51,6 +51,11 @@ pkgs.mkShell {
     # safety net: python3 for the Python track; git so pure/minimal shells
     # (and jj colocated clones) get a current git (no verification needed)
     python3 git
+    # 2015-12-01 JIT-compiles a C function with libtcc at runtime and calls
+    # it via FFI (days/2015-12-01/src/tcc.rs) instead of just summing in
+    # Rust — no system-wide tcc install needed, `pkg-config` picks up
+    # tinycc's libtcc.pc automatically via its setup hook.
+    tinycc pkg-config
   ];
 
   CHEAT_CONFIG_PATH = cheatConf;
