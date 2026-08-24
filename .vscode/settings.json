@@ -7,6 +7,25 @@
   // a local nix-shell get it too, not just the container ones.
   "direnv.restart.automatic": true,
 
+  // Format Rust on save, so the CI fmt gate never rejects a file the editor
+  // could have fixed. Not a nicety: the failure it prevents is invisible to
+  // read. The first one was a 61-character method chain against rustfmt's
+  // default chain_width of 60 — on a 69-character line, well inside
+  // max_width, so it looked correct to every human who saw it.
+  //
+  // Scoped to [rust], NOT set globally, because this repo carries eight
+  // toolchains and an attendee installs exactly one. A global formatOnSave
+  // would fire on Python/Kotlin/Swift/Dart/C files against whatever formatter
+  // that attendee happens to have — nagging them about missing extensions at
+  // best, reformatting a track they never opted into at worst.
+  //
+  // defaultFormatter is spelled out because "format on save" with more than
+  // one capable extension installed is a picker prompt, not a format.
+  "[rust]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "rust-lang.rust-analyzer"
+  },
+
   // VS Code's Explorer and search already read .gitignore
   // (search.useIgnoreFiles is on by default), so this file carries only the
   // things .gitignore cannot cover.
