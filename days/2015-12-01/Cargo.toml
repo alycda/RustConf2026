@@ -10,4 +10,9 @@ derive_more.workspace = true
 miette.workspace = true
 
 [dev-dependencies]
+criterion.workspace = true
 rstest.workspace = true
+
+[[bench]]
+name = "sum"
+harness = false

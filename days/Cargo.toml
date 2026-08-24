@@ -37,6 +37,7 @@ rust-version = "1.85"
 # one table answers "what version of X does this repo use" for every crate.
 [workspace.dependencies]
 aoc-ornaments = "0.1.10"
+criterion = "0.7"
 derive_more = { version = "1", features = ["deref"] }
 itertools = "0.14"
 miette = { version = "7.4", features = ["fancy"] }
