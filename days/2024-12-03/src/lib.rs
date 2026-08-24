@@ -102,15 +102,21 @@ impl<P> Day3<P> {
                     products.push(Product::new(product.0, product.1));
                     input = remainder;
                 }
-                // Handle various parsing errors by skipping invalid input
+                // Any recoverable parse error means the bytes at the cursor are
+                // corruption, not a mul() — skip one byte and rescan. digit1
+                // failing after `mul(` (ErrorKind::Digit, e.g. `mul(x,4)` or a
+                // truncated `mul(2,` at a fragment end) lands here too; the
+                // old catch-all panicked on exactly that input.
                 Err(nom::Err::Error(err)) => match err.code {
-                    ErrorKind::Char if input.len() > 1 => {
-                        input = &input[1..];
-                    }
                     ErrorKind::TakeUntil => {
                         input = "";
                     }
-                    e => panic!("Error: {:?}", e),
+                    _ if input.len() > 1 => {
+                        input = &input[1..];
+                    }
+                    _ => {
+                        input = "";
+                    }
                 },
                 Err(e) => {
                     dbg!(e);
@@ -233,6 +239,17 @@ mod tests {
     fn test_part1() -> miette::Result<()> {
         let input = "xmul(2,4)%&mul[3,7]!@^do_not_mul(5,5)+mul(32,64]then(mul(11,8)mul(8,5))";
         assert_eq!("161", Day3::<Part1>::from_str(input)?.solve(Part::One)?);
+        Ok(())
+    }
+
+    /// The inputs that used to reach the panic arm: a non-digit right
+    /// after `mul(` fails digit1 with ErrorKind::Digit, which the old
+    /// catch-all turned into a crash instead of skipping as corruption.
+    #[test]
+    fn test_part1_corruption_is_skipped_not_panicked() -> miette::Result<()> {
+        assert_eq!("8", Day3::<Part1>::from_str("mul(x,4)mul(2,4)")?.solve(Part::One)?);
+        assert_eq!("8", Day3::<Part1>::from_str("mul(mul(2,4)")?.solve(Part::One)?);
+        assert_eq!("8", Day3::<Part1>::from_str("mul(2,4)mul(2,")?.solve(Part::One)?);
         Ok(())
     }
 
