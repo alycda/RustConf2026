@@ -3,7 +3,8 @@
 # Why a workspace at all, for a couple of small crates:
 # - One edition/rust-version pin below, instead of a copy per crate that
 #   drifts 
-# - One Cargo.lock and one target/
+# - One Cargo.lock and one target/, so ex2 building against ex1 is
+#   incremental
 # - rust-analyzer discovers manifests only at a workspace root and one level
 #   below it (days/Cargo.toml documents the same constraint) — without this
 #   file, exercises/ex1-pure-rust/Cargo.toml is invisible to the IDE
