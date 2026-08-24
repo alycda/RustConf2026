@@ -1,0 +1,38 @@
+# The attendee's working directory, and deliberately NOT part of days/.
+#
+# days/Cargo.toml claims every directory beside it with `members = ["*"]`, so
+# putting the exercises there would have been one line. It would also have
+# been wrong. The exercises are built around being unfinished: they arrive
+# incomplete and are finished only by the attendee. days/ is tested with
+# `cargo test --workspace` and linted with `-D warnings`, so an unfinished
+# crate in that tree breaks verification for everyone. An exercise that could
+# go green before the attendee wrote anything would not be an exercise.
+#
+# Why a workspace at all, for a couple of small crates:
+# - One edition/rust-version pin below, instead of a copy per crate that
+#   drifts (the resurrected skeleton had drifted to 2021 while every day
+#   declares 2024 — exactly this failure).
+# - One Cargo.lock and one target/, so ex2 building against ex1 is
+#   incremental and `--locked` means something here.
+# - rust-analyzer discovers manifests only at a workspace root and one level
+#   below it (days/Cargo.toml documents the same constraint) — without this
+#   file, exercises/ex1-pure-rust/Cargo.toml is invisible to the IDE every
+#   attendee is sitting in.
+#
+# No [workspace.dependencies] table: the exercises have zero external
+# dependencies by design — the boundary is the exercise, not the crates
+# ecosystem — and the table can arrive with the first real shared dependency
+# instead of standing empty.
+#
+# Members are listed by name rather than globbed, and this list grows as the
+# exercises land in the commits above: ex3-bindings never joins (not a Rust
+# crate — one directory per language track), and neither does
+# ex4-choose-your-own-adventure (not even a fixed exercise).
+
+[workspace]
+resolver = "3"
+members = ["ex1-pure-rust"]
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.85"
