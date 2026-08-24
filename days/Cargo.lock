@@ -65,6 +65,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "aoc-2022-12-01"
+version = "0.1.0"
+dependencies = [
+ "aoc-ornaments",
+ "miette",
+ "rstest",
+]
+
+[[package]]
 name = "aoc-day-template"
 version = "0.1.0"
 dependencies = [
