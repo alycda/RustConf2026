@@ -47,7 +47,9 @@ bindgen day:
     #!/usr/bin/env bash
     set -euo pipefail
     if [ ! -f "{{day}}/cbindgen.toml" ]; then
-        echo "days/{{day}} has no cbindgen.toml — not every day carries a C API" >&2
+        echo "days/{{day}} has no cbindgen.toml — not every day carries a C API." >&2
+        echo "To give it one (Exercise 2's shape): copy days/2015-12-01/cbindgen.toml," >&2
+        echo "add a src/c_api.rs, and set crate-type = [\"rlib\", \"cdylib\"] in Cargo.toml." >&2
         exit 1
     fi
     ident="$(printf '%s' "{{day}}" | tr - _)"
