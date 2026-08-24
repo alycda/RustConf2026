@@ -4,7 +4,7 @@
 |----------|--------|----------------|----------------|
 | Ex 1 | ex1-pure-rust | TBD | Idiomatic Rust solution to your chosen day |
 | Ex 2 | ex2-c-glue | TBD | |
-| Ex 3 | ex3-bindings | TBD | |
+| Ex 3 | ex3-bindings | TBD | Bindings in the ONE language track you chose |
 | Next |
 
 ## Ground rules
