@@ -38,9 +38,12 @@
 
 name: Verify
 
+# push alone, no pull_request: this repo's validation flow pushes wip/*
+# branches directly, so every commit already gets a push run — a PR trigger
+# would run the same jobs a second time (concurrency groups keyed on
+# github.ref never cancel across the branch/merge-ref pair).
 on:
   push:
-  pull_request:
   workflow_dispatch: {}
 
 # Least privilege: this workflow only reads the repo.
