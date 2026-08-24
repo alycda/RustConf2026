@@ -53,11 +53,15 @@ def load_library():
     sys.exit("no libaoc_2015_12_01.{so,dylib} found — run: cd days && cargo build -p aoc-2015-12-01 --lib")
 
 
-def call(ffi, fn, text: str) -> int | None:
-    """Runs one of the C API's out-param/status-code functions. `None` means
-    the C side reported an error (-1 bad input, -2 domain error)."""
+def call(ffi, fn, name: str, text: str) -> int:
+    """Runs one of the C API's out-param/status-code functions. A nonzero
+    status is an error the C side already classified — report it and exit
+    nonzero rather than printing a phantom answer."""
     out = ffi.new("int *")
-    return out[0] if fn(text.encode(), out) == 0 else None
+    status = fn(text.encode(), out)
+    if status != 0:
+        sys.exit(f"{name} failed with status {status} (-1 bad input, -2 domain error)")
+    return out[0]
 
 
 def main() -> None:
@@ -68,8 +72,8 @@ def main() -> None:
         sys.exit(f"no puzzle input at {input_path} (see days/.gitignore)")
     text = input_path.read_text()
 
-    print(f"Part 1 🐍(🦀): {call(ffi, lib.aoc_2015_12_01_part1, text)}")
-    print(f"Part 2 🐍(🦀): {call(ffi, lib.aoc_2015_12_01_part2, text)}")
+    print(f"Part 1 🐍(🦀): {call(ffi, lib.aoc_2015_12_01_part1, 'part1', text)}")
+    print(f"Part 2 🐍(🦀): {call(ffi, lib.aoc_2015_12_01_part2, 'part2', text)}")
 
 
 if __name__ == "__main__":
