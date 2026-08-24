@@ -14,7 +14,11 @@ let
   # next prompt because .envrc watches .cheat; plain nix-shell users
   # re-enter the shell instead.
   cheatPaths = [
-    { name = "ffi-playground"; path = ./.cheat; tags = "[]"; }
+    # builtins.path with an explicit name: interpolating ./.cheat directly
+    # would store it under its basename, and store names starting with a
+    # period are rejected before Nix 2.20 — killing the whole shell, required
+    # toolchain included, on distro-packaged Nix.
+    { name = "ffi-playground"; path = builtins.path { path = ./.cheat; name = "ffi-playground-cheat"; }; tags = "[]"; }
   ] ++ pkgs.lib.optionals (isJJContainer && builtins.pathExists ./.devcontainer/jj/cheat) [
     { name = "jj"; path = ./.devcontainer/jj/cheat; tags = "[ jj ]"; }
   ];
