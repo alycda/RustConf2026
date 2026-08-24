@@ -21,6 +21,8 @@ fn main() -> miette::Result<()> {
     let part2 = day.solve(Part::Two)?;
 
     let font = Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/fonts/standard.flf"));
+
+    println!("🦀:");
     print!("{}", caca::figlet_banner(font, &part1)?);
     print!("{}", caca::figlet_banner(font, &part2)?);
 
