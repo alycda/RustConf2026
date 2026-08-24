@@ -51,10 +51,12 @@ pkgs.mkShell {
     # safety net: python3 for the Python track; git so pure/minimal shells
     # (and jj colocated clones) get a current git (no verification needed)
     python3 git
-    # 2015-12-01 banners its answer through libcaca's FIGlet engine at
-    # runtime via FFI (days/2015-12-01/src/caca.rs) — `pkg-config` picks up
-    # libcaca's caca.pc automatically via its setup hook.
-    libcaca pkg-config
+    # 2015-12-01 banners its answer through libcaca's FIGlet engine
+    # (days/2015-12-01/src/caca.rs) and JIT-compiles a C function with
+    # libtcc at runtime (days/2015-12-01/src/tcc.rs), both via FFI — no
+    # system-wide installs needed, `pkg-config` picks up caca.pc and
+    # libtcc.pc automatically via its setup hook.
+    libcaca tinycc pkg-config
   ];
 
   CHEAT_CONFIG_PATH = cheatConf;
