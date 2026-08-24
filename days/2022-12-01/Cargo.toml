@@ -1,0 +1,18 @@
+[package]
+name = "aoc-2022-12-01"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+
+[dependencies]
+aoc-ornaments = "0.1.10"
+miette = { version = "7.4", features = ["fancy"] }
+
+# Reach for these as the solution needs them — versions match what
+# aoc-ornaments already pulls in, so they cost no extra build.
+# derive_more = { version = "1", features = ["deref"] }
+# itertools = "0.14"
+# nom = "7.1.3"
+
+[dev-dependencies]
+rstest = "0.24"
