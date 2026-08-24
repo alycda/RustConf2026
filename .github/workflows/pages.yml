@@ -1,0 +1,47 @@
+# Publish the mdBook to GitHub Pages on every push to main.
+#
+# mdbook is invoked directly rather than through a just recipe: this tree's
+# justfile wiring for the book lives further up the graph, and a workflow
+# that depends only on what its own tree contains keeps the green checkmark
+# honest — the same rule the Verify matrix follows.
+
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      # prebuilt binary: `cargo install mdbook` compiles from source for
+      # minutes; install-action downloads a release in seconds
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: mdbook
+      - run: mdbook build book
+      - run: mv book/book _site
+      - uses: actions/upload-pages-artifact@v3
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deployment
