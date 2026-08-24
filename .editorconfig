@@ -1,0 +1,18 @@
+# Costs nothing now, invisible until history is rewritten — the same bargain
+# as getting .gitignore right in the first commit. Rebuilding this workshop's
+# history (ffi-playground -> RustConf2026) hit add/add conflicts twice whose
+# entire difference was the last byte: a hand-written LICENSE against
+# GitHub's generated one, and two otherwise-identical copies of
+# scripts/self-check.sh. See https://github.com/alycda/dev/issues/2
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+
+# Style only. Width is deliberately unset: shell.nix, the workflows and
+# scripts/self-check.sh run 2, while the devcontainer manifests and the
+# justfile run 4 — pinning one number here would put the editor at war with
+# half the repo.
+indent_style = space
