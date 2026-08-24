@@ -37,6 +37,28 @@ bench day *args:
     fi
     cd "{{day}}" && cargo bench --bench day -- {{args}}
 
+# cbindgen header for a day's C-callable surface (Exercise 2), where a day
+# has one — same bonus convention as `bench`. Not committed (see
+# days/.gitignore): cbindgen is required workshop tooling, so this is
+# always a `just` call away instead of a file to keep in sync by hand.
+# Exercise 3 tracks (e.g. Python/cffi) regenerate it the same way before
+# loading the cdylib.
+bindgen day:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -f "{{day}}/cbindgen.toml" ]; then
+        echo "days/{{day}} has no cbindgen.toml — not every day carries a C API" >&2
+        exit 1
+    fi
+    ident="$(printf '%s' "{{day}}" | tr - _)"
+    cd "{{day}}"
+    mkdir -p include
+    # src/c_api.rs, not the crate dir: cbindgen would otherwise also walk
+    # the tcc/caca modules' own `extern "C"` FFI *imports* (libtcc/libcaca
+    # declarations, not part of this day's C API) and redeclare them here.
+    cbindgen --config cbindgen.toml --output "include/aoc_${ident}.h" src/c_api.rs
+    echo "wrote {{day}}/include/aoc_${ident}.h"
+
 # scaffold a new day from _template, e.g. `just new 2022-12-01`
 new day:
     #!/usr/bin/env bash
