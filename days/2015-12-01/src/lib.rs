@@ -4,6 +4,8 @@ use std::str::FromStr;
 
 use aoc_ornaments::Solution;
 
+pub mod caca;
+
 /// A collection of instructions to move between floors.
 #[derive(Debug, derive_more::Deref)]
 pub struct Day(Vec<i32>);

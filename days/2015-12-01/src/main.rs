@@ -1,6 +1,7 @@
+use std::path::Path;
 use std::str::FromStr;
 
-use aoc_2015_12_01::Day;
+use aoc_2015_12_01::{Day, caca};
 use aoc_ornaments::{Part, Solution};
 
 /// Run Part 1 and Part 2 against your own puzzle input.
@@ -19,8 +20,9 @@ fn main() -> miette::Result<()> {
     let part1 = day.solve(Part::One)?;
     let part2 = day.solve(Part::Two)?;
 
-    println!("Part 1: {}", part1);
-    println!("Part 2: {}", part2);
+    let font = Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/fonts/standard.flf"));
+    print!("{}", caca::figlet_banner(font, &part1)?);
+    print!("{}", caca::figlet_banner(font, &part2)?);
 
     Ok(())
 }
