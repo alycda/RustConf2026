@@ -1,9 +1,9 @@
 # Costs nothing now, invisible until history is rewritten — the same bargain
 # as getting .gitignore right in the first commit. Rebuilding this workshop's
-# history (ffi-playground -> RustConf2026) hit add/add conflicts twice whose
+# history hit add/add conflicts twice whose
 # entire difference was the last byte: a hand-written LICENSE against
 # GitHub's generated one, and two otherwise-identical copies of
-# scripts/self-check.sh. See https://github.com/alycda/dev/issues/2
+# scripts/self-check.sh. 
 root = true
 
 [*]

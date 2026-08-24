@@ -11,7 +11,7 @@ You pick one and carry it through the stages.
 ## Pick from the menu, not from the directory listing
 
 The menu lives in
-[`days/README.md`](https://github.com/alycda/ffi-playground/blob/main/days/README.md),
+[`days/README.md`](https://github.com/alycda/RustConf2026/blob/main/days/README.md),
 next to the crates it indexes. Read it there rather than browsing the tree: the
 column that matters is not the puzzle, it's the **boundary shape** — what has
 to cross the FFI boundary once the Rust part is done.

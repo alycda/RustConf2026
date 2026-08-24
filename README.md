@@ -49,7 +49,7 @@ Nix doesn't run natively on Windows, but WSL2 is Linux, and Linux is fine.
 2. Follow **Option 1** from inside WSL. If the Nix installer complains about
    systemd, enable it: add `[boot]` / `systemd=true` to `/etc/wsl.conf`,
    then `wsl --shutdown` and reopen.
-3. Clone the repo *inside* WSL (e.g. `~/ffi-playground`), not on `/mnt/c` —
+3. Clone the repo *inside* WSL (e.g. `~/RustConf2026`), not on `/mnt/c` —
    the Windows filesystem bridge is slow enough to hurt.
 
 ## Option 3: Docker — VS Code devcontainer
@@ -143,7 +143,7 @@ The book is published, so you never need to build it locally.
 
 ## If it didn't work
 
-Open an issue: https://github.com/alycda/ffi-playground/issues. Do it before
+Open an issue: https://github.com/alycda/RustConf2026/issues. Do it before
 the session rather than during it — a broken environment is much cheaper to
 fix the day before.
 

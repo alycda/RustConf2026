@@ -6,7 +6,7 @@ five tools are *required*: `rustc`, `cargo`, `cbindgen`, a C compiler, and
 `just`. The one extra in the box, `cheat`, is cheatsheets for the FFI
 patterns we'll hit — useful, and safe to ignore. How the required
 five get onto your machine is your choice; the
-[repo README](https://github.com/alycda/ffi-playground#readme) walks each
+[repo README](https://github.com/alycda/RustConf2026#readme) walks each
 path in detail. In brief:
 
 ## The four paths
