@@ -11,6 +11,17 @@ rust-version.workspace = true
 [lib]
 crate-type = ["rlib", "cdylib"]
 
+# The variant links a real C library at build time — build.rs probes
+# pkg-config only for the features you enable — so it is off by default: a
+# bare `cargo test --workspace` stays green on stock CI runners and the
+# manual-setup path alike. The nix shell carries the library.
+#
+# Note there is no `cargo run --features espeak`: this variant deliberately
+# does not answer the puzzle, so nothing routes to it. See src/espeak.rs.
+#   cargo test -p aoc-2023-12-01 --features espeak
+[features]
+espeak = []
+
 [dependencies]
 aoc-ornaments.workspace = true
 miette.workspace = true
@@ -32,3 +43,10 @@ criterion.workspace = true
 [[bench]]
 name = "day"
 harness = false
+
+# The scoreboard needs the library it scores, so it declares the feature:
+# without it the target is skipped rather than failing `--all-targets`, which
+# is the same rule a bench racing a C library follows.
+[[example]]
+name = "espeak_scoreboard"
+required-features = ["espeak"]

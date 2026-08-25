@@ -17,8 +17,14 @@ use std::str::FromStr;
 use aoc_ornaments::{Solution, SolutionResult};
 
 pub mod c_api;
+#[cfg(feature = "espeak")]
+pub mod espeak;
 
-const WORDS: [(&str, u32); 9] = [
+/// The nine spelled-out digits, in value order. `pub(crate)` because the
+/// `espeak` module phonemises this list rather than repeating it — two copies
+/// of these nine words is two places for a typo to answer a slightly
+/// different puzzle.
+pub(crate) const WORDS: [(&str, u32); 9] = [
     ("one", 1),
     ("two", 2),
     ("three", 3),

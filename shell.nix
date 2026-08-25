@@ -51,6 +51,14 @@ pkgs.mkShell {
     # safety net: python3 for the Python track; git so pure/minimal shells
     # (and jj colocated clones) get a current git (no verification needed)
     python3 git
+    # 2023-12-01 hears its calibration digits through espeak-ng, the speech
+    # synthesiser (days/2023-12-01/src/espeak.rs), behind the off-by-default
+    # `espeak` cargo feature. nixpkgs ships espeak-ng.pc, so unlike
+    # 2021-12-02's chipmunk and duckdb there is nothing to synthesize here —
+    # build.rs finds it through pkg-config's setup hook with no hardcoded
+    # store path, and espeak's own dictionaries come from the data directory
+    # compiled into the library.
+    espeak-ng pkg-config
   ];
 
   CHEAT_CONFIG_PATH = cheatConf;
