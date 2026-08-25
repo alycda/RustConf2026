@@ -11,6 +11,15 @@ rust-version.workspace = true
 [lib]
 crate-type = ["rlib", "cdylib"]
 
+# The variant links a real C library at build time — build.rs probes
+# pkg-config, and compiles yara_shim.c, only for the features you enable — so
+# it is off by default: a bare `cargo test --workspace` stays green on stock CI
+# runners and the manual-setup path alike. The nix shell carries the library.
+# The full absurdity is:
+#   cargo run --features yara        # a malware-scanning engine
+[features]
+yara = []
+
 [dependencies]
 aoc-ornaments.workspace = true
 miette.workspace = true

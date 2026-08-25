@@ -51,6 +51,12 @@ pkgs.mkShell {
     # safety net: python3 for the Python track; git so pure/minimal shells
     # (and jj colocated clones) get a current git (no verification needed)
     python3 git
+    # 2023-12-01 runs its calibration scan through YARA, the malware-scanning
+    # engine (days/2023-12-01/src/yara.rs), behind the off-by-default `yara`
+    # cargo feature. nixpkgs ships yara.pc, so unlike 2021-12-02's chipmunk and
+    # duckdb there is nothing to synthesize here — build.rs finds it through
+    # pkg-config's setup hook with no hardcoded store path.
+    yara pkg-config
   ];
 
   CHEAT_CONFIG_PATH = cheatConf;

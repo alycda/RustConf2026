@@ -17,8 +17,14 @@ use std::str::FromStr;
 use aoc_ornaments::{Solution, SolutionResult};
 
 pub mod c_api;
+#[cfg(feature = "yara")]
+pub mod yara;
 
-const WORDS: [(&str, u32); 9] = [
+/// The nine spelled-out digits, in value order. `pub(crate)` because the
+/// `yara` module builds its rule text from this list rather than repeating
+/// it — two copies of these nine words is two places for a typo to answer a
+/// slightly different puzzle.
+pub(crate) const WORDS: [(&str, u32); 9] = [
     ("one", 1),
     ("two", 2),
     ("three", 3),
@@ -155,17 +161,78 @@ fn checked_total(values: impl IntoIterator<Item = u32>) -> Option<u32> {
     values.into_iter().try_fold(0u32, u32::checked_add)
 }
 
+/// Runs the same scan through YARA: one compiled rule set for the whole
+/// solve, one `yr_rules_scan_mem` per line, the answer taken from the reported
+/// match offsets.
+///
+/// Part two needs nothing extra here beyond nine more strings in the rule.
+/// Overlapping spelled-out digits — `oneight` being a `1` and an `8` that
+/// share an `e` — are not a special case for a multi-pattern scanner; they are
+/// two occurrences, which is what it reports. See [`yara`] for the two things
+/// about that reporting the scratchpad had to find out first.
+#[cfg(feature = "yara")]
+pub fn sum_calibration_via_yara(lines: &[String]) -> miette::Result<u32> {
+    scan_via_yara(lines, false)
+}
+
+/// Part two through YARA. See [`sum_calibration_via_yara`].
+#[cfg(feature = "yara")]
+pub fn sum_calibration_with_words_via_yara(lines: &[String]) -> miette::Result<u32> {
+    scan_via_yara(lines, true)
+}
+
+/// One scanner per solve, sized to the longest line it will be given.
+///
+/// A fresh rule set per solve is the same isolation choice 2021-12-02 made for
+/// its `cpSpace` and its DuckDB connection, and here it is also where a third
+/// of the time goes — compiling the rules costs ~0.4 ms against ~1.4 ms of
+/// scanning for a thousand lines. `benches/calibration.rs` reports the two
+/// separately rather than burying one in the other.
+#[cfg(feature = "yara")]
+fn scan_via_yara(lines: &[String], words: bool) -> miette::Result<u32> {
+    let longest = lines.iter().map(String::len).max().unwrap_or(0);
+    let mut scanner = yara::Scanner::new(words, longest)?;
+
+    let mut total: u32 = 0;
+    for line in lines {
+        total = total
+            .checked_add(scanner.calibration_value(line)?)
+            .ok_or_else(|| miette::miette!("calibration sum overflows a u32"))?;
+    }
+    Ok(total)
+}
+
 impl Solution for Day {
     type Output = u32;
 
-    /// Sum the calibration values, digits only.
+    /// Sum the calibration values, digits only, through whichever backend is
+    /// compiled in.
+    ///
+    /// YARA wins when it is on, because it is the variant that answers the
+    /// puzzle exactly — see `days/2023-12-01/README.md` for the one that
+    /// deliberately does not and is never routed to.
     fn part1(&mut self) -> SolutionResult<Self::Output> {
-        Ok(sum_calibration_pure_rust(&self.0))
+        #[cfg(feature = "yara")]
+        {
+            sum_calibration_via_yara(&self.0)
+        }
+        #[cfg(not(feature = "yara"))]
+        {
+            Ok(sum_calibration_pure_rust(&self.0))
+        }
     }
 
-    /// Sum the calibration values, digits and spelled-out digits.
+    /// Sum the calibration values, digits and spelled-out digits — same
+    /// backend precedence as `part1`.
     fn part2(&mut self) -> SolutionResult<Self::Output> {
-        Ok(sum_calibration_with_words_pure_rust(&self.0))
+        #[cfg(feature = "yara")]
+        {
+            sum_calibration_with_words_via_yara(&self.0)
+        }
+        #[cfg(not(feature = "yara"))]
+        {
+            Ok(sum_calibration_with_words_pure_rust(&self.0))
+        }
     }
 }
 
@@ -227,6 +294,43 @@ zoneight234
         assert_eq!(checked_total([0u32; 0]), Some(0));
         assert_eq!(checked_total([u32::MAX, 1]), None);
         assert_eq!(checked_total([u32::MAX - 98, 99]), None);
+    }
+
+    /// The same two answers out of the scanning engine, and — the part the
+    /// per-module tests can't cover — that it agrees with plain Rust rather
+    /// than merely with the puzzle's two published totals. The overlap-heavy
+    /// part-two example is exactly where a multi-pattern scanner and a
+    /// forward scan could plausibly disagree.
+    #[cfg(feature = "yara")]
+    #[test]
+    fn test_yara_backend_agrees_with_pure_rust() -> miette::Result<()> {
+        let part1 = Day::from_str("1abc2\npqr3stu8vwx\na1b2c3d4e5f\ntreb7uchet")?;
+        assert_eq!(sum_calibration_via_yara(&part1)?, 142);
+        assert_eq!(
+            sum_calibration_via_yara(&part1)?,
+            sum_calibration_pure_rust(&part1)
+        );
+
+        let part2 = Day::from_str(
+            "two1nine\neightwothree\nabcone2threexyz\nxtwone3four\n4nineeightseven2\nzoneight234\n7pqrstsixteen",
+        )?;
+        assert_eq!(sum_calibration_with_words_via_yara(&part2)?, 281);
+        assert_eq!(
+            sum_calibration_with_words_via_yara(&part2)?,
+            sum_calibration_with_words_pure_rust(&part2)
+        );
+        Ok(())
+    }
+
+    /// An empty input is a real shape — `Day::from_str("")` has no lines — and
+    /// it is the one that would trip a scanner sized from `max().unwrap_or(0)`
+    /// if the zero case were not handled.
+    #[cfg(feature = "yara")]
+    #[test]
+    fn test_yara_empty_input() -> miette::Result<()> {
+        assert_eq!(sum_calibration_via_yara(&[])?, 0);
+        assert_eq!(sum_calibration_with_words_via_yara(&[])?, 0);
+        Ok(())
     }
 
     /// A line whose characters are not all one byte wide. Asserted for its
