@@ -63,14 +63,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # TEMPORARILY trimmed to the linux column for heavy iteration:
-        # linux is the 1x-billed runner, so the full track row costs ~6
-        # billed minutes per push instead of ~78 (macos is 10x, windows
-        # 2x, and billing rounds up per job). The full map has already
-        # been taken — its findings live in the header above. Restore the
-        # full grid by swapping the os line back to:
-        #   os: [ubuntu-latest, macos-latest, windows-latest]
-        os: [ubuntu-latest]
+        # The full grid, restored: it was trimmed to the linux column while
+        # the repo was private (macos bills 10x there), but public repos
+        # are not billed for standard runners, and this map of attendee
+        # environments across all three OSes is the workflow's whole job.
+        os: [ubuntu-latest, macos-latest, windows-latest]
         track: [rust, c, python, dart, kotlin, swift]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
