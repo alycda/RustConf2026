@@ -57,7 +57,11 @@ fn generated(chars: usize) -> String {
     let mut seed = 0x2015_1201;
 
     for _ in 0..chars {
-        let c = if xorshift(&mut seed) % 2 == 0 { '(' } else { ')' };
+        let c = if xorshift(&mut seed) % 2 == 0 {
+            '('
+        } else {
+            ')'
+        };
         write!(out, "{c}").expect("writing to a String cannot fail");
     }
 
