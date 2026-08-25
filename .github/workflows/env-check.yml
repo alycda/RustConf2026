@@ -151,3 +151,73 @@ jobs:
               ./scripts/self-check.sh --track "${{ matrix.track }}"
               ;;
           esac
+      # Beyond the env check: on a branch that carries a worked Exercise 3
+      # (Swift on 2023-12-01), prove the track end to end — cdylib, header from
+      # the cbindgen this job already installs, then solve.swift against the
+      # puzzle-statement example. Real inputs stay out of CI by the same rule
+      # that keeps them out of the repo (days/.gitignore); statement examples
+      # are published in the puzzle text and fair game. The seven lines below
+      # are part two's example, and the two parts answer 209 and 281 — two
+      # different numbers on one input, so neither assertion can be satisfied
+      # by the other part's answer.
+      #
+      # `just` is not on a stock runner, so the swift-demo recipe's steps are
+      # spelled out here rather than invoked — same as the python and dart
+      # cells. Branches without the worked track skip cleanly.
+      #
+      # This track fetches nothing: no pip, no pub, no pinned jar from Maven.
+      # The C API arrives through the generated header, which module.modulemap
+      # hands to clang, so the only inputs are the ones this repo built.
+      #
+      # No `swift build`/SwiftPM here on purpose. A Package.swift would want
+      # its own manifest, its own systemLibrary target and its own opinion
+      # about where the cdylib lives; `swiftc` with an -I and two -L/-rpath
+      # pairs is the same thing the recipe does, and keeping the two identical
+      # is what makes a red cell here mean something about the track rather
+      # than about a second build system.
+      - name: swift track end-to-end (2023-12-01)
+        if: matrix.track == 'swift'
+        shell: bash
+        run: |
+          if [ ! -f days/2023-12-01/swift/solve.swift ]; then
+            echo "no worked swift track on this branch — skipping"
+            exit 0
+          fi
+          (cd days && cargo build -p aoc-2023-12-01 --lib)
+          (cd days/2023-12-01 && mkdir -p include && \
+            cbindgen --config cbindgen.toml --output include/aoc_2023_12_01.h src/c_api.rs)
+          mkdir -p days/inputs
+          printf '%s\n' 'two1nine' 'eightwothree' 'abcone2threexyz' 'xtwone3four' \
+            '4nineeightseven2' 'zoneight234' '7pqrstsixteen' > days/inputs/2023-12-01.txt
+          target="$(cd days/target && pwd)"
+          cd days/2023-12-01/swift
+          mkdir -p .build
+          swiftc solve.swift -o .build/solve \
+            -I . \
+            -L "$target/debug" -L "$target/release" \
+            -laoc_2023_12_01 \
+            -Xlinker -rpath -Xlinker "$target/debug" \
+            -Xlinker -rpath -Xlinker "$target/release"
+          out="$(./.build/solve)"
+          echo "$out"
+          # Two assertions, not one, because they fail for different reasons
+          # and only one of them is a real problem.
+          #
+          # First the answers, matched loosely: this is the thing that must be
+          # true, and it stays true however the line is labelled.
+          echo "$out" | grep -qE '^Part 1 .*: 209$'
+          echo "$out" | grep -qE '^Part 2 .*: 281$'
+          # Then the label, byte for byte, because the `Part N <emoji>(🦀)`
+          # shape is a repo-wide convention and silent drift in it is worth a
+          # red cell. Kept separate so this failure can say which one it was —
+          # a bare `exit 1` after two correct answers reads as a broken track
+          # when it is actually a cosmetic edit that did not reach this file.
+          #
+          # Unlike the Kotlin cell, there is no variation-selector trap here:
+          # 🐦 is U+1F426 on its own, four bytes, with nothing invisible after
+          # it. Copy the label from swift/solve.swift anyway if you change it.
+          if ! echo "$out" | grep -qF 'Part 1 🐦(🦀): 209' \
+            || ! echo "$out" | grep -qF 'Part 2 🐦(🦀): 281'; then
+            echo "::error::answers are correct but the label drifted — re-sync this step with days/2023-12-01/swift/solve.swift" >&2
+            exit 1
+          fi
