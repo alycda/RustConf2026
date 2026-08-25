@@ -51,6 +51,10 @@ pkgs.mkShell {
     # safety net: python3 for the Python track; git so pure/minimal shells
     # (and jj colocated clones) get a current git (no verification needed)
     python3 git
+    # 2015-12-05 scans lines through vectorscan (the maintained Hyperscan
+    # fork) via FFI (days/2015-12-05/src/hyperscan.rs) — `pkg-config` picks
+    # up its libhs.pc automatically via its setup hook.
+    vectorscan pkg-config
   ];
 
   CHEAT_CONFIG_PATH = cheatConf;
