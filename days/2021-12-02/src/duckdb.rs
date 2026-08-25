@@ -237,7 +237,9 @@ impl Course {
         let up = CString::new("up").expect("no NUL byte");
 
         // SAFETY: `self.connection` is live; the appender is closed and
-        // destroyed on every path out, including the error ones.
+        // destroyed on every path out, including the error ones — the create
+        // failure included, which is the path that is easy to get wrong
+        // because it looks like there is nothing yet to destroy.
         unsafe {
             if duckdb_appender_create(
                 self.connection,
@@ -246,7 +248,16 @@ impl Course {
                 &mut appender,
             ) != DUCKDB_SUCCESS
             {
-                return Err(miette::miette!("duckdb_appender_create failed"));
+                // Failure still hands back a handle: DuckDB allocates the
+                // wrapper and writes `*out_appender` before the step that can
+                // fail, then hangs the message off it. So the message is
+                // readable here, and destroy is required here.
+                if appender.is_null() {
+                    return Err(miette::miette!("duckdb_appender_create failed"));
+                }
+                let message = error_text(duckdb_appender_error(appender));
+                duckdb_appender_destroy(&mut appender);
+                return Err(miette::miette!("duckdb_appender_create failed: {message}"));
             }
 
             for (index, command) in commands.iter().enumerate() {
@@ -415,6 +426,27 @@ mod tests {
     fn the_query_answers_wider_than_an_i32() -> miette::Result<()> {
         let course = Course::load(&[Command::Forward(100_000), Command::Down(100_000)])?;
         assert_eq!(course.scalar(PART1_SQL)?, 10_000_000_000);
+        Ok(())
+    }
+
+    /// The appender's create failure is reachable without any FFI trickery:
+    /// drop the table out from under it. Asserting on the message rather than
+    /// on `is_err()` is the point — DuckDB names the table it could not find,
+    /// and that text was previously freed unread along with the handle it
+    /// hangs off.
+    #[test]
+    fn a_missing_table_surfaces_duckdbs_own_message() -> miette::Result<()> {
+        let course = Course::load(&[])?;
+        course.execute("DROP TABLE course")?;
+
+        let error = course
+            .append(&[Command::Forward(1)])
+            .expect_err("there is no table to append to")
+            .to_string();
+        assert!(
+            error.contains("course"),
+            "expected DuckDB's message naming the table, got: {error}"
+        );
         Ok(())
     }
 

@@ -88,7 +88,7 @@ once).
 cd days/2021-12-02 && cargo run                        # pure Rust
 cargo run -p aoc-2021-12-02 --features chipmunk        # through the physics engine
 cargo run -p aoc-2021-12-02 --features duckdb          # through the database
-cargo test -p aoc-2021-12-02 --features chipmunk,duckdb  # 24 tests, every backend
+cargo test -p aoc-2021-12-02 --features chipmunk,duckdb  # 25 tests, every backend
 
 just days bench 2021-12-02                             # criterion: parse + both parts
 cargo bench -p aoc-2021-12-02 --bench dive --features chipmunk,duckdb   # three-way
