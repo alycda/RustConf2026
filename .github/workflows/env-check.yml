@@ -151,3 +151,39 @@ jobs:
               ./scripts/self-check.sh --track "${{ matrix.track }}"
               ;;
           esac
+      # Beyond the env check: on a branch that carries a worked Exercise 3
+      # (Dart/dart:ffi on 2015-12-05), prove the track end to end — cdylib
+      # with default features, header from the cbindgen this job already
+      # installs, then solve.dart against the puzzle-statement examples.
+      # Real inputs stay out of CI by the same rule that keeps them out of
+      # the repo (days/.gitignore); statement examples are published in the
+      # puzzle text and fair game — the nine below are both parts' examples
+      # concatenated, and each part counts two of them nice.
+      #
+      # Default features is the load-bearing word: this day's vectorscan and
+      # ICU variants are cargo features precisely so a stock runner with no
+      # pkg-config can build the cdylib the C API and this track need.
+      #
+      # `just` is not on a stock runner, so the dart-demo recipe's steps are
+      # spelled out here rather than invoked — same as the python cell.
+      # Branches without the worked track skip cleanly.
+      - name: dart track end-to-end (2015-12-05)
+        if: matrix.track == 'dart'
+        shell: bash
+        run: |
+          if [ ! -f days/2015-12-05/dart/solve.dart ]; then
+            echo "no worked dart track on this branch — skipping"
+            exit 0
+          fi
+          (cd days && cargo build -p aoc-2015-12-05 --lib)
+          (cd days/2015-12-05 && mkdir -p include && \
+            cbindgen --config cbindgen.toml --output include/aoc_2015_12_05.h src/c_api.rs)
+          mkdir -p days/inputs
+          printf '%s\n' ugknbfddgicrmopn aaa jchzalrnumimnmhp \
+            haegwjzuvuyypxyu dvszwmarrgswjxmb qjhvhtzxzqqjkmpb xxyxx \
+            uurcxstgmygtbstg ieodomkazucvgmuy > days/inputs/2015-12-05.txt
+          (cd days/2015-12-05/dart && dart pub get)
+          out="$(cd days/2015-12-05/dart && dart run solve.dart)"
+          echo "$out"
+          echo "$out" | grep -F 'Part 1 🎯(🦀): 2'
+          echo "$out" | grep -F 'Part 2 🎯(🦀): 2'
