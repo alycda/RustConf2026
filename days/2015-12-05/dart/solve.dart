@@ -44,17 +44,28 @@ DynamicLibrary _loadLibrary() {
   exit(1);
 }
 
-/// Runs one of the C API's out-param/status-code functions. `null` means
-/// the C side reported an error (input was null or not valid UTF-8).
-int? _call(_CountFnDart fn, String text) {
+/// Runs one of the C API's out-param/status-code functions. A nonzero
+/// status is an error the C side already classified — report it and exit
+/// nonzero rather than printing a phantom answer.
+int _call(_CountFnDart fn, String name, String text) {
   final inputPtr = text.toNativeUtf8();
   final outCount = calloc<Uint32>();
+  int status;
+  int count;
   try {
-    return fn(inputPtr, outCount) == 0 ? outCount.value : null;
+    status = fn(inputPtr, outCount);
+    count = outCount.value;
   } finally {
     calloc.free(inputPtr);
     calloc.free(outCount);
   }
+
+  if (status != 0) {
+    stderr.writeln('$name failed with status $status '
+        '(-1: input was null or not valid UTF-8)');
+    exit(1);
+  }
+  return count;
 }
 
 void main() {
@@ -72,6 +83,6 @@ void main() {
   }
   final text = inputFile.readAsStringSync();
 
-  print('Part 1: ${_call(part1, text)}');
-  print('Part 2: ${_call(part2, text)}');
+  print('Part 1: ${_call(part1, 'part1', text)}');
+  print('Part 2: ${_call(part2, 'part2', text)}');
 }
