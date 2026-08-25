@@ -38,14 +38,6 @@ target/
 *.dll
 *.out
 
-# UniFFI output. The generator writes a whole directory per language, and only
-# some of it is caught by the extension rules above — a .py binding and a
-# compiled Swift harness have no matching pattern, so without this they get
-# committed. Named exactly, not **/bindings/: exercises/ex3-bindings/ is
-# hand-written source and must not be swept up by a rule aimed at machine
-# output.
-**/uniffi/bindings/
-
 # Python (venv above)
 # Source: https://github.com/github/gitignore/blob/main/Python.gitignore (trimmed)
 # Pulled: 2026-08-08
