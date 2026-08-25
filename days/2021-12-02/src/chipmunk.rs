@@ -153,18 +153,28 @@ impl Submarine {
     /// reaches here should be integral (see the exactness argument above); if
     /// one isn't, that's a broken assumption worth an error rather than a
     /// silently truncated answer.
+    ///
+    /// The check is on the two coordinates, not on their product, and the
+    /// difference matters: `2.5 * 4.0` is `10.0`, so a product test reports
+    /// nothing while the solver is off by half a unit. Half-integers are also
+    /// the likeliest drift there is — a step of the wrong size lands on one —
+    /// so the weaker test would miss the common case and pass on the answer
+    /// as an ordinary-looking integer.
     pub fn answer(&self) -> miette::Result<i32> {
         // SAFETY: as in `aim`.
         let position = unsafe { cpBodyGetPosition(self.body) };
-        let product = position.x * position.y;
 
-        if product.fract() != 0.0 {
+        if position.x.fract() != 0.0 || position.y.fract() != 0.0 {
             return Err(miette::miette!(
-                "the solver drifted off the integers: {} * {} = {product}",
+                "the solver drifted off the integers: horizontal {}, depth {}",
                 position.x,
                 position.y
             ));
         }
+
+        // Both axes are integral and, by the range check below, small: their
+        // product is far under 2^53 and so is exact.
+        let product = position.x * position.y;
         if product < f64::from(i32::MIN) || product > f64::from(i32::MAX) {
             return Err(miette::miette!(
                 "answer {product} does not fit in an i32 (horizontal {}, depth {})",
@@ -218,6 +228,27 @@ mod tests {
         let position = unsafe { cpBodyGetPosition(sub.body) };
         assert_eq!(position.x, 3.0, "horizontal kept thrusting");
         assert_eq!(position.y, 1.0, "depth kept thrusting");
+        Ok(())
+    }
+
+    /// Half-integer drift on both axes, which is the case a product test
+    /// cannot see: `2.5 * 4.0` is exactly `10.0`, so checking the product
+    /// reports success and hands back `10`. The assertion names the axes for
+    /// the same reason — an error message that only quotes the product would
+    /// be describing the value that looked fine.
+    #[test]
+    fn drift_off_the_integers_is_reported_even_when_the_product_is_whole() -> miette::Result<()> {
+        let mut sub = Submarine::new()?;
+        sub.step((2.5, 4.0), 0.0);
+
+        let error = sub
+            .answer()
+            .expect_err("2.5 is not a position this puzzle can answer from")
+            .to_string();
+        assert!(
+            error.contains("2.5"),
+            "expected the drifting axis in the message, got: {error}"
+        );
         Ok(())
     }
 
