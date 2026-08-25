@@ -4,6 +4,14 @@ version = "0.1.0"
 edition.workspace = true
 rust-version.workspace = true
 
+# Declared bare on this line: the tcc module the feature selects lives with
+# the day's FFI variants, and the feature exists here so the `sum` bench can
+# hold itself out of default builds via required-features. Racing the two
+# sides needs both in one tree — merge the day line in, then
+# `cargo bench -p aoc-2015-12-01 --bench sum --features tcc`.
+[features]
+tcc = []
+
 [dependencies]
 aoc-ornaments.workspace = true
 derive_more.workspace = true
@@ -20,3 +28,10 @@ criterion.workspace = true
 [[bench]]
 name = "day"
 harness = false
+
+# The pure-vs-JIT comparison needs the JIT: without the feature the target
+# is skipped rather than failing --all-targets.
+[[bench]]
+name = "sum"
+harness = false
+required-features = ["tcc"]
