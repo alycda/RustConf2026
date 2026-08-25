@@ -211,46 +211,74 @@ jobs:
           (cd days/2023-12-01 && mkdir -p include && \
             cbindgen --config cbindgen.toml --output include/aoc_2023_12_01.h src/c_api.rs)
           mkdir -p days/inputs
-          printf '%s\n' '1abc2' 'pqr3stu8vwx' 'a1b2c3d4e5f' 'treb7uchet' \
-            > days/inputs/2023-12-01.txt
+          inputs="$(cd days/inputs && pwd)"
           target="$(cd days/target && pwd)"
           cd days/2023-12-01/swift
           mkdir -p .build
+          # Mirrors the swift-demo recipe's corelibs block, and is inert here:
+          # a stock runner's Swift ships Foundation with the toolchain, so the
+          # guard is false and no flag is added. It is spelled out anyway
+          # because this step promises to be the recipe's steps, and a cell
+          # that has quietly diverged stops meaning anything about the track.
+          # In the repo's Swift devcontainer the guard is true — see
+          # .devcontainer/swift/README.md for the failure ladder, and note the
+          # -rpath pair is not redundant with -L: -L resolves the link, only
+          # -rpath resolves the load.
+          corelibs=()
+          profile="$HOME/.nix-profile"
+          if [ -d "$profile/lib/swift/linux/$(uname -m)" ]; then
+              corelibs+=(-I "$profile/lib/swift/linux/$(uname -m)")
+              corelibs+=(-Xcc "-I$profile/include")
+              corelibs+=(-L "$profile/lib/swift/linux" -L "$profile/lib")
+              corelibs+=(-Xlinker -rpath -Xlinker "$profile/lib/swift/linux")
+              corelibs+=(-Xlinker -rpath -Xlinker "$profile/lib")
+          fi
           swiftc solve.swift -o .build/solve \
             -I . \
+            ${corelibs[@]+"${corelibs[@]}"} \
             -L "$target/debug" -L "$target/release" \
             -laoc_2023_12_01 \
             -Xlinker -rpath -Xlinker "$target/debug" \
             -Xlinker -rpath -Xlinker "$target/release"
-          out="$(./.build/solve)"
-          echo "$out"
-          # Two assertions, not one, because they fail for different reasons
-          # and only one of them is a real problem.
+          # Run the track once per statement example — this day has two, and
+          # each part's published answer belongs to a different one. A track
+          # reads one input file and prints both parts, so each run shows and
+          # asserts only the part whose example is loaded; the other number
+          # (part two scoring part one's example, and vice versa) is already
+          # pinned in Rust by test_both_parts_over_both_examples and would
+          # only be noise in this log. What this step prints is exactly the
+          # day's two published answers, byte for byte as the track does:
           #
-          # First the answers, matched loosely: this is the thing that must be
-          # true, and it stays true however the line is labelled.
-          echo "$out" | grep -qE '^Part 1 .*: 142$'
-          echo "$out" | grep -qE '^Part 2 .*: 142$'
-          # Then the label, byte for byte, because the `Part N <emoji>(🦀)`
+          #   Part 1 🕊️(🦀): 142
+          #   Part 2 🕊️(🦀): 281
+          #
+          # The label match is byte-exact on purpose — the `Part N <emoji>(🦀)`
           # shape is a repo-wide convention and silent drift in it is worth a
-          # red cell. Kept separate so this failure can say which one it was —
-          # a bare `exit 1` after two correct answers reads as a broken track
-          # when it is actually a cosmetic edit that did not reach this file.
-          #
-          # This cell has the same variation-selector trap the Kotlin one
-          # does, and it is meant literally: 🕊️ is U+1F54A DOVE followed by
-          # U+FE0F VARIATION SELECTOR-16 — seven bytes, the last three
-          # invisible. A bare 🕊 (U+1F54A alone) renders identically here, in
-          # most editors, and in a browser, and will NOT match this grep.
-          #
-          # So do not retype the label if you change it: copy it out of
-          # days/2023-12-01/swift/solve.swift, or generate both sides from the
-          # same bytes. Two of the four track cells now carry this footgun
-          # (☕️ = U+2615 + U+FE0F on the Kotlin one), which is a good argument
-          # for picking selector-free emoji for any track added later — 🐍 and
-          # 🎯 are each a single codepoint, and neither cell needs this note.
-          if ! echo "$out" | grep -qF 'Part 1 🕊️(🦀): 142' \
-            || ! echo "$out" | grep -qF 'Part 2 🕊️(🦀): 142'; then
-            echo "::error::answers are correct but the label drifted — re-sync this step with days/2023-12-01/swift/solve.swift" >&2
-            exit 1
-          fi
+          # red cell. This cell shares the Kotlin cell's variation-selector
+          # trap: 🕊️ is U+1F54A DOVE followed by U+FE0F VARIATION
+          # SELECTOR-16 — seven bytes, the last three invisible — and a bare
+          # 🕊 (U+1F54A alone) renders identically but will NOT match. Do not
+          # retype the label: copy it out of days/2023-12-01/swift/solve.swift.
+          assert_part() {   # <N> <published answer>
+            local part="$1" answer="$2" out
+            out="$(./.build/solve)"
+            # Shows exactly one line — this run's part — and fails the cell
+            # if the track stopped printing it.
+            echo "$out" | grep "^Part ${part} "
+            # The answer, matched loosely: true however the line is labelled.
+            echo "$out" | grep -qE "^Part ${part} .*: ${answer}$"
+            # Then the label, byte for byte (see above).
+            if ! echo "$out" | grep -qF "Part ${part} 🕊️(🦀): ${answer}"; then
+              echo "::error::part ${part}: answer is correct but the label drifted — re-sync this step with days/2023-12-01/swift/solve.swift" >&2
+              exit 1
+            fi
+          }
+          # Part one's example, part one's published answer.
+          printf '%s\n' '1abc2' 'pqr3stu8vwx' 'a1b2c3d4e5f' 'treb7uchet' \
+            > "$inputs/2023-12-01.txt"
+          assert_part 1 142
+          # Part two's example, part two's published answer.
+          printf '%s\n' 'two1nine' 'eightwothree' 'abcone2threexyz' 'xtwone3four' \
+            '4nineeightseven2' 'zoneight234' '7pqrstsixteen' \
+            > "$inputs/2023-12-01.txt"
+          assert_part 2 281

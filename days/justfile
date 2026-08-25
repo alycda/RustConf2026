@@ -102,8 +102,50 @@ swift-demo day: (bindgen day)
     # .gitignore and would be committed. solve.swift locates itself relative
     # to the executable, so it knows to look one level further up.
     mkdir -p .build
+    # Where Foundation lives, when it does not live with the compiler.
+    #
+    # `solve.swift` imports Foundation, and on macOS or a swift.org toolchain
+    # that needs no flags at all — Foundation ships with Swift. In the
+    # repo's Swift devcontainer it does not: nixpkgs packages corelibs
+    # separately, home-manager installs them into the *user profile*, and
+    # `swiftc` searches only its own toolchain path. Bare, it fails with
+    # `no such module 'Foundation'`.
+    #
+    # Three directories, because one package spreads across three and the
+    # error message names the same module every time (the failure ladder is
+    # written up in .devcontainer/swift/README.md):
+    #   lib/swift/linux/<arch>  the Swift modules  (-I)      "no such module"
+    #   include                 the clang module maps (-Xcc) "missing required
+    #                                                         modules"
+    #   lib/swift/linux         libFoundation.so   (-L)      "cannot find -lFoundation"
+    #   lib                     libdispatch.so etc (-L)
+    #
+    # Added only when that layout is actually present, so a nix-shell (whose
+    # setup hooks already put corelibs on the search path) and a Mac are both
+    # unaffected. If this rots, the devcontainer README's own advice is the
+    # sturdier route: build through nixpkgs' Swift stdenv adapter or swiftpm,
+    # which wire these paths themselves rather than having a caller name them.
+    # The -rpath pair is not redundant with the -L pair, and finding that out
+    # cost a second debugging round. Built *outside* a nix-shell, the linker
+    # promotes these -L directories to RUNPATH by itself and the binary runs.
+    # Built inside one — which is how this recipe always runs — it does not:
+    # the profile paths are symlink farms rather than store paths, they are
+    # dropped from RUNPATH, and the binary links clean and then dies at
+    # startup with `libBlocksRuntime.so: cannot open shared object file`.
+    # Compiling, linking and *loading* are three separate searches; -L answers
+    # the second and only -rpath answers the third.
+    corelibs=()
+    profile="$HOME/.nix-profile"
+    if [ -d "$profile/lib/swift/linux/$(uname -m)" ]; then
+        corelibs+=(-I "$profile/lib/swift/linux/$(uname -m)")
+        corelibs+=(-Xcc "-I$profile/include")
+        corelibs+=(-L "$profile/lib/swift/linux" -L "$profile/lib")
+        corelibs+=(-Xlinker -rpath -Xlinker "$profile/lib/swift/linux")
+        corelibs+=(-Xlinker -rpath -Xlinker "$profile/lib")
+    fi
     swiftc solve.swift -o .build/solve \
         -I . \
+        ${corelibs[@]+"${corelibs[@]}"} \
         -L "$target/debug" -L "$target/release" \
         -l"aoc_$(printf '%s' "{{day}}" | tr - _)" \
         -Xlinker -rpath -Xlinker "$target/debug" \
