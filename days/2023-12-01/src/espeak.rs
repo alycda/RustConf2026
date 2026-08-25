@@ -43,12 +43,19 @@
 //! `djnrmpxjbsbpgzvtjkhq6pkkfshx` contains one `6` and reports an `8`, from
 //! letters that happen to sound like one.
 //!
-//! **Part one is not merely hard, it is unavailable.** Part one counts
-//! literal digits and ignores the word `one`. This module cannot tell them
-//! apart *by construction*: after phonemisation they are the same three
-//! sounds. The library's single greatest strength here is that it erases the
-//! distinction part one is made of. Measured, the two parts return the same
-//! total, and they always will.
+//! **Part one is unavailable to *this* design.** Part one counts literal
+//! digits and ignores the word `one`, and after phonemisation those are the
+//! same three sounds — so the one question this module asks (phonemise the
+//! whole suffix, prefix-match) cannot separate them, and both parts return
+//! the same total.
+//!
+//! An earlier version of this comment said part one was unavailable *by
+//! construction* and that no amount of tuning would fix it. That was too
+//! strong, and the measurement that disproves it is in the
+//! [two-window](#the-most-promising-lead-two-window-sizes) note below: a
+//! one-character window separates them cleanly. The distinction part one is
+//! made of survives after all — it is the *context* that destroys it, not the
+//! phonemes.
 //!
 //! # The scoreboard
 //!
@@ -68,12 +75,88 @@
 //! **This is an open challenge, not a finished variant.** The failure modes
 //! above are each pinned by a test named `unsolved_*`. A test in that group
 //! starting to fail means someone got further, and the right response is to
-//! update the number above, the README, and that test's name. Ideas that have
-//! not been tried: `espeakPHONEMES_IPA` and comparing IPA rather than
-//! espeak's own notation; `espeak_SetPhonemeTrace` with a per-phoneme
-//! callback to get positions instead of prefix-matching a string; feeding
-//! single characters with explicit clause breaks so the number normaliser
-//! never sees a run; or a voice whose dictionary treats digits differently.
+//! update the number above, the README, and that test's name.
+//!
+//! ## The most promising lead: two window sizes
+//!
+//! Ask espeak twice per position — once with a **one-character** window and
+//! once with the **full suffix** — and take the one-character answer if it is
+//! a digit, falling back to the suffix otherwise.
+//!
+//! It works because a lone character is pronounced as itself or as its
+//! *letter name*, and no letter name collides with a digit name:
+//!
+//! ```text
+//! "1" -> wˈɒn      "o" -> ˈəʊ      "n" -> ˈɛn
+//!                  "e" -> ˈiː      "t" -> tˈiː      "w" -> dˈʌbəljˌuː
+//! ```
+//!
+//! So a one-character match identifies a *literal* digit — which is part one,
+//! and is why the claim above had to be walked back. It also dissolves the
+//! multi-digit run problem without any new vocabulary: `16` is read
+//! position-by-position as `1` then `6`, while the *word* `sixteen` still
+//! reaches the suffix window and matches `six`. That matters more than it
+//! looks — see the wall below.
+//!
+//! Cost: two calls per position instead of one, on a variant already costing
+//! ~600 µs per line. It does nothing for coarticulation (`twobfr`), which
+//! would remain the last failure mode standing.
+//!
+//! ## The wall: re-parsing spoken numbers back into digits
+//!
+//! The obvious repair for `23seven` is to teach the reference table the
+//! number words, so `twˈɛnti` maps back to a leading `2`. It needs less
+//! machinery than it sounds like — the scan already visits every position, so
+//! each position only needs the *leading* digit of the number starting there,
+//! not a decomposition — and roughly eighteen more references (`ten`..
+//! `nineteen`, `twenty`..`ninety`) would cover it. Two objections that look
+//! fatal are not: input leading zeros are spoken (`07` -> `zˈiəɹəʊ sˈɛvən`,
+//! `007` keeps both), and the zeros that `100` -> `wˈɒnhˈʌndɹɪd` swallows are
+//! recovered anyway by the positions after the first.
+//!
+//! What kills it is a collision that no ordering survives:
+//!
+//! ```text
+//! "16"      -> sˈɪkstiːn        "19"  -> nˈaɪntiːn
+//! "sixteen" -> sˈɪkstiːn        "nine" -> nˈaɪn
+//! "six"     -> sˈɪks
+//! ```
+//!
+//! `16` and `sixteen` are the same sound and want different answers — the
+//! digits `16` are a `1` and a `6`, the word `sixteen` is only a `6`.
+//! Longest-match-first reads both as `1`; shortest-first reads both as `6`.
+//! The puzzle's own statement example, `7pqrstsixteen`, is on the losing side
+//! of longest-match. The information that separates them was destroyed by
+//! phonemisation, which is why the two-window design above — which never has
+//! to ask the question — is the better lead.
+//!
+//! ## Ruled out, with measurements
+//!
+//! - **SSML is not available on this API.** `espeak_TextToPhonemes` reads the
+//!   tags aloud as words: `<say-as interpret-as="characters">23</say-as>`
+//!   comes back as `sˈeɪaz ɪntˈɜːpɹɪtaz ˈiːkwəlz kˈaɹɪktəz twˈɛnti θɹˈiː
+//!   slˈaʃ sˈeɪaz`. Still true with `espeakSSML` (0x10) OR'd into `textmode`
+//!   — that flag belongs to `espeak_Synth`, and this function ignores it.
+//! - **Injecting a leading `0` to force digit mode does not work.** A leading
+//!   zero does trigger digit-by-digit reading, but only once the run reaches
+//!   four digits: `0123` -> "zero one two three", while `016` -> "zero
+//!   sixteen" and `023seven` -> "zero, twenty three, seven". Puzzle runs are
+//!   one to three digits, so it fires exactly where it isn't needed.
+//! - **Length alone never triggers digit mode.** Unlike engines that give up
+//!   past four or five digits, espeak-ng scales all the way:
+//!   `12345678901` -> "twelve billion three hundred and forty five
+//!   million…". There is no threshold to reach.
+//! - **Phone-number shapes are not recognised.** `555-1234` -> "five hundred
+//!   and fifty five, dash, one thousand two hundred and thirty four".
+//!
+//! Still untried: `espeakPHONEMES_IPA`, comparing IPA rather than espeak's
+//! own notation; `espeak_SetPhonemeTrace` with a per-phoneme callback, to get
+//! *positions* back instead of prefix-matching a string, which would sidestep
+//! prefix collisions entirely; or a voice whose dictionary treats digits
+//! differently. If you want to explore text-shaping, `_` is the only
+//! separator espeak splits on silently (`2_3` -> "two three"); space and a
+//! non-grouping comma also work, while `-`, `.`, `:` and `/` each insert a
+//! spoken word.
 //!
 //! Because it does not answer the puzzle, nothing routes to it —
 //! `Solution::part1`/`part2` never call this module. A backend that returns a
@@ -372,11 +455,16 @@ mod tests {
         Ok(())
     }
 
-    /// The structural one. Part one counts literal digits only, and after
-    /// phonemisation `one` and `1` are the same three sounds — so this
-    /// variant answers part two whatever it is asked. Unlike the three above,
-    /// no amount of tuning fixes this; it would need a different question put
-    /// to the library.
+    /// Part one counts literal digits only, and in the *whole-suffix* window
+    /// this module asks in, `one` and `1` are the same three sounds — so it
+    /// answers part two whatever it is asked.
+    ///
+    /// This test used to claim no amount of tuning could fix that. Not so:
+    /// the last clause of that claim — "it would need a different question
+    /// put to the library" — turned out to be the whole answer. Ask with a
+    /// one-character window and `o` is `ˈəʊ`, not `wˈɒn`, so a match there is
+    /// a literal digit. See the two-window note in the module docs. This is
+    /// therefore an `unsolved_*` with a known route, unlike the other three.
     #[test]
     fn unsolved_part_one_is_indistinguishable_from_part_two() -> miette::Result<()> {
         let speaker = Speaker::new()?;
