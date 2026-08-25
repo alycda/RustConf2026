@@ -83,6 +83,6 @@ void main() {
   }
   final text = inputFile.readAsStringSync();
 
-  print('Part 1: ${_call(part1, 'part1', text)}');
-  print('Part 2: ${_call(part2, 'part2', text)}');
+  print('Part 1 🎯(🦀): ${_call(part1, 'part1', text)}');
+  print('Part 2 🎯(🦀): ${_call(part2, 'part2', text)}');
 }
