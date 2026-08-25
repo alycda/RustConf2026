@@ -68,9 +68,20 @@ impl Day {
     }
 
     /// First digit * 10 + last digit found in the line.
+    ///
+    /// `char_indices()` rather than `0..line.len()`: the scan slices the line
+    /// at every offset it produces, and a byte offset that lands inside a
+    /// multi-byte character panics — `&"é1"[1..]` is not a slice, it is
+    /// "start byte index 1 is not a char boundary", in every profile. On
+    /// ASCII the two iterators produce the same offsets, so no answer
+    /// changes; the difference only shows on input this crate cannot
+    /// currently receive — and is about to, once it has a C-callable
+    /// surface, where an unwinding panic is undefined behavior rather than
+    /// a backtrace.
     fn calibration_value(line: &str, words: bool) -> u32 {
-        let digits: Vec<u32> = (0..line.len())
-            .filter_map(|i| Self::digit_at(line, i, words))
+        let digits: Vec<u32> = line
+            .char_indices()
+            .filter_map(|(i, _)| Self::digit_at(line, i, words))
             .collect();
 
         digits.first().copied().unwrap_or(0) * 10 + digits.last().copied().unwrap_or(0)
@@ -123,6 +134,22 @@ xtwone3four
 zoneight234
 7pqrstsixteen";
         assert_eq!("281", Day::from_str(input)?.solve(Part::Two)?);
+        Ok(())
+    }
+
+    /// A line whose characters are not all one byte wide. Asserted for its
+    /// value rather than merely for not panicking: the claim worth pinning
+    /// is that the scan still finds the digits on both sides of the
+    /// multi-byte character, not just that it survives reaching them.
+    ///
+    /// `é` is two bytes, so the old `0..line.len()` scan sliced at offset 1
+    /// — inside it — and panicked in every profile. No real puzzle input
+    /// looks like this; a `const char *` from a C caller can, and valid
+    /// UTF-8 is exactly what the C API promises to accept.
+    #[test]
+    fn a_multibyte_line_is_scanned_by_character() -> miette::Result<()> {
+        assert_eq!("19", Day::from_str("1é9")?.solve(Part::One)?);
+        assert_eq!("42", Day::from_str("fourété2")?.solve(Part::Two)?);
         Ok(())
     }
 }
