@@ -34,10 +34,12 @@ edition = "2024"
 rust-version = "1.85"
 
 # Single-use pins (criterion, derive_more, itertools, nom, nom_locate) live
-# here too: one table answers "what version of X does this repo use" for every
-# crate.
+# here too: one table answers "what version of X does this repo use" for
+# every crate.
 [workspace.dependencies]
 aoc-ornaments = "0.1.10"
+cc = "1"
+
 # Pinned to 0.7 on purpose: criterion 0.8 raised its MSRV to 1.86, and CI
 # checks this workspace against rustc 1.85, the edition-2024 floor every day
 # declares — and clap, which criterion pulls in, already sits exactly on that
@@ -51,6 +53,7 @@ aoc-ornaments = "0.1.10"
 criterion = { version = "0.7", default-features = false, features = [
     "cargo_bench_support",
 ] }
+
 derive_more = { version = "1", features = ["deref"] }
 itertools = "0.14"
 miette = { version = "7.4", features = ["fancy"] }

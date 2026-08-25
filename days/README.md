@@ -32,14 +32,19 @@
 
 ## Benchmarks (bonus)
 
-The reference day carries a criterion benchmark; nothing in the workshop needs one.
+Several days carry criterion benchmarks — `2015-12-01`, `2015-12-05`, `2021-12-02` and
+`2023-12-01` so far; nothing in the workshop needs one, and not every day has them.
 
 ```sh
-just days bench 2023-12-01
-just days bench 2023-12-01 --save-baseline pure-rust   # criterion flags pass through
+just days bench 2015-12-01
+just days bench 2015-12-01 --save-baseline pure-rust   # criterion flags pass through
+
+# a day's second bench, where one exists, races the C variants against plain Rust and
+# so declares required-features — `just days bench` skips it, run it directly:
+cargo bench -p aoc-2015-12-05 --bench nice --features hyperscan,icu
 ```
 
-The bench times the parse and the parts separately, over the statement example, a
+The `day` bench times the parse and the parts separately, over the statement examples, a
 generated input at roughly the scale of a real one, and — only if you have dropped one at
 `days/inputs/<day>.txt` — your own. The generated input exists because puzzle inputs
 cannot be committed here and the examples are far too small to time; it is built from a
