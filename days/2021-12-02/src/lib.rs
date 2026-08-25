@@ -16,6 +16,7 @@ use std::str::FromStr;
 
 use aoc_ornaments::{Solution, SolutionResult};
 
+pub mod c_api;
 #[cfg(feature = "chipmunk")]
 pub mod chipmunk;
 #[cfg(feature = "duckdb")]
