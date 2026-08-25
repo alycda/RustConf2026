@@ -44,6 +44,47 @@ bindgen day:
     cbindgen --config cbindgen.toml --output "include/aoc_${ident}.h" src/c_api.rs
     echo "wrote {{day}}/include/aoc_${ident}.h"
 
+# Exercise 3 (Swift track): call a day's cbindgen C API from Swift.
+# `just setup-swift` once first (the Xcode CLT on macOS, swift.org on Linux —
+# what `just check` probes). Depends on `bindgen` rather than duplicating its
+# cbindgen invocation, and here the dependency is real: swift/module.modulemap
+# names the generated header, and clang has to be able to open it before
+# `import AocDay` means anything.
+#
+# No package manager, no jar to fetch, nothing pinned — the C API arrives
+# through the header, which is the point of this track.
+#
+# The two -L/-rpath pairs are the compiled-language shape of what the other
+# three tracks do at runtime: python/dart/kotlin `dlopen` a path they compute
+# by looking for debug then release, and Swift asks the linker instead. Both
+# are passed unconditionally; a directory that doesn't exist costs nothing,
+# and debug comes first for the same reason it does in those scripts. -rpath
+# takes absolute paths on purpose — the portable spelling of "next to me"
+# differs between platforms ($ORIGIN vs @loader_path) and this is a
+# development recipe, not something being shipped anywhere.
+swift-demo day: (bindgen day)
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -f "{{day}}/swift/solve.swift" ]; then
+        echo "days/{{day}} has no swift/solve.swift — not every day carries one" >&2
+        exit 1
+    fi
+    cd "{{day}}" && cargo build --lib
+    target="$(cd ../target && pwd)"
+    cd swift
+    # .build/ is Swift's own name for build output and is already ignored
+    # repo-wide; a bare `solve` beside solve.swift matches no rule in either
+    # .gitignore and would be committed. solve.swift locates itself relative
+    # to the executable, so it knows to look one level further up.
+    mkdir -p .build
+    swiftc solve.swift -o .build/solve \
+        -I . \
+        -L "$target/debug" -L "$target/release" \
+        -l"aoc_$(printf '%s' "{{day}}" | tr - _)" \
+        -Xlinker -rpath -Xlinker "$target/debug" \
+        -Xlinker -rpath -Xlinker "$target/release"
+    ./.build/solve
+
 # scaffold a new day from _template, e.g. `just new 2022-12-01`
 new day:
     #!/usr/bin/env bash
