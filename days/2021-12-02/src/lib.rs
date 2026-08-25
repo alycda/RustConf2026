@@ -58,23 +58,42 @@ struct Position {
 }
 
 impl Position {
-    fn apply(&mut self, command: &Command) {
+    /// `None` on overflow rather than `+=`, because [`c_api`] promises a
+    /// status code for a course too big for an `i32` and `+=` only delivers
+    /// one when `overflow-checks` happens to be on. Every step is checked,
+    /// not just the final multiply: in [`Self::apply_with_aim`], `depth`
+    /// accumulates `aim * x` and can run out of room while `horizontal` is
+    /// still small.
+    fn apply(&mut self, command: &Command) -> Option<()> {
         match *command {
-            Command::Forward(x) => self.horizontal += x,
-            Command::Down(x) => self.depth += x,
-            Command::Up(x) => self.depth -= x,
+            Command::Forward(x) => self.horizontal = self.horizontal.checked_add(x)?,
+            Command::Down(x) => self.depth = self.depth.checked_add(x)?,
+            Command::Up(x) => self.depth = self.depth.checked_sub(x)?,
         }
+        Some(())
     }
 
-    fn apply_with_aim(&mut self, command: &Command) {
+    /// Part two's rules. See [`Self::apply`] for why this returns `Option`.
+    fn apply_with_aim(&mut self, command: &Command) -> Option<()> {
         match *command {
             Command::Forward(x) => {
-                self.horizontal += x;
-                self.depth += self.aim * x;
+                self.horizontal = self.horizontal.checked_add(x)?;
+                self.depth = self.depth.checked_add(self.aim.checked_mul(x)?)?;
             }
-            Command::Down(x) => self.aim += x,
-            Command::Up(x) => self.aim -= x,
+            Command::Down(x) => self.aim = self.aim.checked_add(x)?,
+            Command::Up(x) => self.aim = self.aim.checked_sub(x)?,
         }
+        Some(())
+    }
+
+    /// Folds `commands` and multiplies the two axes, or `None` if any step —
+    /// the fold or the final multiply — leaves the `i32` the puzzle answers in.
+    fn fold(commands: &[Command], step: fn(&mut Self, &Command) -> Option<()>) -> Option<i32> {
+        let mut position = Self::default();
+        for command in commands {
+            step(&mut position, command)?;
+        }
+        position.horizontal.checked_mul(position.depth)
     }
 }
 
@@ -86,26 +105,25 @@ impl Position {
 /// regression in whichever one `cargo run` doesn't exercise still fails the
 /// suite.
 pub fn dead_reckon_pure_rust(commands: &[Command]) -> i32 {
-    let position = commands
-        .iter()
-        .fold(Position::default(), |mut position, command| {
-            position.apply(command);
-            position
-        });
+    checked_dead_reckon_pure_rust(commands).expect("course overflows the puzzle's i32")
+}
 
-    position.horizontal * position.depth
+/// [`dead_reckon_pure_rust`] without the panic, for callers that have to
+/// answer a too-large course rather than die on it — [`c_api`], which cannot
+/// let an unwind cross its `extern "C"` frame.
+pub fn checked_dead_reckon_pure_rust(commands: &[Command]) -> Option<i32> {
+    Position::fold(commands, Position::apply)
 }
 
 /// Part two's aim rules, in plain Rust. See [`dead_reckon_pure_rust`].
 pub fn dead_reckon_with_aim_pure_rust(commands: &[Command]) -> i32 {
-    let position = commands
-        .iter()
-        .fold(Position::default(), |mut position, command| {
-            position.apply_with_aim(command);
-            position
-        });
+    checked_dead_reckon_with_aim_pure_rust(commands).expect("course overflows the puzzle's i32")
+}
 
-    position.horizontal * position.depth
+/// [`dead_reckon_with_aim_pure_rust`] without the panic. See
+/// [`checked_dead_reckon_pure_rust`].
+pub fn checked_dead_reckon_with_aim_pure_rust(commands: &[Command]) -> Option<i32> {
+    Position::fold(commands, Position::apply_with_aim)
 }
 
 /// Runs the course through Chipmunk2D instead: one rigid body, one

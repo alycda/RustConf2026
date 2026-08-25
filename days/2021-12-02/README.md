@@ -88,7 +88,7 @@ once).
 cd days/2021-12-02 && cargo run                        # pure Rust
 cargo run -p aoc-2021-12-02 --features chipmunk        # through the physics engine
 cargo run -p aoc-2021-12-02 --features duckdb          # through the database
-cargo test -p aoc-2021-12-02 --features chipmunk,duckdb  # 22 tests, every backend
+cargo test -p aoc-2021-12-02 --features chipmunk,duckdb  # 24 tests, every backend
 
 just days bench 2021-12-02                             # criterion: parse + both parts
 cargo bench -p aoc-2021-12-02 --bench dive --features chipmunk,duckdb   # three-way
@@ -228,18 +228,25 @@ a second reason — see the overflow Learning below.
 - **This day's C API needed a guard the others didn't, because of arithmetic.**
   Part 2's answer on a genuine input already lands within ~10% of `i32::MAX`,
   and a C caller isn't limited to genuine inputs: `forward 100000\ndown 100000`
-  overflows, and overflow panics in the dev profile — straight into UB across
-  an `extern "C"` frame. So the arithmetic runs inside `catch_unwind` and
-  reports `-3`. It also constrains the benchmarks: the generated inputs' aim
-  has to nearly cancel, or the bench itself would panic instead of reporting a
-  time. An FFI contract can be forced on you by the puzzle's *number range*,
-  not just by its types.
-- **`catch_unwind` stops the unwind, not the noise.** A C caller that overflows
-  gets a tidy `-3` — and also gets `attempt to multiply with overflow` on
-  stderr from Rust's default panic hook, which fires before the unwind begins.
-  Silencing it means installing a process-global `panic::set_hook`, which a
-  library has no business doing to its host. So the wart is documented rather
-  than fixed by reaching outside the crate's own scope.
+  overflows the answer. The header promises `-3` for that, so the arithmetic is
+  `checked_*` all the way through and `solve` hands back an `Option`. It also
+  constrains the benchmarks: the generated inputs' aim has to nearly cancel, or
+  the bench would be measuring a refusal. An FFI contract can be forced on you
+  by the puzzle's *number range*, not just by its types.
+- **A guard whose mechanism is a panic is a guard you only have in dev.** The
+  first version of that `-3` let the multiply overflow and caught the panic
+  with `catch_unwind` — which reads as careful and isn't, because integer
+  overflow only panics where `overflow-checks` is on. That's the dev profile's
+  default and not the release profile's, and this workspace overrides neither.
+  In the build most likely to ship, the multiply wrapped, nothing panicked, and
+  the C caller got `0` and a garbage answer. Two smaller versions of the same
+  problem: `panic = "abort"` would kill the process before `catch_unwind` ever
+  ran, and Rust's default hook prints `attempt to multiply with overflow` to
+  the host's stderr before any unwind begins — a library shouting about
+  something that is, from the C side, an ordinary error. Arithmetic that
+  cannot overflow is the only version that doesn't depend on how you were
+  built. The `catch_unwind` stays as a backstop, since being wrong about
+  "nothing here panics" across an `extern "C"` frame costs UB.
 - **cbindgen's scope has to be aimed, and this day proves why twice.** The
   crate contains two modules full of `extern "C"` *imports* — Chipmunk's
   handful and DuckDB's twenty-odd. Pointed at the crate root, cbindgen would
