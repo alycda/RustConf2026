@@ -1,25 +1,27 @@
-// Links against this day's C library — YARA, the malware-scanning engine it
-// runs the calibration scan through (src/yara.rs) — via pkg-config rather
-// than system-wide installs or hardcoded paths.
+// Links against this day's two C libraries — YARA, the malware-scanning
+// engine it finds the calibration digits with (src/yara.rs), and espeak-ng,
+// the speech synthesiser it tries to hear them through (src/espeak.rs) — via
+// pkg-config rather than system-wide installs or hardcoded paths.
 //
-// nixpkgs ships `yara.pc`, so unlike 2021-12-02's chipmunk and duckdb there is
-// nothing for shell.nix to synthesize; the probe below is the same three lines
-// every C variant in this repo uses.
+// nixpkgs ships yara.pc and espeak-ng.pc, so unlike 2021-12-02's chipmunk and
+// duckdb there is nothing for shell.nix to synthesize; the loop below is the
+// same three lines every C variant in this repo uses.
 //
-// The library is probed only when its cargo feature is enabled (cargo exposes
+// Each library is probed only when its cargo feature is enabled (cargo exposes
 // enabled features to build scripts as CARGO_FEATURE_* env vars), so the
-// default build needs neither pkg-config nor YARA — that is what keeps stock
-// CI runners and the manual-setup path green, and it is the rule two earlier
-// days shipped red before adopting.
+// default build needs neither pkg-config nor either library — that's what
+// keeps stock CI runners and the manual-setup path green, and it is the rule
+// two earlier days shipped red before adopting.
 //
-// This day's build script does one thing the others don't: it compiles a C
-// file. YARA's match-reading API is macros over its internal structs, which no
-// FFI can call, so `yara_shim.c` does that walking and hands Rust flat
-// integers — see the comment at the top of that file. Compiling it with a
-// plain `Command` rather than the `cc` crate is deliberate: this build script
-// already shells out to pkg-config, the workshop is about doing FFI by hand,
-// and a build-dependency that has to be vendored for the offline path is a
-// cost the six lines below do not carry.
+// One asymmetry, which is why this file is a loop with a special case rather
+// than two symmetric arms: YARA's match-reading API is macros over its
+// internal structs, which no FFI can call, so `yara_shim.c` does that walking
+// and hands Rust flat integers (see the top of that file). Compiling it needs
+// yara's *cflags* as well as its libs, and needs a C compiler — neither of
+// which the espeak side wants. Compiling it with a plain `Command` rather than
+// the `cc` crate is deliberate: this script already shells out to pkg-config,
+// the workshop is about doing FFI by hand, and a build-dependency is a thing
+// the offline path would have to vendor.
 use std::path::PathBuf;
 use std::process::Command;
 
@@ -32,11 +34,12 @@ fn main() {
     // environment pkg-config resolves against has to be listed too, or cargo
     // will happily replay link flags pointing at a store path that no longer
     // exists. PATH steers which pkg-config runs, PKG_CONFIG overrides it
-    // outright, CC steers the compiler, and the rest steer what pkg-config
-    // finds.
+    // outright, CC/AR steer the shim's build, and the rest steer what
+    // pkg-config finds.
     for var in [
         "PATH",
         "CC",
+        "AR",
         "PKG_CONFIG",
         "PKG_CONFIG_PATH",
         "PKG_CONFIG_LIBDIR",
@@ -45,21 +48,29 @@ fn main() {
         println!("cargo:rerun-if-env-changed={var}");
     }
 
-    if std::env::var_os("CARGO_FEATURE_YARA").is_none() {
-        return;
-    }
+    let variants = [
+        ("CARGO_FEATURE_YARA", "yara"),
+        ("CARGO_FEATURE_ESPEAK", "espeak-ng"),
+    ];
 
-    let cflags = pkg_config(&["--cflags", "yara"]);
-    let libs = pkg_config(&["--libs", "yara"]);
+    for (feature, name) in variants {
+        if std::env::var_os(feature).is_none() {
+            continue;
+        }
 
-    build_shim(&cflags);
+        // The shim belongs to YARA alone; espeak needs no C of ours.
+        if name == "yara" {
+            build_shim(&pkg_config(&["--cflags", name]));
+        }
 
-    for flag in libs.split_whitespace() {
-        println!("cargo:rustc-link-arg={flag}");
+        for flag in pkg_config(&["--libs", name]).split_whitespace() {
+            println!("cargo:rustc-link-arg={flag}");
+        }
     }
 }
 
 fn pkg_config(args: &[&str]) -> String {
+    let name = args.last().expect("the module name is the last argument");
     let output = Command::new("pkg-config")
         .args(args)
         .output()
@@ -67,7 +78,7 @@ fn pkg_config(args: &[&str]) -> String {
 
     if !output.status.success() {
         panic!(
-            "pkg-config could not find yara.pc ({}). Run inside the project's nix shell \
+            "pkg-config could not find {name}.pc ({}). Run inside the project's nix shell \
              (see shell.nix), which provides it.",
             String::from_utf8_lossy(&output.stderr).trim()
         );

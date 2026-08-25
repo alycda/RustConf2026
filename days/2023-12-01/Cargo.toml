@@ -11,14 +11,22 @@ rust-version.workspace = true
 [lib]
 crate-type = ["rlib", "cdylib"]
 
-# The variant links a real C library at build time — build.rs probes
-# pkg-config, and compiles yara_shim.c, only for the features you enable — so
-# it is off by default: a bare `cargo test --workspace` stays green on stock CI
-# runners and the manual-setup path alike. The nix shell carries the library.
-# The full absurdity is:
-#   cargo run --features yara        # a malware-scanning engine
+# Both variants link a real C library at build time — build.rs probes
+# pkg-config, and for YARA also compiles yara_shim.c, only for the features
+# you enable — so both are off by default: a bare `cargo test --workspace`
+# stays green on stock CI runners and the manual-setup path alike. The nix
+# shell carries both libraries.
+#
+# The two are not symmetrical, and the asymmetry is the day:
+#   cargo run  -p aoc-2023-12-01 --features yara     # a malware-scanning engine
+#   cargo test -p aoc-2023-12-01 --features espeak   # a speech synthesiser
+# There is no `cargo run --features espeak`, because that variant deliberately
+# does not answer the puzzle and nothing routes to it. See src/espeak.rs for
+# what it does instead, and days/2023-12-01/README.md for why that is a
+# result rather than a failure.
 [features]
 yara = []
+espeak = []
 
 [dependencies]
 aoc-ornaments.workspace = true
@@ -41,3 +49,10 @@ criterion.workspace = true
 [[bench]]
 name = "day"
 harness = false
+
+# The scoreboard needs the library it scores, so it declares the feature:
+# without it the target is skipped rather than failing `--all-targets`, which
+# is the same rule a bench racing a C library follows.
+[[example]]
+name = "espeak_scoreboard"
+required-features = ["espeak"]

@@ -17,13 +17,16 @@ use std::str::FromStr;
 use aoc_ornaments::{Solution, SolutionResult};
 
 pub mod c_api;
+#[cfg(feature = "espeak")]
+pub mod espeak;
 #[cfg(feature = "yara")]
 pub mod yara;
 
-/// The nine spelled-out digits, in value order. `pub(crate)` because the
-/// `yara` module builds its rule text from this list rather than repeating
-/// it — two copies of these nine words is two places for a typo to answer a
-/// slightly different puzzle.
+/// The nine spelled-out digits, in value order. `pub(crate)` because both C
+/// variants read this list rather than repeating it — the `yara` module builds
+/// its rule text from it and the `espeak` module phonemises it. Three copies
+/// of these nine words would be three places for a typo to answer a slightly
+/// different puzzle.
 pub(crate) const WORDS: [(&str, u32); 9] = [
     ("one", 1),
     ("two", 2),

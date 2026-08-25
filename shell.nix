@@ -51,12 +51,16 @@ pkgs.mkShell {
     # safety net: python3 for the Python track; git so pure/minimal shells
     # (and jj colocated clones) get a current git (no verification needed)
     python3 git
-    # 2023-12-01 runs its calibration scan through YARA, the malware-scanning
-    # engine (days/2023-12-01/src/yara.rs), behind the off-by-default `yara`
-    # cargo feature. nixpkgs ships yara.pc, so unlike 2021-12-02's chipmunk and
-    # duckdb there is nothing to synthesize here — build.rs finds it through
-    # pkg-config's setup hook with no hardcoded store path.
-    yara pkg-config
+    # 2023-12-01 solves the same puzzle two absurd ways, both via FFI and both
+    # off by default as cargo features: it finds the calibration digits with
+    # YARA, the malware-scanning engine (days/2023-12-01/src/yara.rs), and it
+    # tries to hear them through espeak-ng, the speech synthesiser
+    # (days/2023-12-01/src/espeak.rs). nixpkgs ships yara.pc and espeak-ng.pc,
+    # so unlike 2021-12-02's chipmunk and duckdb there is nothing to
+    # synthesize here — build.rs finds both through pkg-config's setup hook
+    # with no hardcoded store path, and espeak's own dictionaries come from the
+    # data directory compiled into the library.
+    yara espeak-ng pkg-config
   ];
 
   CHEAT_CONFIG_PATH = cheatConf;
