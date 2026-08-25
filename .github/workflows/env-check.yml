@@ -151,3 +151,73 @@ jobs:
               ./scripts/self-check.sh --track "${{ matrix.track }}"
               ;;
           esac
+      # Beyond the env check: on a branch that carries a worked Exercise 3
+      # (Kotlin/JNA on 2021-12-02), prove the track end to end — cdylib with
+      # default features, header from the cbindgen this job already installs,
+      # then solve.kt against the puzzle-statement example. Real inputs stay
+      # out of CI by the same rule that keeps them out of the repo
+      # (days/.gitignore); statement examples are published in the puzzle text
+      # and fair game — the six commands below are the example both parts
+      # share, and they answer 150 and 900.
+      #
+      # Default features is the load-bearing word: this day's two C variants
+      # (Chipmunk2D and DuckDB) are cargo features precisely so a stock runner
+      # with no pkg-config can build the cdylib the C API and this track need.
+      # nixpkgs ships a .pc for neither library, so even a runner that *had*
+      # pkg-config would not find them — the gate is the only reason this
+      # builds at all here.
+      #
+      # `just` is not on a stock runner, so the kotlin-demo recipe's steps are
+      # spelled out here rather than invoked — same as the python cell — and
+      # the JNA jar is pinned and checksummed here exactly as the recipe pins
+      # and checksums it. Branches without the worked track skip cleanly.
+      #
+      # The `:` classpath separator is why this step is linux/macos-shaped. If
+      # the windows column is ever restored (see the os matrix above), this is
+      # the line that needs `;` there.
+      - name: kotlin track end-to-end (2021-12-02)
+        if: matrix.track == 'kotlin'
+        shell: bash
+        run: |
+          if [ ! -f days/2021-12-02/kotlin/solve.kt ]; then
+            echo "no worked kotlin track on this branch — skipping"
+            exit 0
+          fi
+          jna_version=5.17.0
+          jna_sha256=b3a9408e7c51e08ef0e3bfcc08f443f6ec0f6191ba8cd7c18d53d2b22e5bdbc0
+          (cd days && cargo build -p aoc-2021-12-02 --lib)
+          (cd days/2021-12-02 && mkdir -p include && \
+            cbindgen --config cbindgen.toml --output include/aoc_2021_12_02.h src/c_api.rs)
+          mkdir -p days/inputs
+          printf '%s\n' 'forward 5' 'down 5' 'forward 8' 'up 3' 'down 8' \
+            'forward 2' > days/inputs/2021-12-02.txt
+          cd days/2021-12-02/kotlin
+          jna="jna-${jna_version}.jar"
+          curl -fsSL -o "$jna" \
+            "https://repo1.maven.org/maven2/net/java/dev/jna/jna/${jna_version}/${jna}"
+          echo "${jna_sha256}  ${jna}" | shasum -a 256 -c -
+          kotlinc solve.kt -classpath "$jna" -include-runtime -d solve.jar
+          out="$(java -cp "solve.jar:$jna" SolveKt)"
+          echo "$out"
+          # Two assertions, not one, because they fail for different reasons
+          # and only one of them is a real problem.
+          #
+          # First the answers, matched loosely: this is the thing that must be
+          # true, and it stays true however the line is labelled.
+          echo "$out" | grep -qE '^Part 1 .*: 150$'
+          echo "$out" | grep -qE '^Part 2 .*: 900$'
+          # Then the label, byte for byte, because the `Part N <emoji>(🦀)`
+          # shape is a repo-wide convention and silent drift in it is worth a
+          # red cell. Kept separate so this failure can say which one it was —
+          # a bare `exit 1` after two correct answers reads as a broken track
+          # when it is actually a cosmetic edit that did not reach this file.
+          #
+          # Byte for byte is meant literally: this label is ☕️ = U+2615 plus
+          # U+FE0F (VARIATION SELECTOR-16). A bare ☕ (U+2615 alone) renders
+          # identically here and in most editors and will not match. If you
+          # change the label in kotlin/solve.kt, copy it — do not retype it.
+          if ! echo "$out" | grep -qF 'Part 1 ☕️(🦀): 150' \
+            || ! echo "$out" | grep -qF 'Part 2 ☕️(🦀): 900'; then
+            echo "::error::answers are correct but the label drifted — re-sync this step with days/2021-12-02/kotlin/solve.kt" >&2
+            exit 1
+          fi
