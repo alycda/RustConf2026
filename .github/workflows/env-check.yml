@@ -171,7 +171,7 @@ jobs:
       # with default features (no C libraries needed), header from the
       # cbindgen this job already installs, then solve.py against the
       # puzzle-statement example. Real inputs stay out of CI by the same
-      # rule that keeps them out of the repo (days/.gitignore); statement
+      # rule that keeps them out of the repo (.gitignore); statement
       # examples are published in the puzzle text and fair game. "()())"
       # answers part 1 with -1 — a negative through the out-param, which a
       # naive in-band error convention would have eaten — and part 2 with 5.
@@ -195,8 +195,8 @@ jobs:
           (cd days && cargo build -p aoc-2015-12-01 --lib)
           (cd days/2015-12-01 && mkdir -p include && \
             cbindgen --config cbindgen.toml --output include/aoc_2015_12_01.h src/c_api.rs)
-          mkdir -p days/inputs
-          printf '()())' > days/inputs/2015-12-01.txt
+          mkdir -p inputs
+          printf '()())' > inputs/2015-12-01.txt
           py=./.venv/bin/python
           [ -x "$py" ] || py=./.venv/Scripts/python
           out="$("$py" days/2015-12-01/python/solve.py)"
@@ -209,7 +209,7 @@ jobs:
       # with default features, header from the cbindgen this job already
       # installs, then solve.dart against the puzzle-statement examples.
       # Real inputs stay out of CI by the same rule that keeps them out of
-      # the repo (days/.gitignore); statement examples are published in the
+      # the repo (.gitignore); statement examples are published in the
       # puzzle text and fair game. The list below is both parts' examples
       # concatenated, with `aaa` twice — deliberately, so the two answers
       # differ (3 and 2). All nine distinct examples split into two disjoint
@@ -237,10 +237,10 @@ jobs:
           (cd days && cargo build -p aoc-2015-12-05 --lib)
           (cd days/2015-12-05 && mkdir -p include && \
             cbindgen --config cbindgen.toml --output include/aoc_2015_12_05.h src/c_api.rs)
-          mkdir -p days/inputs
+          mkdir -p inputs
           printf '%s\n' ugknbfddgicrmopn aaa aaa jchzalrnumimnmhp \
             haegwjzuvuyypxyu dvszwmarrgswjxmb qjhvhtzxzqqjkmpb xxyxx \
-            uurcxstgmygtbstg ieodomkazucvgmuy > days/inputs/2015-12-05.txt
+            uurcxstgmygtbstg ieodomkazucvgmuy > inputs/2015-12-05.txt
           (cd days/2015-12-05/dart && dart pub get)
           out="$(cd days/2015-12-05/dart && dart run solve.dart)"
           echo "$out"
@@ -256,7 +256,7 @@ jobs:
       # default features, header from the cbindgen this job already installs,
       # then solve.kt against the puzzle-statement example. Real inputs stay
       # out of CI by the same rule that keeps them out of the repo
-      # (days/.gitignore); statement examples are published in the puzzle text
+      # (.gitignore); statement examples are published in the puzzle text
       # and fair game — the six commands below are the example both parts
       # share, and they answer 150 and 900.
       #
@@ -288,9 +288,9 @@ jobs:
           (cd days && cargo build -p aoc-2021-12-02 --lib)
           (cd days/2021-12-02 && mkdir -p include && \
             cbindgen --config cbindgen.toml --output include/aoc_2021_12_02.h src/c_api.rs)
-          mkdir -p days/inputs
+          mkdir -p inputs
           printf '%s\n' 'forward 5' 'down 5' 'forward 8' 'up 3' 'down 8' \
-            'forward 2' > days/inputs/2021-12-02.txt
+            'forward 2' > inputs/2021-12-02.txt
           cd days/2021-12-02/kotlin
           jna="jna-${jna_version}.jar"
           curl -fsSL -o "$jna" \
@@ -332,7 +332,7 @@ jobs:
       # (Swift on 2023-12-01), prove the track end to end — cdylib, header from
       # the cbindgen this job already installs, then solve.swift against the
       # puzzle-statement example. Real inputs stay out of CI by the same rule
-      # that keeps them out of the repo (days/.gitignore); statement examples
+      # that keeps them out of the repo (.gitignore); statement examples
       # are published in the puzzle text and fair game.
       #
       # The four lines below are part ONE's published example, verbatim, and
@@ -387,8 +387,8 @@ jobs:
           (cd days && cargo build -p aoc-2023-12-01 --lib)
           (cd days/2023-12-01 && mkdir -p include && \
             cbindgen --config cbindgen.toml --output include/aoc_2023_12_01.h src/c_api.rs)
-          mkdir -p days/inputs
-          inputs="$(cd days/inputs && pwd)"
+          mkdir -p inputs
+          inputs="$(cd inputs && pwd)"
           target="$(cd days/target && pwd)"
           cd days/2023-12-01/swift
           mkdir -p .build
@@ -464,7 +464,7 @@ jobs:
       # with default features (no C libraries needed), header from the
       # cbindgen this job already installs, then solve.py against the
       # puzzle-statement example. Real inputs stay out of CI by the same
-      # rule that keeps them out of the repo (days/.gitignore); statement
+      # rule that keeps them out of the repo (.gitignore); statement
       # examples are published in the puzzle text and fair game. The six
       # pairs answer part 1 with 11 and part 2 with 31 — the same numbers
       # days/2024-12-01/src/lib.rs pins in test_day1_part1/test_day1_part2
@@ -481,8 +481,8 @@ jobs:
           (cd days && cargo build -p aoc-2024-12-01 --lib)
           (cd days/2024-12-01 && mkdir -p include && \
             cbindgen --config cbindgen.toml --output include/aoc_2024_12_01.h src/c_api.rs)
-          mkdir -p days/inputs
-          printf '3   4\n4   3\n2   5\n1   3\n3   9\n3   3\n' > days/inputs/2024-12-01.txt
+          mkdir -p inputs
+          printf '3   4\n4   3\n2   5\n1   3\n3   9\n3   3\n' > inputs/2024-12-01.txt
           py=./.venv/bin/python
           [ -x "$py" ] || py=./.venv/Scripts/python
           out="$("$py" days/2024-12-01/python/solve.py)"
@@ -506,8 +506,8 @@ jobs:
           (cd days && cargo build -p aoc-2024-12-01 --lib)
           (cd days/2024-12-01 && mkdir -p include && \
             cbindgen --config cbindgen.toml --output include/aoc_2024_12_01.h src/c_api.rs)
-          mkdir -p days/inputs
-          printf '3   4\n4   3\n2   5\n1   3\n3   9\n3   3\n' > days/inputs/2024-12-01.txt
+          mkdir -p inputs
+          printf '3   4\n4   3\n2   5\n1   3\n3   9\n3   3\n' > inputs/2024-12-01.txt
           (cd days/2024-12-01/dart && dart pub get)
           out="$(cd days/2024-12-01/dart && dart run solve.dart)"
           echo "$out"
@@ -539,8 +539,8 @@ jobs:
           (cd days && cargo build -p aoc-2024-12-01 --lib)
           (cd days/2024-12-01 && mkdir -p include && \
             cbindgen --config cbindgen.toml --output include/aoc_2024_12_01.h src/c_api.rs)
-          mkdir -p days/inputs
-          printf '3   4\n4   3\n2   5\n1   3\n3   9\n3   3\n' > days/inputs/2024-12-01.txt
+          mkdir -p inputs
+          printf '3   4\n4   3\n2   5\n1   3\n3   9\n3   3\n' > inputs/2024-12-01.txt
           cd days/2024-12-01/kotlin
           jna="jna-${jna_version}.jar"
           curl -fsSL -o "$jna" \
@@ -579,8 +579,8 @@ jobs:
           (cd days && cargo build -p aoc-2024-12-01 --lib)
           (cd days/2024-12-01 && mkdir -p include && \
             cbindgen --config cbindgen.toml --output include/aoc_2024_12_01.h src/c_api.rs)
-          mkdir -p days/inputs
-          printf '3   4\n4   3\n2   5\n1   3\n3   9\n3   3\n' > days/inputs/2024-12-01.txt
+          mkdir -p inputs
+          printf '3   4\n4   3\n2   5\n1   3\n3   9\n3   3\n' > inputs/2024-12-01.txt
           target="$(cd days/target && pwd)"
           cd days/2024-12-01/swift
           mkdir -p .build
@@ -627,9 +627,9 @@ jobs:
           (cd days && cargo build -p aoc-2024-12-03 --lib)
           (cd days/2024-12-03 && mkdir -p include && \
             cbindgen --config cbindgen.toml --output include/aoc_2024_12_03.h src/c_api.rs)
-          mkdir -p days/inputs
+          mkdir -p inputs
           printf "xmul(2,4)&mul[3,7]!^don't()_mul(5,5)+mul(32,64](mul(11,8)undo()?mul(8,5))" \
-            > days/inputs/2024-12-03.txt
+            > inputs/2024-12-03.txt
           py=./.venv/bin/python
           [ -x "$py" ] || py=./.venv/Scripts/python
           out="$("$py" days/2024-12-03/python/solve.py)"
@@ -651,9 +651,9 @@ jobs:
           (cd days && cargo build -p aoc-2024-12-03 --lib)
           (cd days/2024-12-03 && mkdir -p include && \
             cbindgen --config cbindgen.toml --output include/aoc_2024_12_03.h src/c_api.rs)
-          mkdir -p days/inputs
+          mkdir -p inputs
           printf "xmul(2,4)&mul[3,7]!^don't()_mul(5,5)+mul(32,64](mul(11,8)undo()?mul(8,5))" \
-            > days/inputs/2024-12-03.txt
+            > inputs/2024-12-03.txt
           (cd days/2024-12-03/dart && dart pub get)
           out="$(cd days/2024-12-03/dart && dart run solve.dart)"
           echo "$out"
@@ -679,9 +679,9 @@ jobs:
           (cd days && cargo build -p aoc-2024-12-03 --lib)
           (cd days/2024-12-03 && mkdir -p include && \
             cbindgen --config cbindgen.toml --output include/aoc_2024_12_03.h src/c_api.rs)
-          mkdir -p days/inputs
+          mkdir -p inputs
           printf "xmul(2,4)&mul[3,7]!^don't()_mul(5,5)+mul(32,64](mul(11,8)undo()?mul(8,5))" \
-            > days/inputs/2024-12-03.txt
+            > inputs/2024-12-03.txt
           cd days/2024-12-03/kotlin
           jna="jna-${jna_version}.jar"
           curl -fsSL -o "$jna" \
@@ -718,9 +718,9 @@ jobs:
           (cd days && cargo build -p aoc-2024-12-03 --lib)
           (cd days/2024-12-03 && mkdir -p include && \
             cbindgen --config cbindgen.toml --output include/aoc_2024_12_03.h src/c_api.rs)
-          mkdir -p days/inputs
+          mkdir -p inputs
           printf "xmul(2,4)&mul[3,7]!^don't()_mul(5,5)+mul(32,64](mul(11,8)undo()?mul(8,5))" \
-            > days/inputs/2024-12-03.txt
+            > inputs/2024-12-03.txt
           target="$(cd days/target && pwd)"
           cd days/2024-12-03/swift
           mkdir -p .build

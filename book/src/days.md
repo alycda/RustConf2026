@@ -49,8 +49,8 @@ So no real input and no puzzle text is ever committed here — only the small
 examples printed in the problem statements, which is what the tests assert
 against.
 
-Download yours and drop it at `days/inputs/<YYYY-MM-DD>.txt`. `.gitignore`
-already covers that directory, and each day reads its file at run time from a
+Download yours and drop it at `inputs/<YYYY-MM-DD>.txt` in the repo root.
+`.gitignore` already covers that directory, and each day reads its file at run time from a
 path anchored to the crate, so `just days run` works and a day with no input
 still builds and tests.
 

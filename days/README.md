@@ -18,9 +18,11 @@
 - **Never commit real puzzle inputs or full puzzle text**
   ([AoC's request](https://adventofcode.com/about#faq_copying)). Only the small example
   inputs from the problem statement live in tests; the doc header of each day paraphrases
-  the puzzle rather than quoting it. `.gitignore` here ignores `**/inputs/*`, so drop your
-  own input at `days/inputs/<YYYY-MM-DD>.txt` — every `main` reads it from there at
-  runtime rather than with `include_str!`, so a day still builds and tests without one.
+  the puzzle rather than quoting it. There is one inputs/ folder, at the repo root, and
+  the root `.gitignore` ignores its contents — so drop your own input at
+  `<repo>/inputs/<YYYY-MM-DD>.txt`. Every `main` anchors that path to its own crate
+  directory, so it resolves the same however cargo is invoked, and reads it at runtime
+  rather than with `include_str!`, so a day still builds and tests without one.
 - **Days are named `YYYY-MM-DD`**, the full date, because `2015-01` reads as January to
   everyone who hasn't been told otherwise and sorts wrong the moment a second event year
   shows up.
@@ -52,7 +54,7 @@ cargo bench -p aoc-2015-12-05 --bench nice --features hyperscan,icu
 
 The `day` bench times the parse and the parts separately, over the statement examples, a
 generated input at roughly the scale of a real one, and — only if you have dropped one at
-`days/inputs/<day>.txt` — your own. The generated input exists because puzzle inputs
+`inputs/<day>.txt` — your own. The generated input exists because puzzle inputs
 cannot be committed here and the examples are far too small to time; it is built from a
 fixed seed, so two runs are comparable.
 

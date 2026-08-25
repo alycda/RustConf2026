@@ -14,6 +14,11 @@
 # build), and anything else that lands here and isn't a day belongs in the
 # exclude list beside it.
 #
+# `inputs` stays on that list even though days/inputs is gone: puzzle inputs
+# now live in <repo>/inputs, but an attendee following older instructions can
+# still create days/inputs, and an unexcluded non-crate directory here fails
+# every cargo command in the workspace.
+#
 # Days are members, so they share days/Cargo.lock and days/target rather than
 # locking and building one per day.
 [workspace]

@@ -1,6 +1,6 @@
 //! Plain Rust vs. a malware scanner vs. a speech synthesiser, head to head.
 //!
-//! Puzzle inputs aren't committed (see `days/.gitignore`), so this builds its
+//! Puzzle inputs aren't committed (see `.gitignore`), so this builds its
 //! own synthetic lines rather than reading one — same reasoning as
 //! `src/main.rs`. Requires both features; without either the target is
 //! skipped, which is what keeps a default `--all-targets` build green on a

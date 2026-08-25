@@ -76,9 +76,9 @@ private func call(
     return slot
 }
 
-let inputPath = daysDir.appendingPathComponent("inputs/2024-12-01.txt")
+let inputPath = daysDir.deletingLastPathComponent().appendingPathComponent("inputs/2024-12-01.txt")
 guard let text = try? String(contentsOf: inputPath, encoding: .utf8) else {
-    fail("no puzzle input at \(inputPath.path) (see days/.gitignore)")
+    fail("no puzzle input at \(inputPath.path) (see .gitignore)")
 }
 
 print("Part 1 🕊️(🦀): \(call("part1", aoc_2024_12_01_part1, text))")

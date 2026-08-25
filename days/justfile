@@ -45,7 +45,7 @@ bench day *args:
 
 # cbindgen header for a day's C-callable surface (Exercise 2), where a day
 # has one — a bonus, and not every day carries one. Not committed (see
-# days/.gitignore): cbindgen is required workshop tooling, so this is
+# .gitignore): cbindgen is required workshop tooling, so this is
 # always a `just` call away instead of a file to keep in sync by hand.
 # Exercise 3 tracks regenerate it the same way before building against it.
 bindgen day:

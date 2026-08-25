@@ -72,7 +72,8 @@ build/
 __MACOSX/
 .AppleDouble
 .LSOverride
-Icon[]
+Icon[
+]
 
 # Resource forks
 ._*
@@ -93,7 +94,8 @@ Icon[]
 .file
 .disk_label*
 lost+found
-.HFS+ Private Directory Data[]
+.HFS+ Private Directory Data[
+]
 
 # Directories potentially created on remote AFP share
 .AppleDB
@@ -170,11 +172,20 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
-# Attendee puzzle inputs. days/.gitignore covers days/inputs/; this covers
-# <repo>/inputs/, which a day binary fills when run from the repo root rather
-# than from days/, and which in a jj repo would be auto-snapshotted on the next
-# command. Ignore the contents but keep the directory itself: git cannot
-# re-include a file whose parent directory is excluded, so this has to exclude
-# /inputs/* rather than /inputs/ for the .gitkeep negation below to take effect.
-/inputs/*
+# Attendee puzzle inputs. There is one inputs/ folder now, at the repo root:
+# every day binary anchors its path to <repo>/inputs/<YYYY-MM-DD>.txt, and the
+# exercise crates will read the same place. AoC asks that real inputs never be
+# republished, and in a jj repo an untracked file is auto-snapshotted on the
+# next command, so the net is deliberately wide — **/inputs/* also catches a
+# stray inputs/ left anywhere else in the tree. Ignore the contents but keep
+# the root directory itself: git cannot re-include a file whose parent
+# directory is excluded, so this excludes the contents rather than the
+# directory, which is what lets the .gitkeep negation take effect.
+**/inputs/*
 !/inputs/.gitkeep
+
+# cbindgen-generated headers (Exercise 2) — regenerate with
+# `just days bindgen <day>`; cbindgen is required workshop tooling, so this
+# is machine output, not source, same reasoning as **/uniffi/bindings/
+# below. Lived in days/.gitignore until that file went with days/inputs/.
+**/include/*.h

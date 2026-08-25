@@ -8,13 +8,13 @@ use aoc_ornaments::{Part, Solution};
 /// Each part is a distinct phantom type — `Day<Part1>` only implements part 1
 /// and `Day<Part2>` only part 2 — so the input is parsed once per part.
 ///
-/// Puzzle inputs are never committed (see `days/.gitignore`) — drop yours at
-/// `days/inputs/2024-12-03.txt`. The path is anchored to this crate's directory
-/// rather than the working directory, so it resolves the same however cargo
-/// is invoked, and read at runtime rather than with `include_str!` so the
-/// crate still builds and tests without one.
+/// Puzzle inputs are never committed (see `.gitignore`) — drop yours at
+/// `inputs/2024-12-03.txt` in the repo root. The path is anchored to this
+/// crate's directory rather than the working directory, so it resolves the
+/// same however cargo is invoked, and read at runtime rather than with
+/// `include_str!` so the crate still builds and tests without one.
 fn main() -> miette::Result<()> {
-    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../inputs/2024-12-03.txt");
+    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../inputs/2024-12-03.txt");
     let input = std::fs::read_to_string(path)
         .map_err(|e| miette::miette!("could not read {}: {}", path, e))?;
 

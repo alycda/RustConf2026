@@ -93,9 +93,9 @@ private fun call(name: String, fn: (String, LongByReference) -> Int, text: Strin
 fun main() {
     val lib = loadLibrary()
 
-    val inputFile = File(dayDir().parentFile, "inputs/2024-12-03.txt")
+    val inputFile = File(dayDir().parentFile.parentFile, "inputs/2024-12-03.txt")
     if (!inputFile.exists()) {
-        err.println("no puzzle input at ${inputFile.path} (see days/.gitignore)")
+        err.println("no puzzle input at ${inputFile.path} (see .gitignore)")
         kotlin.system.exitProcess(1)
     }
     val text = inputFile.readText()

@@ -72,7 +72,7 @@ rather than `Result`, because a panic unwinding across an `extern "C"` frame is
 undefined behavior. They are built on the pure-Rust functions specifically —
 Exercise 2 is about the export direction, and wiring it to either library would
 make the header's meaning depend on a cargo feature. `just days bindgen
-2021-12-02` generates the header (not committed — see `days/.gitignore`).
+2021-12-02` generates the header (not committed — see `.gitignore`).
 
 **Kotlin via JNA (`kotlin/solve.kt`, Exercise 3).** Loads the built `cdylib`
 and calls straight in. JNA needs each function written once, as an ordinary

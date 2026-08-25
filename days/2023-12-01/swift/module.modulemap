@@ -10,7 +10,7 @@
 // rather than a runtime surprise.
 //
 // The header path is relative to this file, and the header does not exist
-// on a fresh clone (days/.gitignore) — `just days swift-demo 2023-12-01`
+// on a fresh clone (.gitignore) — `just days swift-demo 2023-12-01`
 // regenerates it first. `[system]` is the standard marker for a C header
 // you don't own: it silences the warnings clang would otherwise raise
 // inside it, which is right for generated code nobody is going to edit.

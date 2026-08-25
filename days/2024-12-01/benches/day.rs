@@ -71,7 +71,7 @@ fn generated(lines: usize) -> String {
 /// gitignored — and that has to stay fine, so this is an `Option` and the
 /// cases built from it simply don't appear.
 fn real() -> Option<String> {
-    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../inputs/2024-12-01.txt");
+    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../inputs/2024-12-01.txt");
     std::fs::read_to_string(path).ok()
 }
 

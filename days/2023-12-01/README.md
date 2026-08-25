@@ -66,7 +66,7 @@ challenge](#the-open-challenge-espeak-ng) below. Nothing routes to it.
 rather than `Result`, because a panic unwinding across an `extern "C"` frame is
 undefined behavior. `0` on success, `-1` for a null pointer or invalid UTF-8,
 `-2` for a total too large for a `uint32_t`. `just days bindgen 2023-12-01`
-generates the header (not committed — see `days/.gitignore`); cbindgen is
+generates the header (not committed — see `.gitignore`); cbindgen is
 pointed at `src/c_api.rs` rather than at the crate, so a day that later grows a
 module full of *imported* `extern "C"` declarations doesn't get somebody else's
 API redeclared inside its own header.

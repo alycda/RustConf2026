@@ -45,7 +45,7 @@ out-parameters and status codes rather than `Result` — a panic unwinding
 across an `extern "C"` frame is undefined behavior, so nothing in this
 module can panic; a null pointer or invalid UTF-8 from a C caller is
 handled as data, not asserted away. `just days bindgen 2015-12-01`
-generates the header (not committed — see `days/.gitignore`; cbindgen is
+generates the header (not committed — see `.gitignore`; cbindgen is
 required workshop tooling, so regenerating it is always a `just` call
 away).
 

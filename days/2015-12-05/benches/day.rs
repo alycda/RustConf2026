@@ -65,11 +65,11 @@ fn generated(lines: usize) -> String {
     out
 }
 
-/// Your own input, if you have one. Absent on a fresh clone — `days/inputs/`
+/// Your own input, if you have one. Absent on a fresh clone — `inputs/`
 /// is gitignored — and that has to stay fine, so this is an `Option` and the
 /// cases built from it simply don't appear.
 fn real() -> Option<String> {
-    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../inputs/2015-12-05.txt");
+    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../inputs/2015-12-05.txt");
     std::fs::read_to_string(path).ok()
 }
 

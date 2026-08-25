@@ -77,7 +77,7 @@ handled as data. Built on the pure-Rust functions specifically, not on
 whichever variant `Solution::part1` currently runs: this exercise is
 about the export direction, and the exported library needs no C
 dependency of its own. `just days bindgen 2015-12-05` generates the
-header (not committed — see `days/.gitignore`).
+header (not committed — see `.gitignore`).
 
 **Dart via dart:ffi (`dart/solve.dart`, Exercise 3).** Day 1 did this
 step in Python; each day demonstrates a different track. The contrast is
