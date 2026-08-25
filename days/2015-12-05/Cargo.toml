@@ -45,5 +45,12 @@ criterion.workspace = true
 name = "day"
 harness = false
 
+# The three-way comparison needs both C libraries: without the features the
+# target is skipped rather than failing --all-targets.
+[[bench]]
+name = "nice"
+harness = false
+required-features = ["hyperscan", "icu"]
+
 [build-dependencies]
 cc.workspace = true
