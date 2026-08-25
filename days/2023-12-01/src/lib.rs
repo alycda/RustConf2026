@@ -244,27 +244,69 @@ mod tests {
     use super::*;
 
     use aoc_ornaments::Part;
+    use rstest::rstest;
 
-    #[test]
-    fn test_part1() -> miette::Result<()> {
-        let input = "1abc2
+    /// Part one's published example. Named because more than one test needs
+    /// the *same* bytes — a language track runs against one of these two
+    /// inputs verbatim, and "verbatim" stops meaning anything if the string
+    /// is retyped per call site.
+    const PART1_EXAMPLE: &str = "1abc2
 pqr3stu8vwx
 a1b2c3d4e5f
 treb7uchet";
-        assert_eq!("142", Day::from_str(input)?.solve(Part::One)?);
-        Ok(())
-    }
 
-    #[test]
-    fn test_part2() -> miette::Result<()> {
-        let input = "two1nine
+    /// Part two's published example — a different input, which is the whole
+    /// reason [`test_both_parts_over_both_examples`] exists.
+    const PART2_EXAMPLE: &str = "two1nine
 eightwothree
 abcone2threexyz
 xtwone3four
 4nineeightseven2
 zoneight234
 7pqrstsixteen";
-        assert_eq!("281", Day::from_str(input)?.solve(Part::Two)?);
+
+    #[test]
+    fn test_part1() -> miette::Result<()> {
+        assert_eq!("142", Day::from_str(PART1_EXAMPLE)?.solve(Part::One)?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_part2() -> miette::Result<()> {
+        assert_eq!("281", Day::from_str(PART2_EXAMPLE)?.solve(Part::Two)?);
+        Ok(())
+    }
+
+    /// Both parts over both examples — the four cells of a grid the puzzle
+    /// only publishes two of.
+    ///
+    /// A language track (Exercise 3) reads one input file and prints both
+    /// parts, so whichever example a Verify cell writes, one of the two
+    /// numbers it prints is a part the puzzle statement gives no answer for.
+    /// Left like that, CI asserts a figure no Rust test believes, and the
+    /// track is being checked against nothing.
+    ///
+    /// The fix is more assertions, not a different input. A bespoke input
+    /// built to make the numbers come out conveniently would be a fifth
+    /// thing to keep in sync and would appear in no puzzle text; these two
+    /// are published, and a track can now use *either* verbatim with both of
+    /// its printed numbers pinned here.
+    ///
+    /// The two unpublished cells, and why they are what they are:
+    /// part one's example holds no spelled-out digits, so part two scores it
+    /// identically at 142; part two's example scores 209 on literal digits
+    /// alone, the seven lines contributing 11, 0, 22, 33, 42, 24 and 77.
+    #[rstest]
+    #[case(PART1_EXAMPLE, Part::One, "142")]
+    #[case(PART1_EXAMPLE, Part::Two, "142")]
+    #[case(PART2_EXAMPLE, Part::One, "209")]
+    #[case(PART2_EXAMPLE, Part::Two, "281")]
+    fn test_both_parts_over_both_examples(
+        #[case] input: &str,
+        #[case] part: Part,
+        #[case] expected: &str,
+    ) -> miette::Result<()> {
+        assert_eq!(expected, Day::from_str(input)?.solve(part)?);
         Ok(())
     }
 

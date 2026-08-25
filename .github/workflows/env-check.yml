@@ -156,10 +156,34 @@ jobs:
       # the cbindgen this job already installs, then solve.swift against the
       # puzzle-statement example. Real inputs stay out of CI by the same rule
       # that keeps them out of the repo (days/.gitignore); statement examples
-      # are published in the puzzle text and fair game. The seven lines below
-      # are part two's example, and the two parts answer 209 and 281 — two
-      # different numbers on one input, so neither assertion can be satisfied
-      # by the other part's answer.
+      # are published in the puzzle text and fair game.
+      #
+      # The four lines below are part ONE's published example, verbatim, and
+      # both assertions are numbers days/2023-12-01/src/lib.rs asserts over
+      # that same input: 142 from `test_part1`, and 142 again for part two
+      # from `test_both_parts_over_both_examples`.
+      #
+      # Verbatim is the rule, not a detail. A track's job here is to prove it
+      # gets the same answer Rust does, so it has to be handed the same bytes
+      # Rust was. An input tweaked until the numbers came out conveniently --
+      # this cell briefly had one, four lines plus `eightwothree` -- proves a
+      # track agrees with a figure that exists nowhere else in the repo, and
+      # adds a fifth thing to keep in sync.
+      #
+      # This day makes that tempting because its two parts have *different*
+      # statement examples: 142 comes from these four lines, 281 from part
+      # two's seven, and no single input yields both. A track reads one file
+      # and prints both parts, so one of the two numbers it prints is always
+      # a part the puzzle publishes no answer for. The fix is more
+      # assertions, not a different input -- the rstest grid in lib.rs covers
+      # both parts over *both* examples, so either can be used here as-is.
+      #
+      # The cost of this particular choice, stated rather than hidden: part
+      # one's example has no spelled-out digits, so both parts answer 142 and
+      # the two assertions cannot tell each other apart -- a track that ran
+      # part one twice would pass this cell. Swapping to part two's seven
+      # lines (209 and 281, also pinned by that grid) buys that back if it
+      # ever matters more than showing the number the statement is known for.
       #
       # `just` is not on a stock runner, so the swift-demo recipe's steps are
       # spelled out here rather than invoked — same as the python and dart
@@ -187,8 +211,8 @@ jobs:
           (cd days/2023-12-01 && mkdir -p include && \
             cbindgen --config cbindgen.toml --output include/aoc_2023_12_01.h src/c_api.rs)
           mkdir -p days/inputs
-          printf '%s\n' 'two1nine' 'eightwothree' 'abcone2threexyz' 'xtwone3four' \
-            '4nineeightseven2' 'zoneight234' '7pqrstsixteen' > days/inputs/2023-12-01.txt
+          printf '%s\n' '1abc2' 'pqr3stu8vwx' 'a1b2c3d4e5f' 'treb7uchet' \
+            > days/inputs/2023-12-01.txt
           target="$(cd days/target && pwd)"
           cd days/2023-12-01/swift
           mkdir -p .build
@@ -205,8 +229,8 @@ jobs:
           #
           # First the answers, matched loosely: this is the thing that must be
           # true, and it stays true however the line is labelled.
-          echo "$out" | grep -qE '^Part 1 .*: 209$'
-          echo "$out" | grep -qE '^Part 2 .*: 281$'
+          echo "$out" | grep -qE '^Part 1 .*: 142$'
+          echo "$out" | grep -qE '^Part 2 .*: 142$'
           # Then the label, byte for byte, because the `Part N <emoji>(🦀)`
           # shape is a repo-wide convention and silent drift in it is worth a
           # red cell. Kept separate so this failure can say which one it was —
@@ -225,8 +249,8 @@ jobs:
           # (☕️ = U+2615 + U+FE0F on the Kotlin one), which is a good argument
           # for picking selector-free emoji for any track added later — 🐍 and
           # 🎯 are each a single codepoint, and neither cell needs this note.
-          if ! echo "$out" | grep -qF 'Part 1 🕊️(🦀): 209' \
-            || ! echo "$out" | grep -qF 'Part 2 🕊️(🦀): 281'; then
+          if ! echo "$out" | grep -qF 'Part 1 🕊️(🦀): 142' \
+            || ! echo "$out" | grep -qF 'Part 2 🕊️(🦀): 142'; then
             echo "::error::answers are correct but the label drifted — re-sync this step with days/2023-12-01/swift/solve.swift" >&2
             exit 1
           fi
