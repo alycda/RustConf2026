@@ -5,7 +5,12 @@ use std::str::FromStr;
 use aoc_ornaments::Solution;
 
 pub mod c_api;
+// Each C-backed variant is a default-off cargo feature (see Cargo.toml):
+// without it the module, its `extern "C"` block, and build.rs pkg-config
+// probe are all absent, so this crate builds with no C library present.
+#[cfg(feature = "hyperscan")]
 pub mod hyperscan;
+#[cfg(feature = "icu")]
 pub mod icu;
 
 #[derive(Debug, derive_more::Deref)]
@@ -71,6 +76,47 @@ fn is_vowel(c: char) -> bool {
     matches!(c, 'a' | 'e' | 'i' | 'o' | 'u')
 }
 
+/// Which part-1 implementation the [`Solution`] impl runs, decided at
+/// compile time by the features enabled.
+///
+/// ICU wins when it is compiled in, because its regex is the more direct
+/// translation of the puzzle rules, where vectorscan's is a ~700-pattern
+/// workaround for missing backreferences (see the `hyperscan` module docs).
+/// With neither feature on — the default build, which is what CI, a fresh
+/// clone, and `days/2015-12-05/src/c_api.rs`'s C callers all get — it is the
+/// plain-Rust rule, and no C library is needed to build or run this crate.
+/// All three are tested regardless of which one `cargo run` exercises.
+fn part1_rule() -> fn(&str) -> bool {
+    #[cfg(feature = "icu")]
+    {
+        icu::is_nice_via_icu
+    }
+    #[cfg(all(feature = "hyperscan", not(feature = "icu")))]
+    {
+        hyperscan::is_nice_via_hyperscan
+    }
+    #[cfg(not(any(feature = "icu", feature = "hyperscan")))]
+    {
+        is_nice_pure_rust
+    }
+}
+
+/// The part-2 counterpart to `part1_rule`, same precedence.
+fn part2_rule() -> fn(&str) -> bool {
+    #[cfg(feature = "icu")]
+    {
+        icu::is_nice_v2_via_icu
+    }
+    #[cfg(all(feature = "hyperscan", not(feature = "icu")))]
+    {
+        hyperscan::is_nice_v2_via_hyperscan
+    }
+    #[cfg(not(any(feature = "icu", feature = "hyperscan")))]
+    {
+        is_nice_v2_pure_rust
+    }
+}
+
 impl Day {
     fn compute(&self, f: fn(&str) -> bool) -> usize {
         self.iter().filter(|line| f(line)).count()
@@ -80,22 +126,17 @@ impl Day {
 impl Solution for Day {
     type Output = usize;
 
-    /// Count the number of nice strings in the input, via ICU regex — see
-    /// [`icu::is_nice_via_icu`]. [`hyperscan::is_nice_via_hyperscan`] is the
-    /// other sibling's answer to the same rules; ICU wins the default here
-    /// because its regex is the more direct translation of the puzzle
-    /// rules, where vectorscan's is a ~700-pattern workaround for missing
-    /// backreferences (see hyperscan's module docs) — both are fully
-    /// tested below regardless of which one `cargo run` exercises.
+    /// Count the number of nice strings in the input, via whichever
+    /// implementation is compiled in — see `part1_rule`.
     fn part1(&mut self) -> aoc_ornaments::SolutionResult<Self::Output> {
-        Ok(self.compute(icu::is_nice_via_icu))
+        Ok(self.compute(part1_rule()))
     }
 
     /// Count the number of nice strings in the input using the new rules,
-    /// via ICU regex. See [`icu::is_nice_v2_via_icu`] and the note on
-    /// [`Solution::part1`].
+    /// via the same feature switch as [`Solution::part1`] — see
+    /// `part2_rule`.
     fn part2(&mut self) -> aoc_ornaments::SolutionResult<Self::Output> {
-        Ok(self.compute(icu::is_nice_v2_via_icu))
+        Ok(self.compute(part2_rule()))
     }
 }
 
@@ -121,6 +162,7 @@ mod tests {
     #[case("jchzalrnumimnmhp", false)]
     #[case("haegwjzuvuyypxyu", false)]
     #[case("dvszwmarrgswjxmb", false)]
+    #[cfg(feature = "hyperscan")]
     fn test_cases_part1_hyperscan(#[case] input: &str, #[case] expected: bool) {
         assert_eq!(hyperscan::is_nice_via_hyperscan(input), expected);
     }
@@ -131,6 +173,7 @@ mod tests {
     #[case("jchzalrnumimnmhp", false)]
     #[case("haegwjzuvuyypxyu", false)]
     #[case("dvszwmarrgswjxmb", false)]
+    #[cfg(feature = "icu")]
     fn test_cases_part1_icu(#[case] input: &str, #[case] expected: bool) {
         assert_eq!(icu::is_nice_via_icu(input), expected);
     }
@@ -149,6 +192,7 @@ mod tests {
     #[case("xxyxx", true)]
     #[case("uurcxstgmygtbstg", false)]
     #[case("ieodomkazucvgmuy", false)]
+    #[cfg(feature = "hyperscan")]
     fn test_cases_part2_hyperscan(#[case] input: &str, #[case] expected: bool) {
         assert_eq!(hyperscan::is_nice_v2_via_hyperscan(input), expected);
     }
@@ -158,6 +202,7 @@ mod tests {
     #[case("xxyxx", true)]
     #[case("uurcxstgmygtbstg", false)]
     #[case("ieodomkazucvgmuy", false)]
+    #[cfg(feature = "icu")]
     fn test_cases_part2_icu(#[case] input: &str, #[case] expected: bool) {
         assert_eq!(icu::is_nice_v2_via_icu(input), expected);
     }

@@ -11,6 +11,18 @@ rust-version.workspace = true
 [lib]
 crate-type = ["rlib", "cdylib"]
 
+# The hyperscan/icu variants link real C libraries at build time — build.rs
+# probes pkg-config only for the features you enable — so they are off by
+# default: a bare `cargo test --workspace` stays green on stock CI runners
+# and on the manual-setup path alike. The nix shell carries both libraries;
+# the head-to-head is: cargo test --features hyperscan,icu
+#
+# `hyperscan` is the module and feature name, `vectorscan` the package that
+# provides it (libhs.pc) — the maintained fork, same API.
+[features]
+hyperscan = []
+icu = []
+
 [dependencies]
 aoc-ornaments.workspace = true
 miette.workspace = true
