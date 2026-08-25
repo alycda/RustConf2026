@@ -185,5 +185,9 @@ jobs:
           (cd days/2015-12-05/dart && dart pub get)
           out="$(cd days/2015-12-05/dart && dart run solve.dart)"
           echo "$out"
-          echo "$out" | grep -F 'Part 1 🎯(🦀): 2'
-          echo "$out" | grep -F 'Part 2 🎯(🦀): 2'
+          # -q: the run's own two lines are echoed above, and a grep that
+          # reprints its match makes one run look like two in the log. On a
+          # mismatch the step still fails (shell: bash runs with -e) and the
+          # echo above is the diff.
+          echo "$out" | grep -qF 'Part 1 🎯(🦀): 2'
+          echo "$out" | grep -qF 'Part 2 🎯(🦀): 2'
