@@ -34,6 +34,25 @@ let
       tags: ${p.tags}
       readonly: true
   '') cheatPaths);
+  # nixpkgs' duckdb ships include/duckdb.h and lib/libduckdb.so but no
+  # lib/pkgconfig/duckdb.pc, so `pkg-config --libs duckdb` fails even with the
+  # package in buildInputs. days/2021-12-02/build.rs probes pkg-config the way
+  # every C variant in this repo does; teaching it a second, duckdb-only
+  # discovery mechanism would make that one day the exception. Synthesizing
+  # the missing file instead keeps the build script uniform — writeTextDir
+  # puts it at $out/lib/pkgconfig/, which pkg-config's setup hook adds to
+  # PKG_CONFIG_PATH like any other package's.
+  #
+  # Note the two prefixes: duckdb splits its headers and its shared object
+  # across the `dev` and `lib` outputs, so one `prefix=` would resolve only
+  # half of it.
+  duckdbPc = pkgs.writeTextDir "lib/pkgconfig/duckdb.pc" ''
+    Name: duckdb
+    Description: DuckDB in-process analytical database
+    Version: ${pkgs.duckdb.version}
+    Cflags: -I${pkgs.duckdb.dev}/include
+    Libs: -L${pkgs.duckdb.lib}/lib -lduckdb
+  '';
 in
 pkgs.mkShell {
   buildInputs = with pkgs; [
@@ -51,6 +70,11 @@ pkgs.mkShell {
     # safety net: python3 for the Python track; git so pure/minimal shells
     # (and jj colocated clones) get a current git (no verification needed)
     python3 git
+    # 2021-12-02 folds the course in SQL through DuckDB
+    # (days/2021-12-02/src/duckdb.rs) via FFI — an in-process analytical
+    # database doing the work of three integer accumulators. No system-wide
+    # install needed; duckdbPc above supplies the .pc nixpkgs doesn't ship.
+    duckdb duckdbPc pkg-config
   ];
 
   CHEAT_CONFIG_PATH = cheatConf;
