@@ -74,6 +74,7 @@ name = "aoc-2021-12-02"
 version = "0.1.0"
 dependencies = [
  "aoc-ornaments",
+ "criterion",
  "miette",
  "rstest",
 ]
