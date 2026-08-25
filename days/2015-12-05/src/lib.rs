@@ -4,6 +4,7 @@ use std::str::FromStr;
 
 use aoc_ornaments::Solution;
 
+pub mod c_api;
 pub mod hyperscan;
 pub mod icu;
 

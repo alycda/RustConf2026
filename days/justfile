@@ -18,6 +18,28 @@ test day:
 run day:
     cd {{day}} && cargo run
 
+# cbindgen header for a day's C-callable surface (Exercise 2), where a day
+# has one — not every day carries one. Not committed (see
+# days/.gitignore): cbindgen is required workshop tooling, so this is
+# always a `just` call away instead of a file to keep in sync by hand.
+# Exercise 3 tracks (e.g. Dart/dart:ffi) regenerate it the same way before
+# loading the cdylib.
+bindgen day:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -f "{{day}}/cbindgen.toml" ]; then
+        echo "days/{{day}} has no cbindgen.toml — not every day carries a C API" >&2
+        exit 1
+    fi
+    ident="$(printf '%s' "{{day}}" | tr - _)"
+    cd "{{day}}"
+    mkdir -p include
+    # src/c_api.rs, not the crate dir: cbindgen would otherwise also walk
+    # the hyperscan/icu modules' own `extern "C"` FFI *imports* (libhs/ICU
+    # declarations, not part of this day's C API) and redeclare them here.
+    cbindgen --config cbindgen.toml --output "include/aoc_${ident}.h" src/c_api.rs
+    echo "wrote {{day}}/include/aoc_${ident}.h"
+
 # scaffold a new day from _template, e.g. `just new 2022-12-01`
 new day:
     #!/usr/bin/env bash
