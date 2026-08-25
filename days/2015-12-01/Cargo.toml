@@ -11,6 +11,15 @@ rust-version.workspace = true
 [lib]
 crate-type = ["rlib", "cdylib"]
 
+# The tcc/caca variants link real C libraries at build time — build.rs
+# probes pkg-config only for the features you enable — so they're off by
+# default: a bare `cargo test --workspace` stays green on stock CI runners
+# and the manual-setup path alike. The nix shell carries both libraries;
+# the full absurdity is: cargo run --features caca,tcc
+[features]
+caca = []
+tcc = []
+
 [dependencies]
 aoc-ornaments.workspace = true
 derive_more.workspace = true
@@ -28,6 +37,9 @@ criterion.workspace = true
 name = "day"
 harness = false
 
+# The pure-vs-JIT comparison needs the JIT: without the feature the target
+# is skipped rather than failing --all-targets.
 [[bench]]
 name = "sum"
 harness = false
+required-features = ["tcc"]

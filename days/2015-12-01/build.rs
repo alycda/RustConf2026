@@ -5,10 +5,24 @@
 // `pkg-config` setup hook points pkg-config at them automatically, so
 // `pkg-config --libs <name>` is enough without hardcoding any nix store
 // path here.
+//
+// Each library is probed only when its cargo feature is enabled (cargo
+// exposes enabled features to build scripts as CARGO_FEATURE_* env vars),
+// so the default build needs neither pkg-config nor the libraries — that's
+// what keeps stock CI runners and the manual-setup path green.
 use std::process::Command;
 
 fn main() {
-    for name in ["caca", "libtcc"] {
+    let variants = [
+        ("CARGO_FEATURE_CACA", "caca"),
+        ("CARGO_FEATURE_TCC", "libtcc"),
+    ];
+
+    for (feature, name) in variants {
+        if std::env::var_os(feature).is_none() {
+            continue;
+        }
+
         let libs = Command::new("pkg-config")
             .args(["--libs", name])
             .output()
