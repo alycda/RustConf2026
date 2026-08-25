@@ -151,3 +151,30 @@ jobs:
               ./scripts/self-check.sh --track "${{ matrix.track }}"
               ;;
           esac
+      # Beyond the env check: on a branch that carries a worked Exercise 3
+      # (Python/cffi on 2015-12-01), prove the track end to end — cdylib
+      # with default features (no C libraries needed), header from the
+      # cbindgen this job already installs, then solve.py against the
+      # puzzle-statement example. Real inputs stay out of CI by the same
+      # rule that keeps them out of the repo (days/.gitignore); statement
+      # examples are published in the puzzle text and fair game. "()())"
+      # answers part 1 with -1 — a negative through the out-param, which a
+      # naive in-band error convention would have eaten — and part 2 with 5.
+      # Branches without the worked track (e.g. main today) skip cleanly.
+      - name: python track end-to-end (2015-12-01)
+        if: matrix.track == 'python'
+        shell: bash
+        run: |
+          if [ ! -f days/2015-12-01/python/solve.py ]; then
+            echo "no worked python track on this branch — skipping"
+            exit 0
+          fi
+          (cd days && cargo build -p aoc-2015-12-01 --lib)
+          (cd days/2015-12-01 && mkdir -p include && \
+            cbindgen --config cbindgen.toml --output include/aoc_2015_12_01.h src/c_api.rs)
+          mkdir -p days/inputs
+          printf '()())' > days/inputs/2015-12-01.txt
+          out="$(./.venv/bin/python days/2015-12-01/python/solve.py)"
+          echo "$out"
+          echo "$out" | grep -F 'Part 1 🐍(🦀): -1'
+          echo "$out" | grep -F 'Part 2 🐍(🦀): 5'
