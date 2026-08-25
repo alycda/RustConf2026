@@ -213,11 +213,20 @@ jobs:
           # a bare `exit 1` after two correct answers reads as a broken track
           # when it is actually a cosmetic edit that did not reach this file.
           #
-          # Unlike the Kotlin cell, there is no variation-selector trap here:
-          # 🐦 is U+1F426 on its own, four bytes, with nothing invisible after
-          # it. Copy the label from swift/solve.swift anyway if you change it.
-          if ! echo "$out" | grep -qF 'Part 1 🐦(🦀): 209' \
-            || ! echo "$out" | grep -qF 'Part 2 🐦(🦀): 281'; then
+          # This cell has the same variation-selector trap the Kotlin one
+          # does, and it is meant literally: 🕊️ is U+1F54A DOVE followed by
+          # U+FE0F VARIATION SELECTOR-16 — seven bytes, the last three
+          # invisible. A bare 🕊 (U+1F54A alone) renders identically here, in
+          # most editors, and in a browser, and will NOT match this grep.
+          #
+          # So do not retype the label if you change it: copy it out of
+          # days/2023-12-01/swift/solve.swift, or generate both sides from the
+          # same bytes. Two of the four track cells now carry this footgun
+          # (☕️ = U+2615 + U+FE0F on the Kotlin one), which is a good argument
+          # for picking selector-free emoji for any track added later — 🐍 and
+          # 🎯 are each a single codepoint, and neither cell needs this note.
+          if ! echo "$out" | grep -qF 'Part 1 🕊️(🦀): 209' \
+            || ! echo "$out" | grep -qF 'Part 2 🕊️(🦀): 281'; then
             echo "::error::answers are correct but the label drifted — re-sync this step with days/2023-12-01/swift/solve.swift" >&2
             exit 1
           fi

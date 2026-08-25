@@ -84,5 +84,5 @@ guard let text = try? String(contentsOf: inputPath, encoding: .utf8) else {
     fail("no puzzle input at \(inputPath.path) (see days/.gitignore)")
 }
 
-print("Part 1 🐦(🦀): \(call("part1", aoc_2023_12_01_part1, text))")
-print("Part 2 🐦(🦀): \(call("part2", aoc_2023_12_01_part2, text))")
+print("Part 1 🕊️(🦀): \(call("part1", aoc_2023_12_01_part1, text))")
+print("Part 2 🕊️(🦀): \(call("part2", aoc_2023_12_01_part2, text))")
