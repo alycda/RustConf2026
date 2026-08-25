@@ -37,9 +37,9 @@
 # information, not commitments.
 #
 # Answered by the first full-grid run (2026-08-25): python and dart go
-# green everywhere with their provisioning steps; swift/windows is red —
-# the stock image ships no Swift — and stays informational via
-# continue-on-error on that one cell rather than failing every push.
+# green everywhere with their provisioning steps; swift/windows was red —
+# the stock image ships no Swift — and is now excluded from the matrix
+# outright, the observation being recorded here.
 
 name: Verify
 
@@ -74,14 +74,15 @@ jobs:
         # environments across all three OSes is the workflow's whole job.
         os: [ubuntu-latest, macos-latest, windows-latest]
         track: [rust, c, python, dart, kotlin, swift]
+        # swift/windows was the grid's "?" cell and the first full-grid
+        # run answered it: no Swift on the stock image, and the workshop's
+        # Windows answer is WSL2 regardless. An answered question needs no
+        # recurring red job — delete this exclude to start watching the
+        # cell again if Swift on native Windows ever matters.
+        exclude:
+          - os: windows-latest
+            track: swift
     runs-on: ${{ matrix.os }}
-    # swift/windows is the grid's "?" cell, and the first full-grid run
-    # answered it: no Swift on the stock image, self-check exits 1, red.
-    # That red is the observation itself — the workshop's Windows answer
-    # is WSL2 — so it must not fail the run. The cell still executes and
-    # still shows its color; if an image update ever ships Swift, it
-    # flips green with no change on our side.
-    continue-on-error: ${{ matrix.track == 'swift' && matrix.os == 'windows-latest' }}
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
