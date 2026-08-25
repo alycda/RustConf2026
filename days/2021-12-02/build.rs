@@ -48,4 +48,20 @@ fn main() {
     }
 
     println!("cargo:rerun-if-changed=build.rs");
+
+    // Naming build.rs above turns off cargo's default "rerun if any tracked
+    // file changed" and replaces it with exactly what is listed — so the
+    // environment pkg-config resolves against has to be listed too, or cargo
+    // will happily replay link flags pointing at a store path that no longer
+    // exists. PATH steers which pkg-config runs, PKG_CONFIG overrides it
+    // outright, and the other three steer what it finds.
+    for var in [
+        "PATH",
+        "PKG_CONFIG",
+        "PKG_CONFIG_PATH",
+        "PKG_CONFIG_LIBDIR",
+        "PKG_CONFIG_SYSROOT_DIR",
+    ] {
+        println!("cargo:rerun-if-env-changed={var}");
+    }
 }
