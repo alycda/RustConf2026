@@ -9,7 +9,7 @@
 | [2020-12-02](2020-12-02/) | Password Philosophy | `1-3 a: abcde` lines → struct → `usize` count | Rust reference |
 | [2021-12-02](2021-12-02/) | Dive! | command lines → enum → `i32`, the product of two accumulators | Rust reference |
 | [2022-12-01](2022-12-01/) | Calorie Counting | blank-line groups → `usize`; part 2 sums a top-3 internally, so the array is the thing worth exposing at the boundary | Rust reference |
-| [2023-12-01](2023-12-01/) | Trebuchet?! | string → `u32`; overlapping spelled-out digits | Rust reference + cbindgen C API + Swift track |
+| [2023-12-01](2023-12-01/) | Trebuchet?! | string → `u32`; overlapping spelled-out digits | YARA + espeak-ng (an open challenge) + cbindgen C API + Swift track |
 
 ## Rules
 
