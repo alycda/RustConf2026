@@ -117,8 +117,8 @@ unsafe extern "C" {
 
 /// Part one: horizontal is every `forward`, depth is `down` minus `up`.
 pub const PART1_SQL: &str = "\
-SELECT COALESCE(SUM(CASE WHEN cmd = 'forward' THEN x END), 0)
-     * COALESCE(SUM(CASE cmd WHEN 'down' THEN x WHEN 'up' THEN -x END), 0)
+SELECT (COALESCE(SUM(CASE WHEN cmd = 'forward' THEN x END), 0)
+      * COALESCE(SUM(CASE cmd WHEN 'down' THEN x WHEN 'up' THEN -x END), 0))::BIGINT
 FROM course";
 
 /// Part two: `aim` is a running total, so it is a window function. Every
@@ -131,8 +131,8 @@ FROM course";
 /// groups of the `ORDER BY` value, so the two agree only as long as `idx` has
 /// no duplicates. Saying `ROWS` makes the intent independent of that.
 pub const PART2_SQL: &str = "\
-SELECT COALESCE(SUM(x) FILTER (WHERE cmd = 'forward'), 0)
-     * COALESCE(SUM(x * aim) FILTER (WHERE cmd = 'forward'), 0)
+SELECT (COALESCE(SUM(x) FILTER (WHERE cmd = 'forward'), 0)
+      * COALESCE(SUM(x * aim) FILTER (WHERE cmd = 'forward'), 0))::BIGINT
 FROM (
   SELECT cmd,
          x,
@@ -289,6 +289,15 @@ impl Course {
     /// be null — DuckDB returns null to mean "every row in this vector is
     /// valid", so a null check here is not a defensive nicety, it is the
     /// common case.
+    ///
+    /// `BIGINT` in that first sentence is a contract the *caller* has to keep,
+    /// and it is easy to break by accident: `SUM` over an `INTEGER` column
+    /// widens to `HUGEINT`, so the obvious query hands back a 16-byte value
+    /// and this `cast::<i64>()` reads its low half. There is no type tag in
+    /// the pointer to catch that — the wrong answer is simply the right
+    /// answer modulo 2^64. Both queries here end in `::BIGINT` for exactly
+    /// this reason, which also puts the range check in DuckDB, where an
+    /// out-of-range value fails the query instead of being silently trimmed.
     pub fn scalar(&self, sql: &str) -> miette::Result<i64> {
         let sql = CString::new(sql).map_err(|e| miette::miette!("SQL has a NUL byte: {e}"))?;
         let mut result = DuckDbResult::empty();
@@ -405,5 +414,37 @@ mod tests {
         let course = Course::load(&[Command::Forward(100_000), Command::Down(100_000)])?;
         assert_eq!(course.scalar(PART1_SQL)?, 10_000_000_000);
         Ok(())
+    }
+
+    /// The one case the test above cannot reach: a product too large for
+    /// `BIGINT` itself. `SUM` widens to `HUGEINT`, so the multiply really does
+    /// produce 2^64 here rather than wrapping in the database — and 2^64 is
+    /// congruent to 0 mod 2^64, which is precisely the value an unchecked
+    /// `cast::<i64>()` of the low half would return. A regression shows up as
+    /// `Ok(0)`, the most plausible-looking wrong answer available, so the
+    /// assertion is on the error and not merely on `is_err()`.
+    #[test]
+    fn a_product_too_large_for_bigint_fails_the_query() {
+        let quarter = 1 << 30;
+        let course = Course::load(&[
+            Command::Forward(quarter),
+            Command::Forward(quarter),
+            Command::Forward(quarter),
+            Command::Forward(quarter),
+            Command::Down(quarter),
+            Command::Down(quarter),
+            Command::Down(quarter),
+            Command::Down(quarter),
+        ])
+        .expect("the course itself is well within INTEGER");
+
+        let error = course
+            .scalar(PART1_SQL)
+            .expect_err("2^64 does not fit in a BIGINT")
+            .to_string();
+        assert!(
+            error.contains("out of range"),
+            "expected a conversion error, got: {error}"
+        );
     }
 }
