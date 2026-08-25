@@ -72,7 +72,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       # Prebuilt binary for the same reason the track workflows give:
       # `cargo install cbindgen` compiles from source for minutes; the
       # install-action downloads in seconds. Verified on linux and macos
