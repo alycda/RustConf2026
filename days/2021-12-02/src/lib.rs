@@ -160,12 +160,18 @@ pub fn dead_reckon_with_aim_via_chipmunk(commands: &[Command]) -> miette::Result
 
 /// Narrows a DuckDB `BIGINT` answer to the puzzle's `i32`.
 ///
-/// The database computes in 64 bits and cannot overflow at this scale, which
-/// means the range check lands here rather than inside the query — the one
-/// place the two number systems actually meet. Note the contrast with the
-/// Chipmunk side, which computes in `f64` and checks integrality as well as
-/// range: three backends, three different ways for the puzzle's `i32` to be
-/// the wrong type.
+/// The database does not compute in 64 bits — `SUM` over an `INTEGER` column
+/// widens to 128-bit `HUGEINT`, and the product of two of those is `HUGEINT`
+/// too. The 64-bit boundary is the FFI read in [`duckdb::Course::scalar`],
+/// which is why the queries there end in `::BIGINT`: that cast is what makes
+/// the value this function receives *actually* a `BIGINT`, and it takes the
+/// out-of-range half of the problem with it. What is left here is the narrow
+/// from a value the database has already vouched for to the puzzle's `i32`.
+///
+/// Note the contrast with the Chipmunk side, which computes in `f64` and
+/// checks integrality as well as range: three backends, three different ways
+/// for the puzzle's `i32` to be the wrong type — and, on this one, a fourth
+/// width in between that has to be spent before it gets here.
 #[cfg(feature = "duckdb")]
 fn narrow(product: i64) -> miette::Result<i32> {
     i32::try_from(product).map_err(|_| {
@@ -367,8 +373,10 @@ forward 2";
         Ok(())
     }
 
-    /// DuckDB answers in BIGINT, so a course that overflows the puzzle's i32
-    /// is reported as an error by `narrow` rather than wrapping.
+    /// A course that overflows the puzzle's i32 but still fits the query's
+    /// BIGINT is reported as an error by `narrow` rather than wrapping. The
+    /// case past BIGINT is the database's to reject, and is covered by
+    /// `duckdb::tests::a_product_too_large_for_bigint_fails_the_query`.
     #[cfg(feature = "duckdb")]
     #[test]
     fn test_duckdb_reports_overflow_rather_than_wrapping() {

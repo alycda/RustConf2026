@@ -88,7 +88,7 @@ once).
 cd days/2021-12-02 && cargo run                        # pure Rust
 cargo run -p aoc-2021-12-02 --features chipmunk        # through the physics engine
 cargo run -p aoc-2021-12-02 --features duckdb          # through the database
-cargo test -p aoc-2021-12-02 --features chipmunk,duckdb  # 21 tests, every backend
+cargo test -p aoc-2021-12-02 --features chipmunk,duckdb  # 22 tests, every backend
 
 just days bench 2021-12-02                             # criterion: parse + both parts
 cargo bench -p aoc-2021-12-02 --bench dive --features chipmunk,duckdb   # three-way
@@ -215,10 +215,16 @@ a second reason — see the overflow Learning below.
   input, and `COALESCE` is what makes it a zero.)
 - **Three backends, three different ways for `i32` to be the wrong type.**
   Chipmunk computes in `f64`, so its answer is checked for integrality *and*
-  range. DuckDB computes in `BIGINT`, so it cannot overflow and only the
-  narrowing is checked. Plain Rust computes in `i32` and simply panics. The
-  same puzzle answer needed three different guards depending on what was
-  holding it.
+  range. DuckDB computes in 128-bit `HUGEINT` — `SUM` over an `INTEGER` column
+  widens, which is easy to miss — so the query casts `::BIGINT` to get a value
+  the FFI read can hold at all, and only then is the narrowing checked. Plain
+  Rust computes in `i32` and simply panics. The same puzzle answer needed three
+  different guards depending on what was holding it.
+- **A columnar FFI read has no type tag to check against.** The DuckDB result
+  is a raw data pointer you `cast::<i64>()`; if the column is really `HUGEINT`,
+  you read its low half and get the right answer modulo 2^64 with no error
+  anywhere. That is the wrong answer most likely to be believed. The fix is to
+  make the *query* promise the width, not the Rust.
 - **This day's C API needed a guard the others didn't, because of arithmetic.**
   Part 2's answer on a genuine input already lands within ~10% of `i32::MAX`,
   and a C caller isn't limited to genuine inputs: `forward 100000\ndown 100000`

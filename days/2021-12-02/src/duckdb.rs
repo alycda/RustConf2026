@@ -406,11 +406,13 @@ mod tests {
         Ok(())
     }
 
-    /// DuckDB computes in BIGINT, so a course whose product overflows an i32
-    /// is answered correctly here rather than wrapping — the narrowing back to
-    /// the puzzle's i32 is `lib.rs`'s job, and this is what it is handed.
+    /// A course whose product overflows an i32 is answered correctly here
+    /// rather than wrapping — the narrowing back to the puzzle's i32 is
+    /// `lib.rs`'s job, and this is what it is handed. The width doing that
+    /// work is the query's, not the vector's: DuckDB computes in HUGEINT and
+    /// the `::BIGINT` cast brings it down to something an `i64` can hold.
     #[test]
-    fn the_database_computes_in_64_bits() -> miette::Result<()> {
+    fn the_query_answers_wider_than_an_i32() -> miette::Result<()> {
         let course = Course::load(&[Command::Forward(100_000), Command::Down(100_000)])?;
         assert_eq!(course.scalar(PART1_SQL)?, 10_000_000_000);
         Ok(())
