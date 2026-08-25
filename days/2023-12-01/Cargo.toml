@@ -56,3 +56,11 @@ harness = false
 [[example]]
 name = "espeak_scoreboard"
 required-features = ["espeak"]
+
+# The three-way race needs both libraries present, so it declares both:
+# without either feature the target is skipped rather than failing
+# --all-targets. Run it with `--features yara,espeak`.
+[[bench]]
+name = "calibration"
+harness = false
+required-features = ["yara", "espeak"]
