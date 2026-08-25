@@ -4,6 +4,18 @@ version = "0.1.0"
 edition.workspace = true
 rust-version.workspace = true
 
+# Declared bare on this line: the hyperscan/icu modules the features select
+# live with the day's FFI variants, and the features exist here so the `nice`
+# bench can hold itself out of default builds via required-features. Racing
+# the three sides needs everything in one tree — merge the day line in, then
+# `cargo bench -p aoc-2015-12-05 --bench nice --features hyperscan,icu`.
+#
+# `hyperscan` is the module and feature name, `vectorscan` the package that
+# provides it (libhs.pc) — the maintained fork, same API.
+[features]
+hyperscan = []
+icu = []
+
 [dependencies]
 aoc-ornaments.workspace = true
 miette.workspace = true
@@ -25,3 +37,10 @@ criterion.workspace = true
 [[bench]]
 name = "day"
 harness = false
+
+# The three-way comparison needs both C libraries: without the features the
+# target is skipped rather than failing --all-targets.
+[[bench]]
+name = "nice"
+harness = false
+required-features = ["hyperscan", "icu"]
