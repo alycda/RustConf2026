@@ -4,6 +4,13 @@ version = "0.1.0"
 edition.workspace = true
 rust-version.workspace = true
 
+# cdylib for the C-callable surface in src/c_api.rs (Exercise 2 — cbindgen
+# generates a header from it, Exercise 3 links against it from Swift); rlib
+# alongside it so main.rs, the tests, and the benches keep linking against
+# this crate the normal Rust way.
+[lib]
+crate-type = ["rlib", "cdylib"]
+
 [dependencies]
 aoc-ornaments.workspace = true
 miette.workspace = true

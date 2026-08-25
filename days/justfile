@@ -18,6 +18,32 @@ test day:
 run day:
     cd {{day}} && cargo run
 
+# cbindgen header for a day's C-callable surface (Exercise 2), where a day
+# has one — a bonus, and not every day carries one. Not committed (see
+# days/.gitignore): cbindgen is required workshop tooling, so this is
+# always a `just` call away instead of a file to keep in sync by hand.
+# Exercise 3 tracks regenerate it the same way before building against it.
+bindgen day:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -f "{{day}}/cbindgen.toml" ]; then
+        echo "days/{{day}} has no cbindgen.toml — not every day carries a C API." >&2
+        echo "To give it one (Exercise 2's shape): copy days/2023-12-01/cbindgen.toml," >&2
+        echo "add a src/c_api.rs, and set crate-type = [\"rlib\", \"cdylib\"] in Cargo.toml." >&2
+        exit 1
+    fi
+    ident="$(printf '%s' "{{day}}" | tr - _)"
+    cd "{{day}}"
+    mkdir -p include
+    # src/c_api.rs, not the crate dir: a day that also *imports* a C library
+    # keeps those `extern "C"` declarations in their own module, and cbindgen
+    # pointed at the crate root would walk them too and redeclare somebody
+    # else's API inside our header. Aiming it at the one file that defines
+    # the export surface is what keeps the header to this day's own
+    # functions — including on days that have no such module yet.
+    cbindgen --config cbindgen.toml --output "include/aoc_${ident}.h" src/c_api.rs
+    echo "wrote {{day}}/include/aoc_${ident}.h"
+
 # scaffold a new day from _template, e.g. `just new 2022-12-01`
 new day:
     #!/usr/bin/env bash
