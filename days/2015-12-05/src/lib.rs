@@ -5,6 +5,7 @@ use std::str::FromStr;
 use aoc_ornaments::Solution;
 
 pub mod hyperscan;
+pub mod icu;
 
 #[derive(Debug, derive_more::Deref)]
 pub struct Day(Vec<String>);
@@ -18,7 +19,8 @@ impl FromStr for Day {
 }
 
 /// Check if a line is nice, in plain Rust. Kept alongside
-/// [`hyperscan::is_nice_via_hyperscan`] for comparison.
+/// [`icu::is_nice_via_icu`] and [`hyperscan::is_nice_via_hyperscan`] for
+/// comparison.
 ///
 /// - it contains at least three vowels (aeiou)
 /// - a double letter (like xx)
@@ -28,7 +30,8 @@ pub fn is_nice_pure_rust(line: &str) -> bool {
 }
 
 /// Check if a line is nice using the new rules, in plain Rust. Kept
-/// alongside [`hyperscan::is_nice_v2_via_hyperscan`] for comparison.
+/// alongside [`icu::is_nice_v2_via_icu`] and
+/// [`hyperscan::is_nice_v2_via_hyperscan`] for comparison.
 ///
 /// - it contains a pair of any two letters that appears at least twice in the string without overlapping
 /// - it contains at least one letter which repeats with exactly one letter between them
@@ -76,16 +79,22 @@ impl Day {
 impl Solution for Day {
     type Output = usize;
 
-    /// Count the number of nice strings in the input. See
-    /// [`hyperscan::is_nice_via_hyperscan`].
+    /// Count the number of nice strings in the input, via ICU regex — see
+    /// [`icu::is_nice_via_icu`]. [`hyperscan::is_nice_via_hyperscan`] is the
+    /// other sibling's answer to the same rules; ICU wins the default here
+    /// because its regex is the more direct translation of the puzzle
+    /// rules, where vectorscan's is a ~700-pattern workaround for missing
+    /// backreferences (see hyperscan's module docs) — both are fully
+    /// tested below regardless of which one `cargo run` exercises.
     fn part1(&mut self) -> aoc_ornaments::SolutionResult<Self::Output> {
-        Ok(self.compute(hyperscan::is_nice_via_hyperscan))
+        Ok(self.compute(icu::is_nice_via_icu))
     }
 
-    /// Count the number of nice strings in the input using the new rules.
-    /// See [`hyperscan::is_nice_v2_via_hyperscan`].
+    /// Count the number of nice strings in the input using the new rules,
+    /// via ICU regex. See [`icu::is_nice_v2_via_icu`] and the note on
+    /// [`Solution::part1`].
     fn part2(&mut self) -> aoc_ornaments::SolutionResult<Self::Output> {
-        Ok(self.compute(hyperscan::is_nice_v2_via_hyperscan))
+        Ok(self.compute(icu::is_nice_v2_via_icu))
     }
 }
 
@@ -116,6 +125,16 @@ mod tests {
     }
 
     #[rstest]
+    #[case("ugknbfddgicrmopn", true)]
+    #[case("aaa", true)]
+    #[case("jchzalrnumimnmhp", false)]
+    #[case("haegwjzuvuyypxyu", false)]
+    #[case("dvszwmarrgswjxmb", false)]
+    fn test_cases_part1_icu(#[case] input: &str, #[case] expected: bool) {
+        assert_eq!(icu::is_nice_via_icu(input), expected);
+    }
+
+    #[rstest]
     #[case("qjhvhtzxzqqjkmpb", true)]
     #[case("xxyxx", true)]
     #[case("uurcxstgmygtbstg", false)]
@@ -131,5 +150,14 @@ mod tests {
     #[case("ieodomkazucvgmuy", false)]
     fn test_cases_part2_hyperscan(#[case] input: &str, #[case] expected: bool) {
         assert_eq!(hyperscan::is_nice_v2_via_hyperscan(input), expected);
+    }
+
+    #[rstest]
+    #[case("qjhvhtzxzqqjkmpb", true)]
+    #[case("xxyxx", true)]
+    #[case("uurcxstgmygtbstg", false)]
+    #[case("ieodomkazucvgmuy", false)]
+    fn test_cases_part2_icu(#[case] input: &str, #[case] expected: bool) {
+        assert_eq!(icu::is_nice_v2_via_icu(input), expected);
     }
 }

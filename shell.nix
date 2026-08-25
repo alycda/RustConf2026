@@ -51,10 +51,12 @@ pkgs.mkShell {
     # safety net: python3 for the Python track; git so pure/minimal shells
     # (and jj colocated clones) get a current git (no verification needed)
     python3 git
-    # 2015-12-05 scans lines through vectorscan (the maintained Hyperscan
-    # fork) via FFI (days/2015-12-05/src/hyperscan.rs) — `pkg-config` picks
-    # up its libhs.pc automatically via its setup hook.
-    vectorscan pkg-config
+    # 2015-12-05 scans lines two ways, both via FFI: through vectorscan
+    # (the maintained Hyperscan fork, days/2015-12-05/src/hyperscan.rs) and
+    # through ICU's regex engine via a small C shim
+    # (days/2015-12-05/src/icu_shim.c, src/icu.rs) — `pkg-config` picks up
+    # libhs.pc / icu-i18n.pc / icu-uc.pc automatically via its setup hook.
+    vectorscan icu pkg-config
   ];
 
   CHEAT_CONFIG_PATH = cheatConf;

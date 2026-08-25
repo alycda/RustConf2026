@@ -16,3 +16,6 @@ derive_more.workspace = true
 
 [dev-dependencies]
 rstest.workspace = true
+
+[build-dependencies]
+cc.workspace = true
