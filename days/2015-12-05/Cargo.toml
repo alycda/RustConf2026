@@ -16,3 +16,12 @@ derive_more.workspace = true
 
 [dev-dependencies]
 rstest.workspace = true
+
+# Benchmarks are a bonus (`just days bench <day>`), not part of any workshop
+# step — not every day carries one.
+criterion.workspace = true
+
+# harness = false hands the binary to criterion rather than libtest.
+[[bench]]
+name = "day"
+harness = false

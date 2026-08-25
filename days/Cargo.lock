@@ -54,6 +54,7 @@ name = "aoc-2015-12-05"
 version = "0.1.0"
 dependencies = [
  "aoc-ornaments",
+ "criterion",
  "derive_more",
  "miette",
  "rstest",
