@@ -157,8 +157,14 @@ jobs:
       # installs, then solve.dart against the puzzle-statement examples.
       # Real inputs stay out of CI by the same rule that keeps them out of
       # the repo (days/.gitignore); statement examples are published in the
-      # puzzle text and fair game — the nine below are both parts' examples
-      # concatenated, and each part counts two of them nice.
+      # puzzle text and fair game. The list below is both parts' examples
+      # concatenated, with `aaa` twice — deliberately, so the two answers
+      # differ (3 and 2). All nine distinct examples split into two disjoint
+      # pairs, one nice per part, which makes 2 and 2: an assertion that
+      # cannot tell part 1 from part 2, and would still pass if solve.dart
+      # called one of them twice or the C API wired both symbols to the same
+      # function. `aaa` is part-1 nice and part-2 naughty, so a second copy
+      # moves one count and not the other.
       #
       # Default features is the load-bearing word: this day's vectorscan and
       # ICU variants are cargo features precisely so a stock runner with no
@@ -179,7 +185,7 @@ jobs:
           (cd days/2015-12-05 && mkdir -p include && \
             cbindgen --config cbindgen.toml --output include/aoc_2015_12_05.h src/c_api.rs)
           mkdir -p days/inputs
-          printf '%s\n' ugknbfddgicrmopn aaa jchzalrnumimnmhp \
+          printf '%s\n' ugknbfddgicrmopn aaa aaa jchzalrnumimnmhp \
             haegwjzuvuyypxyu dvszwmarrgswjxmb qjhvhtzxzqqjkmpb xxyxx \
             uurcxstgmygtbstg ieodomkazucvgmuy > days/inputs/2015-12-05.txt
           (cd days/2015-12-05/dart && dart pub get)
@@ -189,5 +195,5 @@ jobs:
           # reprints its match makes one run look like two in the log. On a
           # mismatch the step still fails (shell: bash runs with -e) and the
           # echo above is the diff.
-          echo "$out" | grep -qF 'Part 1 🎯(🦀): 2'
+          echo "$out" | grep -qF 'Part 1 🎯(🦀): 3'
           echo "$out" | grep -qF 'Part 2 🎯(🦀): 2'
