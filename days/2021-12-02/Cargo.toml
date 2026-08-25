@@ -4,13 +4,14 @@ version = "0.1.0"
 edition.workspace = true
 rust-version.workspace = true
 
-# Declared bare on this line: the chipmunk module the feature selects lives
-# with the day's FFI variants, and the feature exists here so the `dive`
+# Declared bare on this line: the chipmunk/duckdb modules the features select
+# live with the day's FFI variants, and the features exist here so the `dive`
 # bench can hold itself out of default builds via required-features. Racing
-# the two sides needs both in one tree — merge the day line in, then
-# `cargo bench -p aoc-2021-12-02 --bench dive --features chipmunk`.
+# the three sides needs everything in one tree — merge the day line in, then
+# `cargo bench -p aoc-2021-12-02 --bench dive --features chipmunk,duckdb`.
 [features]
 chipmunk = []
+duckdb = []
 
 [dependencies]
 aoc-ornaments.workspace = true
@@ -34,9 +35,10 @@ criterion.workspace = true
 name = "day"
 harness = false
 
-# The pure-vs-physics comparison needs the physics: without the feature the
-# target is skipped rather than failing --all-targets.
+# The three-way race needs both libraries present, so it declares both:
+# without either feature the target is skipped rather than failing
+# --all-targets. Run it with `--features chipmunk,duckdb`.
 [[bench]]
 name = "dive"
 harness = false
-required-features = ["chipmunk"]
+required-features = ["chipmunk", "duckdb"]
