@@ -92,14 +92,26 @@ probe_kotlin() {
 # its own python3 to the inherited PATH, shadowing an activated .venv — the
 # probe must not turn a completed `just setup-python` into a false "not ready".
 probe_python() {
-  local py venv_py
+  local py venv_py cand activate
   py=python3
-  venv_py="$(dirname "$0")/../.venv/bin/python"
-  [ -x "$venv_py" ] && py="$venv_py"
+  venv_py=""
+  # bin/ is the POSIX venv layout (and WSL2's); Scripts/ is what a native
+  # Windows python builds, probed with and without the .exe suffix because
+  # Git Bash's -x test is not consistent about executable extensions.
+  for cand in "$(dirname "$0")/../.venv/bin/python" \
+              "$(dirname "$0")/../.venv/Scripts/python.exe" \
+              "$(dirname "$0")/../.venv/Scripts/python"; do
+    if [ -x "$cand" ]; then venv_py="$cand" && break; fi
+  done
+  [ -n "$venv_py" ] && py="$venv_py"
   if command -v "$py" >/dev/null 2>&1; then
     if "$py" -c 'import cffi' 2>/dev/null; then
-      if [ "$py" = "$venv_py" ] && [ -z "${VIRTUAL_ENV:-}" ]; then
-        printf ' %s %-12s ready %s(cffi in .venv — activate: source .venv/bin/activate)%s\n' "$PASS" "Python" "$DIM" "$NC"
+      if [ -n "$venv_py" ] && [ "$py" = "$venv_py" ] && [ -z "${VIRTUAL_ENV:-}" ]; then
+        case "$venv_py" in
+          */Scripts/*) activate=".venv/Scripts/activate" ;;
+          *)           activate=".venv/bin/activate" ;;
+        esac
+        printf ' %s %-12s ready %s(cffi in .venv — activate: source %s)%s\n' "$PASS" "Python" "$DIM" "$activate" "$NC"
       else
         printf ' %s %-12s ready (cffi installed)\n' "$PASS" "Python"
       fi

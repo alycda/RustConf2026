@@ -122,14 +122,19 @@ jobs:
           sdk: stable
       # The python cell provisions its track the way `just setup-python`
       # does — a repo-local .venv — because that is the path self-check
-      # probes first (it prefers ./.venv/bin/python even when the venv is
-      # not activated, exactly the case here).
+      # probes first (it prefers the venv python even when the venv is
+      # not activated, exactly the case here). The interpreter's location
+      # depends on the OS that built the venv: bin/ everywhere except
+      # native Windows, which uses Scripts/ — the same two layouts
+      # self-check's probe_python walks.
       - name: provision cffi (the setup-python recipe)
         if: matrix.track == 'python'
         shell: bash
         run: |
           python3 -m venv .venv
-          ./.venv/bin/python -m pip install --upgrade pip cffi
+          py=./.venv/bin/python
+          [ -x "$py" ] || py=./.venv/Scripts/python
+          "$py" -m pip install --upgrade pip cffi
       # shell: bash so the windows cells run under Git Bash rather than
       # PowerShell — the closest a native-Windows runner gets to running
       # this script at all.
