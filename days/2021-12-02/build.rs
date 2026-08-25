@@ -1,23 +1,27 @@
-// Links against Chipmunk2D (the 2D rigid-body physics engine this day
-// dead-reckons the submarine through, see src/chipmunk.rs) via pkg-config
-// rather than a system-wide install or a hardcoded path.
+// Links against this day's two C libraries — Chipmunk2D, the rigid-body
+// physics engine it dead-reckons the submarine through (src/chipmunk.rs), and
+// DuckDB, the analytical database it folds the course in (src/duckdb.rs) — via
+// pkg-config rather than system-wide installs or hardcoded paths.
 //
-// nixpkgs' `chipmunk` is the one library in this repo that ships no .pc file
-// of its own — shell.nix synthesizes `chipmunk.pc` next to it and lets
-// pkg-config's setup hook put it on PKG_CONFIG_PATH, so the probe below is
-// the same three lines every other C variant here uses. Fixing the gap on
-// the nix side rather than here is deliberate: a build script that knows
-// about include paths is a build script that has to be re-taught them on
-// every machine.
+// Neither is shipped with a .pc file by nixpkgs, which is unusual; every other
+// C library this repo has linked came with one. shell.nix synthesizes both and
+// lets pkg-config's setup hook put them on PKG_CONFIG_PATH, so the loop below
+// stays the same three lines every C variant in this repo uses, for both
+// libraries and for whatever comes next. Fixing the gap on the nix side rather
+// than here is deliberate: a build script that knows about include paths is a
+// build script that has to be re-taught them on every machine.
 //
-// The probe runs only when the cargo feature is enabled (cargo exposes
+// Each library is probed only when its cargo feature is enabled (cargo exposes
 // enabled features to build scripts as CARGO_FEATURE_* env vars), so the
-// default build needs neither pkg-config nor the library — that's what keeps
-// stock CI runners and the manual-setup path green.
+// default build needs neither pkg-config nor either library — that's what
+// keeps stock CI runners and the manual-setup path green.
 use std::process::Command;
 
 fn main() {
-    let variants = [("CARGO_FEATURE_CHIPMUNK", "chipmunk")];
+    let variants = [
+        ("CARGO_FEATURE_CHIPMUNK", "chipmunk"),
+        ("CARGO_FEATURE_DUCKDB", "duckdb"),
+    ];
 
     for (feature, name) in variants {
         if std::env::var_os(feature).is_none() {
@@ -32,7 +36,8 @@ fn main() {
         if !libs.status.success() {
             panic!(
                 "pkg-config could not find {name}.pc ({}). Run inside the project's nix shell \
-                 (see shell.nix), which synthesizes it — nixpkgs' chipmunk does not ship one.",
+                 (see shell.nix), which synthesizes it — nixpkgs ships neither this day's \
+                 chipmunk.pc nor its duckdb.pc.",
                 String::from_utf8_lossy(&libs.stderr).trim()
             );
         }
