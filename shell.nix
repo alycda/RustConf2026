@@ -51,6 +51,10 @@ pkgs.mkShell {
     # safety net: python3 for the Python track; git so pure/minimal shells
     # (and jj colocated clones) get a current git (no verification needed)
     python3 git
+    # 2015-12-05 scans lines through ICU's regex engine via a small C shim
+    # (days/2015-12-05/src/icu_shim.c, src/icu.rs) — `pkg-config` picks up
+    # its icu-i18n.pc/icu-uc.pc automatically via its setup hook.
+    icu pkg-config
   ];
 
   CHEAT_CONFIG_PATH = cheatConf;
