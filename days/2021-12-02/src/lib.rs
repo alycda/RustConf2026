@@ -16,6 +16,9 @@ use std::str::FromStr;
 
 use aoc_ornaments::{Solution, SolutionResult};
 
+#[cfg(feature = "chipmunk")]
+pub mod chipmunk;
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Command {
     Forward(i32),
@@ -72,6 +75,85 @@ impl Position {
     }
 }
 
+/// Runs the course in plain Rust and returns `horizontal * depth`.
+///
+/// Kept alongside [`dead_reckon_via_chipmunk`] — its physics-engine
+/// equivalent — rather than replaced by it, so `benches/dive.rs` can race the
+/// two and so a regression in whichever one `cargo run` doesn't exercise
+/// still fails the suite.
+pub fn dead_reckon_pure_rust(commands: &[Command]) -> i32 {
+    let position = commands
+        .iter()
+        .fold(Position::default(), |mut position, command| {
+            position.apply(command);
+            position
+        });
+
+    position.horizontal * position.depth
+}
+
+/// Part two's aim rules, in plain Rust. See [`dead_reckon_pure_rust`].
+pub fn dead_reckon_with_aim_pure_rust(commands: &[Command]) -> i32 {
+    let position = commands
+        .iter()
+        .fold(Position::default(), |mut position, command| {
+            position.apply_with_aim(command);
+            position
+        });
+
+    position.horizontal * position.depth
+}
+
+/// Runs the course through Chipmunk2D instead: one rigid body, one
+/// `cpSpaceStep` per command, the answer read back off the body's position.
+///
+/// The submarine only ever translates here — part one has no aim — so every
+/// command becomes a velocity for one unit of time and the body's rotation
+/// stays at zero. See [`chipmunk`] for why that is exact.
+#[cfg(feature = "chipmunk")]
+pub fn dead_reckon_via_chipmunk(commands: &[Command]) -> miette::Result<i32> {
+    let mut submarine = chipmunk::Submarine::new()?;
+
+    for command in commands {
+        let velocity = match *command {
+            Command::Forward(x) => (f64::from(x), 0.0),
+            Command::Down(x) => (0.0, f64::from(x)),
+            Command::Up(x) => (0.0, -f64::from(x)),
+        };
+        submarine.step(velocity, 0.0);
+    }
+
+    submarine.answer()
+}
+
+/// Part two through Chipmunk2D — the variant that actually earns the engine.
+///
+/// `aim` is not tracked in Rust at all: `down`/`up` set an *angular* velocity
+/// and let the solver integrate it into the body's rotation, and `forward`
+/// reads that rotation back to build its velocity. The puzzle's own
+/// hand-wave (depth grows by `aim * x`, not `sin(aim) * x`) is why the
+/// rotation is used as a raw scalar rather than an angle — the engine is
+/// storing the number, not interpreting it.
+#[cfg(feature = "chipmunk")]
+pub fn dead_reckon_with_aim_via_chipmunk(commands: &[Command]) -> miette::Result<i32> {
+    let mut submarine = chipmunk::Submarine::new()?;
+
+    for command in commands {
+        match *command {
+            Command::Forward(x) => {
+                let x = f64::from(x);
+                // Read before the step: `aim` is whatever the solver has
+                // integrated so far, exactly as the puzzle intends.
+                submarine.step((x, submarine.aim() * x), 0.0);
+            }
+            Command::Down(x) => submarine.step((0.0, 0.0), f64::from(x)),
+            Command::Up(x) => submarine.step((0.0, 0.0), -f64::from(x)),
+        }
+    }
+
+    submarine.answer()
+}
+
 #[derive(Debug, Clone)]
 pub struct Day(Vec<Command>);
 
@@ -100,28 +182,31 @@ impl FromStr for Day {
 impl Solution for Day {
     type Output = i32;
 
-    /// Run every command through `Position::apply`, then multiply the two axes.
+    /// Multiply the two axes — through the physics engine when the
+    /// `chipmunk` feature is on (see [`dead_reckon_via_chipmunk`]), in plain
+    /// Rust otherwise.
     fn part1(&mut self) -> SolutionResult<Self::Output> {
-        let position = self
-            .iter()
-            .fold(Position::default(), |mut position, command| {
-                position.apply(command);
-                position
-            });
-
-        Ok(position.horizontal * position.depth)
+        #[cfg(feature = "chipmunk")]
+        {
+            dead_reckon_via_chipmunk(&self.0)
+        }
+        #[cfg(not(feature = "chipmunk"))]
+        {
+            Ok(dead_reckon_pure_rust(&self.0))
+        }
     }
 
-    /// Same, but commands are interpreted through the `aim`-tracking variant.
+    /// Same, but commands are interpreted through the `aim`-tracking variant
+    /// — same feature switch as `part1`.
     fn part2(&mut self) -> SolutionResult<Self::Output> {
-        let position = self
-            .iter()
-            .fold(Position::default(), |mut position, command| {
-                position.apply_with_aim(command);
-                position
-            });
-
-        Ok(position.horizontal * position.depth)
+        #[cfg(feature = "chipmunk")]
+        {
+            dead_reckon_with_aim_via_chipmunk(&self.0)
+        }
+        #[cfg(not(feature = "chipmunk"))]
+        {
+            Ok(dead_reckon_with_aim_pure_rust(&self.0))
+        }
     }
 }
 
@@ -157,6 +242,53 @@ forward 2";
     #[test]
     fn test_part2() -> miette::Result<()> {
         assert_eq!("900", Day::from_str(EXAMPLE)?.solve(Part::Two)?);
+        Ok(())
+    }
+
+    /// The pure-Rust functions, called directly rather than through
+    /// `Solution` — which routes to whichever backend the feature set
+    /// selected, and so cannot vouch for this one when `chipmunk` is on.
+    #[test]
+    fn test_pure_rust_backend() -> miette::Result<()> {
+        let day = Day::from_str(EXAMPLE)?;
+        assert_eq!(dead_reckon_pure_rust(&day), 150);
+        assert_eq!(dead_reckon_with_aim_pure_rust(&day), 900);
+        Ok(())
+    }
+
+    /// The same two answers out of the physics engine. Not "close to": the
+    /// integrator is exact under this module's conditions, so an approximate
+    /// comparison here would hide the day the conditions stop holding.
+    #[cfg(feature = "chipmunk")]
+    #[test]
+    fn test_chipmunk_backend() -> miette::Result<()> {
+        let day = Day::from_str(EXAMPLE)?;
+        assert_eq!(dead_reckon_via_chipmunk(&day)?, 150);
+        assert_eq!(dead_reckon_with_aim_via_chipmunk(&day)?, 900);
+        Ok(())
+    }
+
+    /// Each `Submarine` gets its own `cpSpace`, so two courses run back to
+    /// back must not see each other's state — the failure this catches is a
+    /// body or space accidentally shared or reused across calls.
+    #[cfg(feature = "chipmunk")]
+    #[test]
+    fn test_chipmunk_runs_are_independent() -> miette::Result<()> {
+        let day = Day::from_str(EXAMPLE)?;
+        assert_eq!(dead_reckon_with_aim_via_chipmunk(&day)?, 900);
+        assert_eq!(dead_reckon_with_aim_via_chipmunk(&day)?, 900);
+        assert_eq!(dead_reckon_via_chipmunk(&day)?, 150);
+        Ok(())
+    }
+
+    /// An empty course is a real input shape (a `Day` parsed from `""` has no
+    /// commands): the engine must hand back 0 * 0 rather than tripping the
+    /// integral/range checks in `Submarine::answer`.
+    #[cfg(feature = "chipmunk")]
+    #[test]
+    fn test_chipmunk_empty_course() -> miette::Result<()> {
+        assert_eq!(dead_reckon_via_chipmunk(&[])?, 0);
+        assert_eq!(dead_reckon_with_aim_via_chipmunk(&[])?, 0);
         Ok(())
     }
 }

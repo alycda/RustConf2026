@@ -4,6 +4,15 @@ version = "0.1.0"
 edition.workspace = true
 rust-version.workspace = true
 
+# The chipmunk variant links a real C library at build time — build.rs probes
+# pkg-config only for the features you enable — so it's off by default: a bare
+# `cargo test --workspace` stays green on stock CI runners and the
+# manual-setup path alike. The nix shell carries the library (and the
+# chipmunk.pc nixpkgs doesn't ship); the full absurdity is:
+#   cargo run --features chipmunk
+[features]
+chipmunk = []
+
 [dependencies]
 aoc-ornaments.workspace = true
 miette.workspace = true

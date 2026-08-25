@@ -34,6 +34,22 @@ let
       tags: ${p.tags}
       readonly: true
   '') cheatPaths);
+  # nixpkgs' chipmunk ships include/chipmunk/*.h and lib/libchipmunk.so but
+  # no lib/pkgconfig/chipmunk.pc, so `pkg-config --libs chipmunk` fails even
+  # with the package in buildInputs. days/2021-12-02/build.rs probes
+  # pkg-config the same way every other C variant in this repo does; teaching
+  # it a second, chipmunk-only discovery mechanism would make that one day the
+  # exception. Synthesizing the missing file instead keeps the build script
+  # uniform — writeTextDir puts it at $out/lib/pkgconfig/, which pkg-config's
+  # setup hook adds to PKG_CONFIG_PATH like any other package's.
+  chipmunkPc = pkgs.writeTextDir "lib/pkgconfig/chipmunk.pc" ''
+    prefix=${pkgs.chipmunk}
+    Name: chipmunk
+    Description: Chipmunk2D rigid body physics
+    Version: ${pkgs.chipmunk.version}
+    Cflags: -I''${prefix}/include
+    Libs: -L''${prefix}/lib -lchipmunk -lm
+  '';
 in
 pkgs.mkShell {
   buildInputs = with pkgs; [
@@ -51,6 +67,12 @@ pkgs.mkShell {
     # safety net: python3 for the Python track; git so pure/minimal shells
     # (and jj colocated clones) get a current git (no verification needed)
     python3 git
+    # 2021-12-02 dead-reckons the submarine through Chipmunk2D's rigid-body
+    # solver (days/2021-12-02/src/chipmunk.rs) via FFI — no system-wide
+    # install needed. chipmunkPc above is the .pc file nixpkgs' chipmunk
+    # doesn't ship; with it on PKG_CONFIG_PATH, `pkg-config --libs chipmunk`
+    # answers without any nix store path hardcoded in build.rs.
+    chipmunk chipmunkPc pkg-config
   ];
 
   CHEAT_CONFIG_PATH = cheatConf;
