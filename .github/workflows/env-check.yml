@@ -151,3 +151,33 @@ jobs:
               ./scripts/self-check.sh --track "${{ matrix.track }}"
               ;;
           esac
+      # Beyond the env check: on a branch that carries a worked Exercise 3
+      # (Python/cffi on 2024-12-03), prove the track end to end — cdylib,
+      # header from the cbindgen this job already installs, then solve.py
+      # against part TWO's statement example: the one whose two answers
+      # differ (161/48), so the assertions can tell the parts apart. Both
+      # numbers are pinned in days/2024-12-03/src/lib.rs by
+      # test_part1_over_both_examples/test_part2_over_both_examples over
+      # these exact bytes — for both parsers, nom and the byte cursor the
+      # C API is built on. Real inputs stay out of CI by the same rule that
+      # keeps them out of the repo; statement examples are published in the
+      # puzzle text and fair game. Branches without the worked track skip
+      # cleanly.
+      - name: python track end-to-end (2024-12-03)
+        if: matrix.track == 'python'
+        shell: bash
+        run: |
+          if [ ! -f days/2024-12-03/python/solve.py ]; then
+            echo "no worked python track on this branch — skipping"
+            exit 0
+          fi
+          (cd days && cargo build -p aoc-2024-12-03 --lib)
+          (cd days/2024-12-03 && mkdir -p include && \
+            cbindgen --config cbindgen.toml --output include/aoc_2024_12_03.h src/c_api.rs)
+          mkdir -p days/inputs
+          printf "xmul(2,4)&mul[3,7]!^don't()_mul(5,5)+mul(32,64](mul(11,8)undo()?mul(8,5))" \
+            > days/inputs/2024-12-03.txt
+          out="$(./.venv/bin/python days/2024-12-03/python/solve.py)"
+          echo "$out"
+          echo "$out" | grep -qF 'Part 1 🐍(🦀): 161'
+          echo "$out" | grep -qF 'Part 2 🐍(🦀): 48'
