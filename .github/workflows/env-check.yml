@@ -204,3 +204,36 @@ jobs:
           echo "$out"
           echo "$out" | grep -qF 'Part 1 🎯(🦀): 161'
           echo "$out" | grep -qF 'Part 2 🎯(🦀): 48'
+      # Beyond the env check: on a branch that carries a worked Exercise 3
+      # (Kotlin/JNA on 2024-12-03), prove the track end to end — same input,
+      # same pinned 161/48; the JNA jar is pinned and checksummed exactly as
+      # the kotlin-demo recipe pins it, and the `:` classpath separator is
+      # why this step is linux/macos-shaped. The label greps are
+      # byte-for-byte (☕️ is U+2615 U+FE0F — copy it, do not retype it).
+      # Branches without the worked track skip cleanly.
+      - name: kotlin track end-to-end (2024-12-03)
+        if: matrix.track == 'kotlin'
+        shell: bash
+        run: |
+          if [ ! -f days/2024-12-03/kotlin/solve.kt ]; then
+            echo "no worked kotlin track on this branch — skipping"
+            exit 0
+          fi
+          jna_version=5.17.0
+          jna_sha256=b3a9408e7c51e08ef0e3bfcc08f443f6ec0f6191ba8cd7c18d53d2b22e5bdbc0
+          (cd days && cargo build -p aoc-2024-12-03 --lib)
+          (cd days/2024-12-03 && mkdir -p include && \
+            cbindgen --config cbindgen.toml --output include/aoc_2024_12_03.h src/c_api.rs)
+          mkdir -p days/inputs
+          printf "xmul(2,4)&mul[3,7]!^don't()_mul(5,5)+mul(32,64](mul(11,8)undo()?mul(8,5))" \
+            > days/inputs/2024-12-03.txt
+          cd days/2024-12-03/kotlin
+          jna="jna-${jna_version}.jar"
+          curl -fsSL -o "$jna" \
+            "https://repo1.maven.org/maven2/net/java/dev/jna/jna/${jna_version}/${jna}"
+          echo "${jna_sha256}  ${jna}" | shasum -a 256 -c -
+          kotlinc solve.kt -classpath "$jna" -include-runtime -d solve.jar
+          out="$(java -cp "solve.jar:$jna" SolveKt)"
+          echo "$out"
+          echo "$out" | grep -qF 'Part 1 ☕️(🦀): 161'
+          echo "$out" | grep -qF 'Part 2 ☕️(🦀): 48'
