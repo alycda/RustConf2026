@@ -25,6 +25,8 @@ use nom::{
 };
 use nom_locate::LocatedSpan;
 
+pub mod cursor;
+
 type Span<'a> = LocatedSpan<&'a str>;
 
 pub use crate::Day3 as Day;
@@ -247,9 +249,18 @@ mod tests {
     /// catch-all turned into a crash instead of skipping as corruption.
     #[test]
     fn test_part1_corruption_is_skipped_not_panicked() -> miette::Result<()> {
-        assert_eq!("8", Day3::<Part1>::from_str("mul(x,4)mul(2,4)")?.solve(Part::One)?);
-        assert_eq!("8", Day3::<Part1>::from_str("mul(mul(2,4)")?.solve(Part::One)?);
-        assert_eq!("8", Day3::<Part1>::from_str("mul(2,4)mul(2,")?.solve(Part::One)?);
+        assert_eq!(
+            "8",
+            Day3::<Part1>::from_str("mul(x,4)mul(2,4)")?.solve(Part::One)?
+        );
+        assert_eq!(
+            "8",
+            Day3::<Part1>::from_str("mul(mul(2,4)")?.solve(Part::One)?
+        );
+        assert_eq!(
+            "8",
+            Day3::<Part1>::from_str("mul(2,4)mul(2,")?.solve(Part::One)?
+        );
         Ok(())
     }
 
