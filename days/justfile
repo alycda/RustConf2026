@@ -82,6 +82,25 @@ python-demo day: (bindgen day)
     [ -x "$py" ] || py=python3
     "$py" "{{day}}/python/solve.py"
 
+
+# Exercise 3 (Dart/dart:ffi track): call a day's cbindgen C API from Dart.
+# `just setup-dart` once first. Depends on `bindgen` rather than
+# duplicating its cbindgen invocation — the header isn't actually parsed
+# (dart:ffi needs signatures written as Dart types, see the day's
+# dart/solve.dart), but regenerating it keeps it available for eyeballing
+# alongside the hand-transcribed ones.
+dart-demo day: (bindgen day)
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -f "{{day}}/dart/solve.dart" ]; then
+        echo "days/{{day}} has no dart/solve.dart — not every day carries one" >&2
+        exit 1
+    fi
+    cd "{{day}}" && cargo build --lib
+    cd dart
+    dart pub get
+    dart run solve.dart
+
 # scaffold a new day from _template, e.g. `just new 2022-12-01`
 new day:
     #!/usr/bin/env bash
