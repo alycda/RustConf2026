@@ -6,5 +6,6 @@
         "rust-lang.rust-analyzer"
     ],
     "unwantedRecommendations": [
+        "donjayamanne.python-extension-pack"
     ]
 }

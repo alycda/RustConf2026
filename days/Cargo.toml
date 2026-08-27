@@ -38,6 +38,7 @@ rust-version = "1.85"
 # every crate.
 [workspace.dependencies]
 aoc-ornaments = "0.1.10"
+cc = "1"
 
 # Pinned to 0.7 on purpose: criterion 0.8 raised its MSRV to 1.86, and CI
 # checks this workspace against rustc 1.85, the edition-2024 floor every day
@@ -57,6 +58,7 @@ criterion = { version = "0.7", default-features = false, features = [
 # the honest half of that comparison, so ahash sits beside std's map rather
 # than replacing it anywhere.
 ahash = "0.8"
+
 derive_more = { version = "1", features = ["deref"] }
 itertools = "0.14"
 miette = { version = "7.4", features = ["fancy"] }

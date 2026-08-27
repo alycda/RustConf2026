@@ -23,11 +23,17 @@ run day:
 # rotting is the clippy gate in `verify`: --all-targets compiles and lints a
 # bench without running it. Timings only ever come from here.
 #
-# criterion's own flags go on the end — `just days bench 2015-12-01
-# --save-baseline pure-rust`, then `--baseline pure-rust` once that day runs
-# through C. `--bench day` is what lets them through: it skips the libtest
-# bench targets cargo generates for the lib and the bin, which reject any
-# flag they do not recognise.
+# criterion's own flags go on the end — `just days bench 2023-12-01
+# --save-baseline pure-rust`, then `--baseline pure-rust` to compare a later
+# run against it. `--bench day` is what lets them through: it skips the
+# libtest bench targets cargo generates for the lib and the bin, which
+# reject any flag they do not recognise.
+#
+# `--bench day` is also the reason this recipe takes no --features: a day
+# whose second bench races a C library against plain Rust declares
+# required-features on that target, and cargo skips it here rather than
+# failing. Run those directly, e.g.
+# `cargo bench -p aoc-<day> --bench <subject> --features <lib>`.
 bench day *args:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -47,7 +53,7 @@ bindgen day:
     set -euo pipefail
     if [ ! -f "{{day}}/cbindgen.toml" ]; then
         echo "days/{{day}} has no cbindgen.toml — not every day carries a C API." >&2
-        echo "To give it one (Exercise 2's shape): copy days/2024-12-01/cbindgen.toml," >&2
+        echo "To give it one (Exercise 2's shape): copy days/2023-12-01/cbindgen.toml," >&2
         echo "add a src/c_api.rs, and set crate-type = [\"rlib\", \"cdylib\"] in Cargo.toml." >&2
         exit 1
     fi
@@ -186,10 +192,29 @@ swift-demo day: (bindgen day)
     # `swiftc` searches only its own toolchain path. Bare, it fails with
     # `no such module 'Foundation'`.
     #
+    # Three directories, because one package spreads across three and the
+    # error message names the same module every time (the failure ladder is
+    # written up in .devcontainer/swift/README.md):
+    #   lib/swift/linux/<arch>  the Swift modules  (-I)      "no such module"
+    #   include                 the clang module maps (-Xcc) "missing required
+    #                                                         modules"
+    #   lib/swift/linux         libFoundation.so   (-L)      "cannot find -lFoundation"
+    #   lib                     libdispatch.so etc (-L)
+    #
     # Added only when that layout is actually present, so a nix-shell (whose
     # setup hooks already put corelibs on the search path) and a Mac are both
-    # unaffected. The -rpath pair is not redundant with the -L pair: -L
-    # answers the link-time search and only -rpath answers the load-time one.
+    # unaffected. If this rots, the devcontainer README's own advice is the
+    # sturdier route: build through nixpkgs' Swift stdenv adapter or swiftpm,
+    # which wire these paths themselves rather than having a caller name them.
+    # The -rpath pair is not redundant with the -L pair, and finding that out
+    # cost a second debugging round. Built *outside* a nix-shell, the linker
+    # promotes these -L directories to RUNPATH by itself and the binary runs.
+    # Built inside one — which is how this recipe always runs — it does not:
+    # the profile paths are symlink farms rather than store paths, they are
+    # dropped from RUNPATH, and the binary links clean and then dies at
+    # startup with `libBlocksRuntime.so: cannot open shared object file`.
+    # Compiling, linking and *loading* are three separate searches; -L answers
+    # the second and only -rpath answers the third.
     corelibs=()
     profile="$HOME/.nix-profile"
     if [ -d "$profile/lib/swift/linux/$(uname -m)" ]; then
