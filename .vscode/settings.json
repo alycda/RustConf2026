@@ -7,6 +7,24 @@
   // a local nix-shell get it too, not just the container ones.
   "direnv.restart.automatic": true,
 
+  // This repo holds TWO cargo workspaces, and rust-analyzer finds only one of
+  // them on its own: it auto-discovers manifests at the workspace root and
+  // one level below, so days/Cargo.toml is found and the exercise crates —
+  // exercises/ex1-pure-rust/Cargo.toml, two levels down — are not. Without
+  // this, every file the attendee actually edits opens with no completion and
+  // no go-to-definition, and saving one logs "file not found" in the RA log.
+  //
+  // Both roots are named because linkedProjects REPLACES auto-discovery
+  // rather than adding to it: listing only exercises/ would lose days/.
+  //
+  // This sits with the exercises rather than on main because a linkedProjects
+  // entry pointing at a manifest that does not exist is itself an RA load
+  // error — the list has to arrive with the workspace it names.
+  "rust-analyzer.linkedProjects": [
+    "days/Cargo.toml",
+    "exercises/Cargo.toml"
+  ],
+
   // Format Rust on save, so the CI fmt gate never rejects a file the editor
   // could have fixed. Not a nicety: the failure it prevents is invisible to
   // read. The first one was a 61-character method chain against rustfmt's
