@@ -25,6 +25,7 @@ use nom::{
 };
 use nom_locate::LocatedSpan;
 
+pub mod c_api;
 pub mod cursor;
 
 type Span<'a> = LocatedSpan<&'a str>;
