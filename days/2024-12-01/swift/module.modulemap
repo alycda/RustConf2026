@@ -1,0 +1,20 @@
+// Exercise 3 (Swift track): what makes the real cbindgen header importable
+// as a Swift module.
+//
+// This file is the whole reason this track differs from the other three.
+// Python's cffi reads the header at runtime, Dart and Kotlin/JNA don't read
+// it at all; Swift hands it to clang, which turns it into a module, and
+// `import AocDay` then puts `aoc_2024_12_01_part1` in scope as a normal
+// typed function. There is no hand-transcribed signature anywhere in
+// solve.swift, and a header that stopped matching would be a compile error
+// rather than a runtime surprise.
+//
+// The header path is relative to this file, and the header does not exist
+// on a fresh clone (days/.gitignore) — `just days swift-demo 2024-12-01`
+// regenerates it first. `[system]` is the standard marker for a C header
+// you don't own: it silences the warnings clang would otherwise raise
+// inside it, which is right for generated code nobody is going to edit.
+module AocDay [system] {
+    header "../include/aoc_2024_12_01.h"
+    export *
+}
