@@ -47,3 +47,10 @@ criterion.workspace = true
 [[bench]]
 name = "day"
 harness = false
+
+# The backend races need their boundaries: without the features the target
+# is skipped rather than failing --all-targets.
+[[bench]]
+name = "sort"
+harness = false
+required-features = ["qsort", "cpp"]
