@@ -23,7 +23,26 @@ use nom::{
     sequence::separated_pair,
 };
 
+#[cfg(feature = "uthash")]
+mod uthash;
+
 pub use crate::Day1 as Day;
+
+/// Part 2's similarity score as the baseline computes it — the naive scan,
+/// O(left × right). Kept alongside [`similarity_via_uthash`] — its C hash
+/// table equivalent — so a benchmark can compare the two.
+pub fn similarity_pure_rust(left: &[i32], right: &[i32]) -> i32 {
+    left.iter()
+        .map(|n| n * right.iter().filter(|&x| x == n).count() as i32)
+        .sum()
+}
+
+/// Part 2's similarity score with the frequency map built and queried in C.
+/// See [`uthash`] and [`similarity_pure_rust`].
+#[cfg(feature = "uthash")]
+pub fn similarity_via_uthash(left: &[i32], right: &[i32]) -> i32 {
+    uthash::similarity(left, right)
+}
 
 /// Solution for comparing and matching numbers between two lists
 ///
@@ -111,12 +130,17 @@ impl Solution for Day1 {
     fn part2(&mut self) -> SolutionResult<Self::Output> {
         let Day1(left, right) = self;
 
-        let output = left
-            .iter()
-            .map(|n| n * right.iter().filter(|&x| x == n).count() as Self::Output)
-            .sum::<Self::Output>();
-
-        Ok(output)
+        // The occurrence counting goes through the C hash table when the
+        // `uthash` feature is on (see [`similarity_via_uthash`]), and stays
+        // the naive scan otherwise.
+        #[cfg(feature = "uthash")]
+        {
+            Ok(similarity_via_uthash(left, right))
+        }
+        #[cfg(not(feature = "uthash"))]
+        {
+            Ok(similarity_pure_rust(left, right))
+        }
     }
 }
 
@@ -208,6 +232,25 @@ mod tests {
     3   3";
         assert_eq!("11", Day1::from_str(input)?.solve(Part::One)?);
         Ok(())
+    }
+
+    /// Both counters over the same columns, same score — including a key
+    /// the right column never holds (count 0), a negative key, and an
+    /// empty right column (uthash's NULL-is-an-empty-table case).
+    #[cfg(feature = "uthash")]
+    #[test]
+    fn test_day1_similarity_agrees() {
+        let left = [3, 4, 2, 1, 3, 3, -7];
+        let right = [4, 3, 5, 3, 9, 3, -7];
+
+        assert_eq!(
+            similarity_pure_rust(&left, &right),
+            similarity_via_uthash(&left, &right)
+        );
+        // The statement example's 31, minus 7: the negative key matches
+        // once and a negative ID weights its count below zero.
+        assert_eq!(31 - 7, similarity_via_uthash(&left, &right));
+        assert_eq!(0, similarity_via_uthash(&left, &[]));
     }
 
     #[test]

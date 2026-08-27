@@ -4,6 +4,19 @@ version = "0.1.0"
 edition.workspace = true
 rust-version.workspace = true
 
+# The uthash variant compiles a C wrapper at build time (uthash is a macro
+# library — nothing to link until a C translation unit instantiates it), so
+# it's off by default: a bare `cargo test --workspace` stays green on stock
+# CI runners and the manual-setup path alike. The nix shell carries the
+# header; the full crossing is: cargo test --features uthash
+[features]
+uthash = []
+
+# Compiled unconditionally (pure Rust, no system deps), invoked only when
+# the uthash feature is on — build.rs says why it can't be optional.
+[build-dependencies]
+cc = "1"
+
 [dependencies]
 aoc-ornaments.workspace = true
 itertools.workspace = true
