@@ -101,6 +101,48 @@ dart-demo day: (bindgen day)
     dart pub get
     dart run solve.dart
 
+
+
+# Exercise 3 (Kotlin/JNA track): call a day's cbindgen C API from Kotlin.
+# `just setup-kotlin` once first (JDK 17+ and kotlinc — what `just check`
+# probes). Depends on `bindgen` rather than duplicating its cbindgen
+# invocation — the header isn't actually parsed (JNA needs the signatures
+# written as Kotlin methods, see the day's kotlin/solve.kt), but
+# regenerating it keeps it available for eyeballing alongside the
+# hand-transcribed ones.
+#
+# JNA is the track's one dependency and there is no `pip`/`dart pub` here to
+# fetch it, so it comes straight from Maven Central — pinned and checksummed,
+# because an unpinned jar downloaded over the network and then executed is a
+# different kind of thing from a pinned one. Cached next to the script after
+# the first run; *.jar is gitignored repo-wide.
+kotlin-demo day: (bindgen day)
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -f "{{day}}/kotlin/solve.kt" ]; then
+        echo "days/{{day}} has no kotlin/solve.kt — not every day carries one" >&2
+        exit 1
+    fi
+    jna_version=5.17.0
+    jna_sha256=b3a9408e7c51e08ef0e3bfcc08f443f6ec0f6191ba8cd7c18d53d2b22e5bdbc0
+    cd "{{day}}" && cargo build --lib
+    cd kotlin
+    jna="jna-${jna_version}.jar"
+    if [ ! -f "$jna" ]; then
+        echo "fetching $jna from Maven Central"
+        curl -fsSL -o "$jna.tmp" \
+            "https://repo1.maven.org/maven2/net/java/dev/jna/jna/${jna_version}/${jna}"
+        # Verified before it is moved into place, so an interrupted or
+        # tampered download never becomes a cached jar that later runs.
+        echo "${jna_sha256}  ${jna}.tmp" | shasum -a 256 -c - >/dev/null
+        mv "$jna.tmp" "$jna"
+    fi
+    # -include-runtime bundles the Kotlin stdlib, so the result runs under
+    # plain `java` — which is exactly what scripts/self-check.sh guarantees
+    # for this track (kotlinc + a runnable java, nothing else).
+    kotlinc solve.kt -classpath "$jna" -include-runtime -d solve.jar
+    java -cp "solve.jar:$jna" SolveKt
+
 # scaffold a new day from _template, e.g. `just new 2022-12-01`
 new day:
     #!/usr/bin/env bash

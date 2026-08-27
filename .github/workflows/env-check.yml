@@ -203,3 +203,41 @@ jobs:
           echo "$out"
           echo "$out" | grep -qF 'Part 1 🎯(🦀): 11'
           echo "$out" | grep -qF 'Part 2 🎯(🦀): 31'
+      # Beyond the env check: on a branch that carries a worked Exercise 3
+      # (Kotlin/JNA on 2024-12-01), prove the track end to end — same input,
+      # same pinned 11/31 as the python and dart cells; the JNA jar is pinned
+      # and checksummed here exactly as the kotlin-demo recipe pins it.
+      # `just` is not on a stock runner, so the recipe's steps are spelled
+      # out here rather than invoked. The `:` classpath separator is why this
+      # step is linux/macos-shaped. Branches without the worked track skip
+      # cleanly.
+      #
+      # The label greps are byte-for-byte: ☕️ is U+2615 plus U+FE0F
+      # (VARIATION SELECTOR-16); a bare ☕ renders identically and will not
+      # match. If you change the label in kotlin/solve.kt, copy it — do not
+      # retype it.
+      - name: kotlin track end-to-end (2024-12-01)
+        if: matrix.track == 'kotlin'
+        shell: bash
+        run: |
+          if [ ! -f days/2024-12-01/kotlin/solve.kt ]; then
+            echo "no worked kotlin track on this branch — skipping"
+            exit 0
+          fi
+          jna_version=5.17.0
+          jna_sha256=b3a9408e7c51e08ef0e3bfcc08f443f6ec0f6191ba8cd7c18d53d2b22e5bdbc0
+          (cd days && cargo build -p aoc-2024-12-01 --lib)
+          (cd days/2024-12-01 && mkdir -p include && \
+            cbindgen --config cbindgen.toml --output include/aoc_2024_12_01.h src/c_api.rs)
+          mkdir -p days/inputs
+          printf '3   4\n4   3\n2   5\n1   3\n3   9\n3   3\n' > days/inputs/2024-12-01.txt
+          cd days/2024-12-01/kotlin
+          jna="jna-${jna_version}.jar"
+          curl -fsSL -o "$jna" \
+            "https://repo1.maven.org/maven2/net/java/dev/jna/jna/${jna_version}/${jna}"
+          echo "${jna_sha256}  ${jna}" | shasum -a 256 -c -
+          kotlinc solve.kt -classpath "$jna" -include-runtime -d solve.jar
+          out="$(java -cp "solve.jar:$jna" SolveKt)"
+          echo "$out"
+          echo "$out" | grep -qF 'Part 1 ☕️(🦀): 11'
+          echo "$out" | grep -qF 'Part 2 ☕️(🦀): 31'
