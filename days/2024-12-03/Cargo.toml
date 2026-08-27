@@ -26,3 +26,9 @@ criterion.workspace = true
 [[bench]]
 name = "day"
 harness = false
+
+# Both parsers are pure Rust, so unlike the C-backed races elsewhere this
+# target needs no features.
+[[bench]]
+name = "parser"
+harness = false
