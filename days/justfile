@@ -143,6 +143,71 @@ kotlin-demo day: (bindgen day)
     kotlinc solve.kt -classpath "$jna" -include-runtime -d solve.jar
     java -cp "solve.jar:$jna" SolveKt
 
+
+# Exercise 3 (Swift track): call a day's cbindgen C API from Swift.
+# `just setup-swift` once first (the Xcode CLT on macOS, swift.org on Linux —
+# what `just check` probes). Depends on `bindgen` rather than duplicating its
+# cbindgen invocation, and here the dependency is real: swift/module.modulemap
+# names the generated header, and clang has to be able to open it before
+# `import AocDay` means anything.
+#
+# No package manager, no jar to fetch, nothing pinned — the C API arrives
+# through the header, which is the point of this track.
+#
+# The two -L/-rpath pairs are the compiled-language shape of what the other
+# three tracks do at runtime: python/dart/kotlin `dlopen` a path they compute
+# by looking for debug then release, and Swift asks the linker instead. Both
+# are passed unconditionally; a directory that doesn't exist costs nothing,
+# and debug comes first for the same reason it does in those scripts. -rpath
+# takes absolute paths on purpose — the portable spelling of "next to me"
+# differs between platforms ($ORIGIN vs @loader_path) and this is a
+# development recipe, not something being shipped anywhere.
+swift-demo day: (bindgen day)
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -f "{{day}}/swift/solve.swift" ]; then
+        echo "days/{{day}} has no swift/solve.swift — not every day carries one" >&2
+        exit 1
+    fi
+    cd "{{day}}" && cargo build --lib
+    target="$(cd ../target && pwd)"
+    cd swift
+    # .build/ is Swift's own name for build output and is already ignored
+    # repo-wide; a bare `solve` beside solve.swift matches no rule in either
+    # .gitignore and would be committed. solve.swift locates itself relative
+    # to the executable, so it knows to look one level further up.
+    mkdir -p .build
+    # Where Foundation lives, when it does not live with the compiler.
+    #
+    # `solve.swift` imports Foundation, and on macOS or a swift.org toolchain
+    # that needs no flags at all — Foundation ships with Swift. In the
+    # repo's Swift devcontainer it does not: nixpkgs packages corelibs
+    # separately, home-manager installs them into the *user profile*, and
+    # `swiftc` searches only its own toolchain path. Bare, it fails with
+    # `no such module 'Foundation'`.
+    #
+    # Added only when that layout is actually present, so a nix-shell (whose
+    # setup hooks already put corelibs on the search path) and a Mac are both
+    # unaffected. The -rpath pair is not redundant with the -L pair: -L
+    # answers the link-time search and only -rpath answers the load-time one.
+    corelibs=()
+    profile="$HOME/.nix-profile"
+    if [ -d "$profile/lib/swift/linux/$(uname -m)" ]; then
+        corelibs+=(-I "$profile/lib/swift/linux/$(uname -m)")
+        corelibs+=(-Xcc "-I$profile/include")
+        corelibs+=(-L "$profile/lib/swift/linux" -L "$profile/lib")
+        corelibs+=(-Xlinker -rpath -Xlinker "$profile/lib/swift/linux")
+        corelibs+=(-Xlinker -rpath -Xlinker "$profile/lib")
+    fi
+    swiftc solve.swift -o .build/solve \
+        -I . \
+        ${corelibs[@]+"${corelibs[@]}"} \
+        -L "$target/debug" -L "$target/release" \
+        -l"aoc_$(printf '%s' "{{day}}" | tr - _)" \
+        -Xlinker -rpath -Xlinker "$target/debug" \
+        -Xlinker -rpath -Xlinker "$target/release"
+    ./.build/solve
+
 # scaffold a new day from _template, e.g. `just new 2022-12-01`
 new day:
     #!/usr/bin/env bash

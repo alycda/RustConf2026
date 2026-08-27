@@ -237,3 +237,49 @@ jobs:
           echo "$out"
           echo "$out" | grep -qF 'Part 1 ☕️(🦀): 161'
           echo "$out" | grep -qF 'Part 2 ☕️(🦀): 48'
+      # Beyond the env check: on a branch that carries a worked Exercise 3
+      # (Swift on 2024-12-03), prove the track end to end — same input, same
+      # pinned 161/48. This track fetches nothing: the C API arrives through
+      # the generated header, which module.modulemap hands to clang. The
+      # corelibs block mirrors the swift-demo recipe and is inert on a stock
+      # runner; it is spelled out anyway because this step promises to be
+      # the recipe's steps. No SwiftPM on purpose — keeping this identical
+      # to the recipe is what makes a red cell mean something about the
+      # track. Branches without the worked track skip cleanly.
+      - name: swift track end-to-end (2024-12-03)
+        if: matrix.track == 'swift'
+        shell: bash
+        run: |
+          if [ ! -f days/2024-12-03/swift/solve.swift ]; then
+            echo "no worked swift track on this branch — skipping"
+            exit 0
+          fi
+          (cd days && cargo build -p aoc-2024-12-03 --lib)
+          (cd days/2024-12-03 && mkdir -p include && \
+            cbindgen --config cbindgen.toml --output include/aoc_2024_12_03.h src/c_api.rs)
+          mkdir -p days/inputs
+          printf "xmul(2,4)&mul[3,7]!^don't()_mul(5,5)+mul(32,64](mul(11,8)undo()?mul(8,5))" \
+            > days/inputs/2024-12-03.txt
+          target="$(cd days/target && pwd)"
+          cd days/2024-12-03/swift
+          mkdir -p .build
+          corelibs=()
+          profile="$HOME/.nix-profile"
+          if [ -d "$profile/lib/swift/linux/$(uname -m)" ]; then
+              corelibs+=(-I "$profile/lib/swift/linux/$(uname -m)")
+              corelibs+=(-Xcc "-I$profile/include")
+              corelibs+=(-L "$profile/lib/swift/linux" -L "$profile/lib")
+              corelibs+=(-Xlinker -rpath -Xlinker "$profile/lib/swift/linux")
+              corelibs+=(-Xlinker -rpath -Xlinker "$profile/lib")
+          fi
+          swiftc solve.swift -o .build/solve \
+            -I . \
+            ${corelibs[@]+"${corelibs[@]}"} \
+            -L "$target/debug" -L "$target/release" \
+            -laoc_2024_12_03 \
+            -Xlinker -rpath -Xlinker "$target/debug" \
+            -Xlinker -rpath -Xlinker "$target/release"
+          out="$(./.build/solve)"
+          echo "$out"
+          echo "$out" | grep -qF 'Part 1 🕊️(🦀): 161'
+          echo "$out" | grep -qF 'Part 2 🕊️(🦀): 48'
