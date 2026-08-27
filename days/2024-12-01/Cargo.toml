@@ -40,7 +40,9 @@ nom.workspace = true
 rstest.workspace = true
 
 # Benchmarks are a bonus (`just days bench <day>`), not part of any workshop
-# step — not every day carries one.
+# step — not every day carries one. ahash appears only in the part-2 lookup
+# race (benches/lookup.rs), never in the solution.
+ahash.workspace = true
 criterion.workspace = true
 
 # harness = false hands the binary to criterion rather than libtest.
@@ -54,3 +56,8 @@ harness = false
 name = "sort"
 harness = false
 required-features = ["qsort", "cpp"]
+
+[[bench]]
+name = "lookup"
+harness = false
+required-features = ["uthash"]

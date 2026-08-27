@@ -53,6 +53,10 @@ criterion = { version = "0.7", default-features = false, features = [
     "cargo_bench_support",
 ] }
 
+# Bench-only (2024-12-01's part-2 lookup race): SipHash's DoS resistance is
+# the honest half of that comparison, so ahash sits beside std's map rather
+# than replacing it anywhere.
+ahash = "0.8"
 derive_more = { version = "1", features = ["deref"] }
 itertools = "0.14"
 miette = { version = "7.4", features = ["fancy"] }
