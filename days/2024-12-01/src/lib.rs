@@ -41,6 +41,39 @@ pub fn sort_via_qsort(column: &mut [i32]) {
     qsort::sort(column);
 }
 
+/// A sorting backend, chosen at compile time — the talk's
+/// `2024-12-01-zero-cost-abstraction` branch, ported.
+///
+/// This is a zero-cost abstraction because:
+/// - the marker types are zero-sized — no runtime memory,
+/// - monomorphization creates a specialized copy of every generic function
+///   per backend at compile time,
+/// - there are no vtables and no dynamic dispatch — everything resolves
+///   statically, as if the per-backend functions were written by hand.
+pub trait Sorter {
+    fn sort(column: &mut [i32]);
+}
+
+/// Marker type for Rust's built-in sort.
+pub struct NativeSort;
+
+impl Sorter for NativeSort {
+    fn sort(column: &mut [i32]) {
+        sort_pure_rust(column);
+    }
+}
+
+/// Marker type for libc's `qsort`.
+#[cfg(feature = "qsort")]
+pub struct CSort;
+
+#[cfg(feature = "qsort")]
+impl Sorter for CSort {
+    fn sort(column: &mut [i32]) {
+        sort_via_qsort(column);
+    }
+}
+
 /// Solution for comparing and matching numbers between two lists
 ///
 /// This implementation solves a puzzle where:
@@ -67,6 +100,25 @@ impl FromStr for Day1 {
     /// * If any line doesn't contain exactly two numbers
     /// * If any number cannot be parsed as i32
     fn from_str(input: &str) -> miette::Result<Self> {
+        // Rank-pairing needs both columns sorted — through the C boundary
+        // when the `qsort` feature is on, in plain Rust otherwise.
+        #[cfg(feature = "qsort")]
+        {
+            Self::parse_with::<CSort>(input)
+        }
+        #[cfg(not(feature = "qsort"))]
+        {
+            Self::parse_with::<NativeSort>(input)
+        }
+    }
+}
+
+impl Day1 {
+    /// Parses the two columns and rank-sorts them through the chosen
+    /// backend. Monomorphized per `S`: `parse_with::<NativeSort>` and
+    /// `parse_with::<CSort>` compile to separate specialized functions,
+    /// so picking a backend costs nothing at runtime.
+    pub fn parse_with<S: Sorter>(input: &str) -> miette::Result<Self> {
         let (mut left, mut right): (Vec<i32>, Vec<i32>) = input
             .lines()
             .map(|line| {
@@ -77,24 +129,12 @@ impl FromStr for Day1 {
             })
             .unzip();
 
-        // Rank-pairing needs both columns sorted — through the C boundary
-        // when the `qsort` feature is on, in plain Rust otherwise.
-        #[cfg(feature = "qsort")]
-        {
-            sort_via_qsort(&mut left);
-            sort_via_qsort(&mut right);
-        }
-        #[cfg(not(feature = "qsort"))]
-        {
-            sort_pure_rust(&mut left);
-            sort_pure_rust(&mut right);
-        }
+        S::sort(&mut left);
+        S::sort(&mut right);
 
         Ok(Self(left, right))
     }
-}
 
-impl Day1 {
     /// Nom parser implementation for handling input parsing with error handling
     ///
     /// Parses lines of space-separated integer pairs using nom combinators
@@ -233,6 +273,41 @@ mod tests {
     3   9
     3   3";
         assert_eq!("11", Day1::from_str(input)?.solve(Part::One)?);
+        Ok(())
+    }
+
+    /// The explicit monomorphization the default build exercises implicitly
+    /// through `FromStr` — spelling the backend out at the call site.
+    #[test]
+    fn test_day1_part1_native_sort() -> miette::Result<()> {
+        let input = "3   4
+    4   3
+    2   5
+    1   3
+    3   9
+    3   3";
+        assert_eq!(
+            "11",
+            Day1::parse_with::<NativeSort>(input)?.solve(Part::One)?
+        );
+        Ok(())
+    }
+
+    /// Both monomorphized parses must build the same ranked columns.
+    #[cfg(feature = "qsort")]
+    #[test]
+    fn test_day1_parse_backends_agree() -> miette::Result<()> {
+        let input = "3   4
+    4   3
+    2   5
+    1   3
+    3   9
+    3   3";
+        let mut native = Day1::parse_with::<NativeSort>(input)?;
+        let mut c = Day1::parse_with::<CSort>(input)?;
+
+        assert_eq!(native.solve(Part::One)?, c.solve(Part::One)?);
+        assert_eq!(native.solve(Part::Two)?, c.solve(Part::Two)?);
         Ok(())
     }
 
