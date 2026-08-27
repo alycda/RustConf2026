@@ -41,7 +41,7 @@ pass the same `--config` to every subsequent command.
 The CLI honours everything that builds the container: the base image, the Nix
 feature, the mounts, `containerEnv` (which is how the variants select their own
 `home.nix`), `remoteEnv` (the `PATH` fix that puts the home-manager profile
-where tools can find it), and both `postCreateCommand` and `postStartCommand` —
+where tools can find it), and both `onCreateCommand` and `postStartCommand` —
 so `setup.sh` and `poststart.sh` run exactly as they do under VS Code, and
 home-manager installs your profile.
 
