@@ -51,6 +51,11 @@ pkgs.mkShell {
     # safety net: python3 for the Python track; git so pure/minimal shells
     # (and jj colocated clones) get a current git (no verification needed)
     python3 git
+    # uthash for days/2024-12-01's C-hash-table variant (cargo feature
+    # `uthash`, off by default). Header-only and no .pc file, so no
+    # pkg-config: the cc wrapper injects the include path for every
+    # buildInputs entry, which is how that day's build.rs finds <uthash.h>.
+    uthash
   ];
 
   CHEAT_CONFIG_PATH = cheatConf;

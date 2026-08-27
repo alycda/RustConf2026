@@ -23,13 +23,18 @@ use nom::{
     sequence::separated_pair,
 };
 
+#[cfg(feature = "cpp")]
+mod cpp;
 #[cfg(feature = "qsort")]
 mod qsort;
+#[cfg(feature = "uthash")]
+mod uthash;
 
 pub use crate::Day1 as Day;
 
-/// Sorts one column in plain Rust. Kept alongside [`sort_via_qsort`] — its
-/// libc equivalent — so a benchmark can compare the two backends.
+/// Sorts one column in plain Rust. Kept alongside [`sort_via_qsort`] and
+/// [`sort_via_cpp`] — its libc and C++ equivalents — so a benchmark can
+/// compare the backends.
 pub fn sort_pure_rust(column: &mut [i32]) {
     column.sort();
 }
@@ -39,6 +44,29 @@ pub fn sort_pure_rust(column: &mut [i32]) {
 #[cfg(feature = "qsort")]
 pub fn sort_via_qsort(column: &mut [i32]) {
     qsort::sort(column);
+}
+
+/// Sorts one column with C++'s `std::sort` through a C-shaped shim.
+/// See [`cpp`] and [`sort_pure_rust`].
+#[cfg(feature = "cpp")]
+pub fn sort_via_cpp(column: &mut [i32]) {
+    cpp::sort(column);
+}
+
+/// Part 2's similarity score as the baseline computes it — the naive scan,
+/// O(left × right). Kept alongside [`similarity_via_uthash`] — its C hash
+/// table equivalent — so a benchmark can compare the two.
+pub fn similarity_pure_rust(left: &[i32], right: &[i32]) -> i32 {
+    left.iter()
+        .map(|n| n * right.iter().filter(|&x| x == n).count() as i32)
+        .sum()
+}
+
+/// Part 2's similarity score with the frequency map built and queried in C.
+/// See [`uthash`] and [`similarity_pure_rust`].
+#[cfg(feature = "uthash")]
+pub fn similarity_via_uthash(left: &[i32], right: &[i32]) -> i32 {
+    uthash::similarity(left, right)
 }
 
 /// A sorting backend, chosen at compile time — the talk's
@@ -74,6 +102,17 @@ impl Sorter for CSort {
     }
 }
 
+/// Marker type for C++'s `std::sort`.
+#[cfg(feature = "cpp")]
+pub struct CppSort;
+
+#[cfg(feature = "cpp")]
+impl Sorter for CppSort {
+    fn sort(column: &mut [i32]) {
+        sort_via_cpp(column);
+    }
+}
+
 /// Solution for comparing and matching numbers between two lists
 ///
 /// This implementation solves a puzzle where:
@@ -100,13 +139,19 @@ impl FromStr for Day1 {
     /// * If any line doesn't contain exactly two numbers
     /// * If any number cannot be parsed as i32
     fn from_str(input: &str) -> miette::Result<Self> {
-        // Rank-pairing needs both columns sorted — through the C boundary
-        // when the `qsort` feature is on, in plain Rust otherwise.
+        // Rank-pairing needs both columns sorted. Backend precedence when
+        // several features are on: qsort (the talk's headline crossing),
+        // then the C++ shim, then plain Rust — every backend stays
+        // reachable by name via parse_with either way.
         #[cfg(feature = "qsort")]
         {
             Self::parse_with::<CSort>(input)
         }
-        #[cfg(not(feature = "qsort"))]
+        #[cfg(all(feature = "cpp", not(feature = "qsort")))]
+        {
+            Self::parse_with::<CppSort>(input)
+        }
+        #[cfg(not(any(feature = "qsort", feature = "cpp")))]
         {
             Self::parse_with::<NativeSort>(input)
         }
@@ -177,12 +222,17 @@ impl Solution for Day1 {
     fn part2(&mut self) -> SolutionResult<Self::Output> {
         let Day1(left, right) = self;
 
-        let output = left
-            .iter()
-            .map(|n| n * right.iter().filter(|&x| x == n).count() as Self::Output)
-            .sum::<Self::Output>();
-
-        Ok(output)
+        // The occurrence counting goes through the C hash table when the
+        // `uthash` feature is on (see [`similarity_via_uthash`]), and stays
+        // the naive scan otherwise.
+        #[cfg(feature = "uthash")]
+        {
+            Ok(similarity_via_uthash(left, right))
+        }
+        #[cfg(not(feature = "uthash"))]
+        {
+            Ok(similarity_pure_rust(left, right))
+        }
     }
 }
 
@@ -311,6 +361,24 @@ mod tests {
         Ok(())
     }
 
+    /// Same agreement over the C++ marker the merge added.
+    #[cfg(feature = "cpp")]
+    #[test]
+    fn test_day1_cpp_parse_agrees() -> miette::Result<()> {
+        let input = "3   4
+    4   3
+    2   5
+    1   3
+    3   9
+    3   3";
+        let mut native = Day1::parse_with::<NativeSort>(input)?;
+        let mut cpp = Day1::parse_with::<CppSort>(input)?;
+
+        assert_eq!(native.solve(Part::One)?, cpp.solve(Part::One)?);
+        assert_eq!(native.solve(Part::Two)?, cpp.solve(Part::Two)?);
+        Ok(())
+    }
+
     /// The talk's `test_both_agree`, sharpened: the two backends must order
     /// identically, including the extremes that broke the `a - b` comparator.
     #[cfg(feature = "qsort")]
@@ -323,6 +391,40 @@ mod tests {
         sort_pure_rust(&mut pure);
 
         assert_eq!(via_c, pure);
+    }
+
+    /// The two backends must order identically, including the i32 extremes
+    /// — std::sort compares with `<`, so unlike a subtracting C comparator
+    /// there is no overflow to fall into, and this pins that.
+    #[cfg(feature = "cpp")]
+    #[test]
+    fn test_day1_cpp_sort_agrees() {
+        let mut via_cpp = vec![3, 1, 4, 1, 5, 9, 2, 6, i32::MAX, i32::MIN];
+        let mut pure = via_cpp.clone();
+
+        sort_via_cpp(&mut via_cpp);
+        sort_pure_rust(&mut pure);
+
+        assert_eq!(via_cpp, pure);
+    }
+
+    /// Both counters over the same columns, same score — including a key
+    /// the right column never holds (count 0), a negative key, and an
+    /// empty right column (uthash's NULL-is-an-empty-table case).
+    #[cfg(feature = "uthash")]
+    #[test]
+    fn test_day1_similarity_agrees() {
+        let left = [3, 4, 2, 1, 3, 3, -7];
+        let right = [4, 3, 5, 3, 9, 3, -7];
+
+        assert_eq!(
+            similarity_pure_rust(&left, &right),
+            similarity_via_uthash(&left, &right)
+        );
+        // The statement example's 31, minus 7: the negative key matches
+        // once and a negative ID weights its count below zero.
+        assert_eq!(31 - 7, similarity_via_uthash(&left, &right));
+        assert_eq!(0, similarity_via_uthash(&left, &[]));
     }
 
     #[test]

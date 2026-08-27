@@ -4,13 +4,27 @@ version = "0.1.0"
 edition.workspace = true
 rust-version.workspace = true
 
-# The qsort variant crosses into libc at runtime but needs no build.rs and
-# no pkg-config — qsort ships in the C standard library every target already
-# links. Off by default all the same: variants are opt-in, and the default
-# build stays the pure-Rust reference. The same tests run through the C
-# boundary with: cargo test --features qsort
+# Every variant is off by default: the default build is the pure-Rust
+# reference, and a bare `cargo test --workspace` stays green on stock CI
+# runners and the manual-setup path alike.
+# - qsort: crosses into libc at runtime; no build step and no pkg-config —
+#   qsort ships in the C standard library every target already links, so
+#   this one is opt-in purely because variants are opt-in.
+# - cpp: compiles src/cpp_sort.cpp at build time (needs a C++ toolchain;
+#   the nix shell's stdenv carries one).
+# - uthash: compiles src/uthash_wrapper.c at build time (uthash is a macro
+#   library — nothing to link until a C translation unit instantiates it;
+#   the nix shell carries the header).
+# The full absurdity is: cargo test --features qsort,cpp,uthash
 [features]
 qsort = []
+cpp = []
+uthash = []
+
+# Compiled unconditionally (pure Rust, no system deps), invoked only when
+# the cpp/uthash features are on — build.rs says why it can't be optional.
+[build-dependencies]
+cc = "1"
 
 [dependencies]
 aoc-ornaments.workspace = true
