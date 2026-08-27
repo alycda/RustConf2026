@@ -1,0 +1,41 @@
+[package]
+name = "aoc-2024-12-03"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+
+# cdylib for the C-callable surface in src/c_api.rs (Exercise 2 — cbindgen
+# generates a header from it, the Exercise 3 tracks consume it); rlib
+# alongside it so main.rs, the tests, and the benches keep linking against
+# this crate the normal Rust way.
+[lib]
+crate-type = ["rlib", "cdylib"]
+
+[dependencies]
+aoc-ornaments.workspace = true
+miette.workspace = true
+nom.workspace = true
+nom_locate.workspace = true
+
+# Reach for these as the solution needs them — versions match what
+# aoc-ornaments already pulls in, so they cost no extra build.
+# derive_more.workspace = true
+# itertools.workspace = true
+
+[dev-dependencies]
+rstest.workspace = true
+
+# Benchmarks are a bonus (`just days bench <day>`), not part of any workshop
+# step — not every day carries one.
+criterion.workspace = true
+
+# harness = false hands the binary to criterion rather than libtest.
+[[bench]]
+name = "day"
+harness = false
+
+# Both parsers are pure Rust, so unlike the C-backed races elsewhere this
+# target needs no features.
+[[bench]]
+name = "parser"
+harness = false
