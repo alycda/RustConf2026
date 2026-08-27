@@ -181,3 +181,26 @@ jobs:
           echo "$out"
           echo "$out" | grep -qF 'Part 1 🐍(🦀): 161'
           echo "$out" | grep -qF 'Part 2 🐍(🦀): 48'
+      # Beyond the env check: on a branch that carries a worked Exercise 3
+      # (Dart/dart:ffi on 2024-12-03), prove the track end to end — same
+      # input, same pinned 161/48, same reasoning as the python cell above.
+      # Branches without the worked track skip cleanly.
+      - name: dart track end-to-end (2024-12-03)
+        if: matrix.track == 'dart'
+        shell: bash
+        run: |
+          if [ ! -f days/2024-12-03/dart/solve.dart ]; then
+            echo "no worked dart track on this branch — skipping"
+            exit 0
+          fi
+          (cd days && cargo build -p aoc-2024-12-03 --lib)
+          (cd days/2024-12-03 && mkdir -p include && \
+            cbindgen --config cbindgen.toml --output include/aoc_2024_12_03.h src/c_api.rs)
+          mkdir -p days/inputs
+          printf "xmul(2,4)&mul[3,7]!^don't()_mul(5,5)+mul(32,64](mul(11,8)undo()?mul(8,5))" \
+            > days/inputs/2024-12-03.txt
+          (cd days/2024-12-03/dart && dart pub get)
+          out="$(cd days/2024-12-03/dart && dart run solve.dart)"
+          echo "$out"
+          echo "$out" | grep -qF 'Part 1 🎯(🦀): 161'
+          echo "$out" | grep -qF 'Part 2 🎯(🦀): 48'
