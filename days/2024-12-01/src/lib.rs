@@ -23,6 +23,7 @@ use nom::{
     sequence::separated_pair,
 };
 
+pub mod c_api;
 #[cfg(feature = "cpp")]
 mod cpp;
 #[cfg(feature = "qsort")]
