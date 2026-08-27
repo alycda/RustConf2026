@@ -23,7 +23,23 @@ use nom::{
     sequence::separated_pair,
 };
 
+#[cfg(feature = "qsort")]
+mod qsort;
+
 pub use crate::Day1 as Day;
+
+/// Sorts one column in plain Rust. Kept alongside [`sort_via_qsort`] — its
+/// libc equivalent — so a benchmark can compare the two backends.
+pub fn sort_pure_rust(column: &mut [i32]) {
+    column.sort();
+}
+
+/// Sorts one column by handing its backing storage to libc's `qsort` over
+/// FFI. See [`qsort`] and [`sort_pure_rust`].
+#[cfg(feature = "qsort")]
+pub fn sort_via_qsort(column: &mut [i32]) {
+    qsort::sort(column);
+}
 
 /// Solution for comparing and matching numbers between two lists
 ///
@@ -61,8 +77,18 @@ impl FromStr for Day1 {
             })
             .unzip();
 
-        left.sort();
-        right.sort();
+        // Rank-pairing needs both columns sorted — through the C boundary
+        // when the `qsort` feature is on, in plain Rust otherwise.
+        #[cfg(feature = "qsort")]
+        {
+            sort_via_qsort(&mut left);
+            sort_via_qsort(&mut right);
+        }
+        #[cfg(not(feature = "qsort"))]
+        {
+            sort_pure_rust(&mut left);
+            sort_pure_rust(&mut right);
+        }
 
         Ok(Self(left, right))
     }
@@ -208,6 +234,20 @@ mod tests {
     3   3";
         assert_eq!("11", Day1::from_str(input)?.solve(Part::One)?);
         Ok(())
+    }
+
+    /// The talk's `test_both_agree`, sharpened: the two backends must order
+    /// identically, including the extremes that broke the `a - b` comparator.
+    #[cfg(feature = "qsort")]
+    #[test]
+    fn test_day1_sorts_agree() {
+        let mut via_c = vec![3, 1, 4, 1, 5, 9, 2, 6, i32::MAX, i32::MIN];
+        let mut pure = via_c.clone();
+
+        sort_via_qsort(&mut via_c);
+        sort_pure_rust(&mut pure);
+
+        assert_eq!(via_c, pure);
     }
 
     #[test]

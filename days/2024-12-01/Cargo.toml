@@ -4,6 +4,14 @@ version = "0.1.0"
 edition.workspace = true
 rust-version.workspace = true
 
+# The qsort variant crosses into libc at runtime but needs no build.rs and
+# no pkg-config — qsort ships in the C standard library every target already
+# links. Off by default all the same: variants are opt-in, and the default
+# build stays the pure-Rust reference. The same tests run through the C
+# boundary with: cargo test --features qsort
+[features]
+qsort = []
+
 [dependencies]
 aoc-ornaments.workspace = true
 itertools.workspace = true
