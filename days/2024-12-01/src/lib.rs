@@ -23,7 +23,23 @@ use nom::{
     sequence::separated_pair,
 };
 
+#[cfg(feature = "cpp")]
+mod cpp;
+
 pub use crate::Day1 as Day;
+
+/// Sorts one column in plain Rust. Kept alongside [`sort_via_cpp`] — its
+/// C++ equivalent — so a benchmark can compare the two backends.
+pub fn sort_pure_rust(column: &mut [i32]) {
+    column.sort();
+}
+
+/// Sorts one column with C++'s `std::sort` through a C-shaped shim.
+/// See [`cpp`] and [`sort_pure_rust`].
+#[cfg(feature = "cpp")]
+pub fn sort_via_cpp(column: &mut [i32]) {
+    cpp::sort(column);
+}
 
 /// Solution for comparing and matching numbers between two lists
 ///
@@ -61,8 +77,18 @@ impl FromStr for Day1 {
             })
             .unzip();
 
-        left.sort();
-        right.sort();
+        // Rank-pairing needs both columns sorted — through the C++ shim
+        // when the `cpp` feature is on, in plain Rust otherwise.
+        #[cfg(feature = "cpp")]
+        {
+            sort_via_cpp(&mut left);
+            sort_via_cpp(&mut right);
+        }
+        #[cfg(not(feature = "cpp"))]
+        {
+            sort_pure_rust(&mut left);
+            sort_pure_rust(&mut right);
+        }
 
         Ok(Self(left, right))
     }
@@ -208,6 +234,21 @@ mod tests {
     3   3";
         assert_eq!("11", Day1::from_str(input)?.solve(Part::One)?);
         Ok(())
+    }
+
+    /// The two backends must order identically, including the i32 extremes
+    /// — std::sort compares with `<`, so unlike a subtracting C comparator
+    /// there is no overflow to fall into, and this pins that.
+    #[cfg(feature = "cpp")]
+    #[test]
+    fn test_day1_cpp_sort_agrees() {
+        let mut via_cpp = vec![3, 1, 4, 1, 5, 9, 2, 6, i32::MAX, i32::MIN];
+        let mut pure = via_cpp.clone();
+
+        sort_via_cpp(&mut via_cpp);
+        sort_pure_rust(&mut pure);
+
+        assert_eq!(via_cpp, pure);
     }
 
     #[test]
