@@ -30,17 +30,19 @@ Directory _dayDir() => File(Platform.script.toFilePath()).parent.parent;
 DynamicLibrary _loadLibrary() {
   final daysDir = _dayDir().parent;
   for (final profile in ['debug', 'release']) {
-    // A cdylib takes the host's extension, not Rust's choice: .so on Linux,
-    // .dylib on macOS. Same two-loop search as python/solve.py.
-    for (final ext in ['so', 'dylib']) {
-      final path = '${daysDir.path}/target/$profile/libaoc_2024_12_03.$ext';
+    // A cdylib takes the host's name, not Rust's choice: libaoc_2024_12_03.so on
+    // Linux, libaoc_2024_12_03.dylib on macOS, aoc_2024_12_03.dll (no lib prefix) on
+    // Windows. Same three-name search as python/solve.py — no platform
+    // check, whichever file cargo produced is the one that exists.
+    for (final name in ['libaoc_2024_12_03.so', 'libaoc_2024_12_03.dylib', 'aoc_2024_12_03.dll']) {
+      final path = '${daysDir.path}/target/$profile/$name';
       if (File(path).existsSync()) {
         return DynamicLibrary.open(path);
       }
     }
   }
   stderr.writeln(
-      'no libaoc_2024_12_03.{so,dylib} found — run: cd days && cargo build -p aoc-2024-12-03 --lib');
+      'no libaoc_2024_12_03.{so,dylib} / aoc_2024_12_03.dll found — run: cd days && cargo build -p aoc-2024-12-03 --lib');
   exit(1);
 }
 
