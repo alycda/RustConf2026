@@ -744,3 +744,100 @@ jobs:
           echo "$out"
           echo "$out" | grep -qF 'Part 1 🕊️(🦀): 161'
           echo "$out" | grep -qF 'Part 2 🕊️(🦀): 48'
+
+      # ---- Exercises: the attendee scaffold, solved once, end to end -------
+      # exercises/ ships with todo!() and TODOs, so nothing on main can run
+      # it; .github/ci/exercises/ holds the same files solved once (Ex 1 is
+      # 2025 day 3 from alycda/learning-in-public — its part-2 answer is above
+      # 32 bits on purpose). These steps overlay them and run exactly the
+      # commands the READMEs and file headers tell attendees to run, so a
+      # green cell means the attendee path works on this OS with this track.
+      # See .github/ci/README.md. Skipped on Windows, where Ex 2's own script
+      # stops (the workshop's Windows answer is WSL2), and on a branch
+      # without the overlay.
+      - name: exercises overlay (2025 day 3, solved)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          if [ ! -d .github/ci/exercises ]; then
+            echo "no exercises overlay on this branch — skipping"
+            exit 0
+          fi
+          cp -R .github/ci/exercises/. exercises/
+      - name: exercises Ex 1 + Ex 2 end-to-end
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          if [ ! -d .github/ci/exercises ]; then
+            echo "no exercises overlay on this branch — skipping"
+            exit 0
+          fi
+          (cd exercises && cargo test --workspace --locked)
+          out="$(exercises/ex2-c-glue/build-and-test.sh)"
+          echo "$out"
+          echo "$out" | grep -qF 'part2(example) = 3121910778619'
+          echo "$out" | grep -qF 'All Ex 2 checks passed.'
+      - name: exercises Ex 3 python
+        if: matrix.track == 'python' && runner.os != 'Windows'
+        shell: bash
+        run: |
+          if [ ! -d .github/ci/exercises ]; then
+            echo "no exercises overlay on this branch — skipping"
+            exit 0
+          fi
+          py=./.venv/bin/python
+          [ -x "$py" ] || py=./.venv/Scripts/python
+          out="$("$py" exercises/ex3-bindings/python/bindings.py)"
+          echo "$out"
+          echo "$out" | grep -qF 'Ex 3 (Python) passed.'
+      - name: exercises Ex 3 dart
+        if: matrix.track == 'dart' && runner.os != 'Windows'
+        shell: bash
+        run: |
+          if [ ! -d .github/ci/exercises ]; then
+            echo "no exercises overlay on this branch — skipping"
+            exit 0
+          fi
+          cd exercises/ex3-bindings/dart
+          dart pub get
+          out="$(dart run ex3.dart)"
+          echo "$out"
+          echo "$out" | grep -qF 'Ex 3 (Dart) passed.'
+      - name: exercises Ex 3 kotlin
+        if: matrix.track == 'kotlin' && runner.os != 'Windows'
+        shell: bash
+        run: |
+          if [ ! -d .github/ci/exercises ]; then
+            echo "no exercises overlay on this branch — skipping"
+            exit 0
+          fi
+          jna_version=5.17.0
+          jna_sha256=b3a9408e7c51e08ef0e3bfcc08f443f6ec0f6191ba8cd7c18d53d2b22e5bdbc0
+          cd exercises/ex3-bindings/kotlin
+          jna="jna-${jna_version}.jar"
+          curl -fsSL -o "$jna" \
+            "https://repo1.maven.org/maven2/net/java/dev/jna/jna/${jna_version}/${jna}"
+          if command -v sha256sum >/dev/null 2>&1; then
+            echo "${jna_sha256}  ${jna}" | sha256sum -c -
+          else
+            echo "${jna_sha256}  ${jna}" | shasum -a 256 -c -
+          fi
+          out="$(kotlinc -script ex3.kts -classpath "$jna" \
+            -J-Djna.library.path=../../target/release)"
+          echo "$out"
+          echo "$out" | grep -qF 'Ex 3 (Kotlin) passed.'
+      - name: exercises Ex 3 swift
+        if: matrix.track == 'swift' && runner.os != 'Windows'
+        shell: bash
+        run: |
+          if [ ! -d .github/ci/exercises ]; then
+            echo "no exercises overlay on this branch — skipping"
+            exit 0
+          fi
+          cd exercises/ex3-bindings/swift
+          swiftc main.swift -import-objc-header ../../ex2-c-glue/include/ex2_c_glue.h \
+            -L ../../target/release -lex2_c_glue \
+            -Xlinker -rpath -Xlinker "$PWD/../../target/release" -o ex3
+          out="$(./ex3)"
+          echo "$out"
+          echo "$out" | grep -qF 'Ex 3 (Swift) passed.'
