@@ -2,9 +2,11 @@
 //
 // Needs JDK 17+, kotlinc, and the JNA jar:
 //   curl -fsSL -o jna.jar https://repo1.maven.org/maven2/net/java/dev/jna/jna/5.14.0/jna-5.14.0.jar
-// Run from this directory:
+// Run from this directory (the exercises are one cargo workspace, so the
+// Ex 2 cdylib is in ../../target/, not inside ex2-c-glue/; JNA maps the
+// bare name to libex2_c_glue.so / .dylib / ex2_c_glue.dll itself):
 //   kotlinc -script ex3.kts -classpath jna.jar \
-//       -J-Djna.library.path=../../ex2-c-glue/target/release
+//       -J-Djna.library.path=../../target/release
 
 import com.sun.jna.Library
 import com.sun.jna.Native

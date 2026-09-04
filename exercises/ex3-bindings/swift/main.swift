@@ -1,9 +1,14 @@
 // Exercise 3, Swift track.
 //
-// Compile & run from this directory (adjust lib extension on Linux):
+// Compile & run from this directory. The exercises are one cargo workspace,
+// so the Ex 2 cdylib is in ../../target/, not inside ex2-c-glue/; -l names
+// no extension, so the same line works on macOS and Linux. The -rpath is
+// what lets ./ex3 find the library at run time on both — an environment
+// variable would be DYLD_* on one and LD_* on the other:
 //   swiftc main.swift -import-objc-header ../../ex2-c-glue/include/ex2_c_glue.h \
-//       -L ../../ex2-c-glue/target/release -lex2_c_glue -o ex3 \
-//   && DYLD_LIBRARY_PATH=../../ex2-c-glue/target/release ./ex3
+//       -L ../../target/release -lex2_c_glue \
+//       -Xlinker -rpath -Xlinker "$PWD/../../target/release" -o ex3 \
+//   && ./ex3
 //
 // (Why is this file named main.swift? Multi-file swiftc only allows
 // top-level code in main.swift — a rule you now know that most Swift

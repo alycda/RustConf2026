@@ -19,10 +19,25 @@ ffi.cdef("""
     // paste the two int64_t ex_part*(const char*) declarations here
 """)
 
-# TODO 2: load the library. Adjust the extension for your platform
-# (.dylib on macOS, .so on Linux).
-LIB_PATH = Path(__file__).parent / ".." / ".." / "ex2-c-glue" / "target" / "release" / "libex2_c_glue.dylib"
-lib = ffi.dlopen(str(LIB_PATH.resolve()))
+# TODO 2: load the library. Nothing to fill in here, but read it: the
+# exercises are one cargo workspace, so the cdylib lands in ../../target/
+# (not inside ex2-c-glue/), and it takes the host's name, not Rust's —
+# libex2_c_glue.so on Linux, libex2_c_glue.dylib on macOS, ex2_c_glue.dll
+# (no lib prefix) on Windows. Searching the three needs no platform check:
+# whichever file cargo produced is the one that exists.
+TARGET = Path(__file__).resolve().parent / ".." / ".." / "target"
+
+
+def load_library():
+    for profile in ("release", "debug"):
+        for name in ("libex2_c_glue.so", "libex2_c_glue.dylib", "ex2_c_glue.dll"):
+            candidate = TARGET / profile / name
+            if candidate.exists():
+                return ffi.dlopen(str(candidate.resolve()))
+    sys.exit("no Ex 2 library found — run ../../ex2-c-glue/build-and-test.sh first")
+
+
+lib = load_library()
 
 # TODO 3: call it. Python strs are NOT C strings — encode first.
 # Question worth answering while you're here: what does cffi do with the
