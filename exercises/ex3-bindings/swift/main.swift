@@ -14,9 +14,15 @@
 // top-level code in main.swift — a rule you now know that most Swift
 // developers learn the hard way.)
 
-// TODO 1: your day's example input. Swift strings are UTF-16 internally —
-// what happens on the way to `const char *`? (Module 3 answered this;
-// now watch it happen.)
+// exit() is libc, not the Swift standard library. It only resolved before
+// because cbindgen's default header pulls in <stdlib.h>; say it explicitly
+// so the file still compiles against a header that doesn't.
+import Foundation
+
+// TODO 1: your day's example input. Swift String has been UTF-8 inside
+// since Swift 5 (https://www.swift.org/blog/utf8-string/ — short, worth
+// reading); UTF-16 lives in the NSString bridge. So what does the trip to
+// `const char *` still cost? (Module 3 answered this; now watch it happen.)
 let example = "PASTE YOUR DAY'S EXAMPLE INPUT HERE"
 let expectedPart1: Int64 = 0  // from the puzzle statement
 
