@@ -199,7 +199,9 @@ jobs:
             cbindgen --config cbindgen.toml --output include/aoc_2015_12_01.h src/c_api.rs)
           mkdir -p days/inputs
           printf '()())' > days/inputs/2015-12-01.txt
-          out="$(./.venv/bin/python days/2015-12-01/python/solve.py)"
+          py=./.venv/bin/python
+          [ -x "$py" ] || py=./.venv/Scripts/python
+          out="$("$py" days/2015-12-01/python/solve.py)"
           echo "$out"
           echo "$out" | grep -F 'Part 1 🐍(🦀): -1'
           echo "$out" | grep -F 'Part 2 🐍(🦀): 5'
@@ -477,7 +479,9 @@ jobs:
             cbindgen --config cbindgen.toml --output include/aoc_2024_12_01.h src/c_api.rs)
           mkdir -p days/inputs
           printf '3   4\n4   3\n2   5\n1   3\n3   9\n3   3\n' > days/inputs/2024-12-01.txt
-          out="$(./.venv/bin/python days/2024-12-01/python/solve.py)"
+          py=./.venv/bin/python
+          [ -x "$py" ] || py=./.venv/Scripts/python
+          out="$("$py" days/2024-12-01/python/solve.py)"
           echo "$out"
           echo "$out" | grep -qF 'Part 1 🐍(🦀): 11'
           echo "$out" | grep -qF 'Part 2 🐍(🦀): 31'
@@ -616,7 +620,9 @@ jobs:
           mkdir -p days/inputs
           printf "xmul(2,4)&mul[3,7]!^don't()_mul(5,5)+mul(32,64](mul(11,8)undo()?mul(8,5))" \
             > days/inputs/2024-12-03.txt
-          out="$(./.venv/bin/python days/2024-12-03/python/solve.py)"
+          py=./.venv/bin/python
+          [ -x "$py" ] || py=./.venv/Scripts/python
+          out="$("$py" days/2024-12-03/python/solve.py)"
           echo "$out"
           echo "$out" | grep -qF 'Part 1 🐍(🦀): 161'
           echo "$out" | grep -qF 'Part 2 🐍(🦀): 48'

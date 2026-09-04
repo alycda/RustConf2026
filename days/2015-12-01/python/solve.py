@@ -53,13 +53,17 @@ def load_library():
     ffi = FFI()
     ffi.cdef(header_declarations())
 
+    # A cdylib takes the host's name, not Rust's choice: libaoc_2015_12_01.so on
+    # Linux, libaoc_2015_12_01.dylib on macOS, aoc_2015_12_01.dll (no lib prefix) on
+    # Windows. Searching the three filenames needs no platform check —
+    # whichever one cargo produced is the one that exists.
     for profile in ("debug", "release"):
-        for ext in ("so", "dylib"):
-            candidate = DAYS_DIR / "target" / profile / f"libaoc_2015_12_01.{ext}"
+        for name in ("libaoc_2015_12_01.so", "libaoc_2015_12_01.dylib", "aoc_2015_12_01.dll"):
+            candidate = DAYS_DIR / "target" / profile / name
             if candidate.exists():
                 return ffi, ffi.dlopen(str(candidate))
 
-    sys.exit("no libaoc_2015_12_01.{so,dylib} found — run: cd days && cargo build -p aoc-2015-12-01 --lib")
+    sys.exit("no libaoc_2015_12_01.{so,dylib} / aoc_2015_12_01.dll found — run: cd days && cargo build -p aoc-2015-12-01 --lib")
 
 
 def call(ffi, fn, name: str, text: str) -> int:
