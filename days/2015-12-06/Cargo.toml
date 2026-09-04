@@ -1,0 +1,18 @@
+[package]
+name = "aoc-2015-12-06"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+aoc-ornaments.workspace = true
+miette.workspace = true
+
+# Reach for these as the solution needs them — versions match what
+# aoc-ornaments already pulls in, so they cost no extra build.
+# derive_more.workspace = true
+# itertools.workspace = true
+# nom.workspace = true
+
+[dev-dependencies]
+rstest.workspace = true
