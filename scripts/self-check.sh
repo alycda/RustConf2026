@@ -165,6 +165,24 @@ if command -v rustc >/dev/null 2>&1; then
   fi
 fi
 
+# cbindgen floor: every export in days/*/src/c_api.rs and Exercise 2's
+# lib.rs is spelled #[unsafe(no_mangle)], the edition-2024 form, and cbindgen
+# parses it only from 0.28 (0.26: "expected path"; 0.27: "expected
+# identifier, found keyword unsafe"). Ubuntu 24.04 LTS packages 0.26, so a
+# distro cbindgen passes the existence check above and then Exercise 2's
+# build script dies at the header step. Same shape as the rust floor.
+if command -v cbindgen >/dev/null 2>&1; then
+  cbindgen_minor=$(cbindgen --version 2>/dev/null | sed -nE 's/^cbindgen 0\.([0-9]+)(\..*)?$/\1/p')
+  if [ -n "$cbindgen_minor" ]; then
+    if [ "$cbindgen_minor" -ge 28 ]; then
+      printf ' %s %-10s 0.%s meets the 0.28 floor (#[unsafe(no_mangle)])\n' "$PASS" "cbindgen floor" "$cbindgen_minor"
+    else
+      printf ' %s %-10s cbindgen 0.%s is older than 0.28 (#[unsafe(no_mangle)]) — cargo install cbindgen --locked (nix: newer channel)\n' "$FAIL" "cbindgen floor" "$cbindgen_minor"
+      required_failures=$((required_failures + 1))
+    fi
+  fi
+fi
+
 # C compiler: accept cc, clang, or gcc.
 c_compiler=""
 for candidate in cc clang gcc; do

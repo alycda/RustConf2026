@@ -82,7 +82,7 @@ Install each tool yourself. **Required — install all five:**
 | Tool | What it's for | Where to get it |
 |------|---------------|-----------------|
 | [rustc + cargo](https://rustup.rs) | the workshop's core: building Rust FFI libraries | rustup |
-| [cbindgen](https://github.com/mozilla/cbindgen) | generating C headers from Rust | `cargo install cbindgen` |
+| [cbindgen](https://github.com/mozilla/cbindgen) | generating C headers from Rust | `cargo install cbindgen` (0.28 or newer — `just check` verifies) |
 | C compiler | compiling/linking against your Rust libraries | Xcode CLT (`xcode-select --install`), apt/dnf `gcc` |
 | [just](https://github.com/casey/just) | task runner — `just check`, `just setup-<track>` | `cargo install just`, brew, or a [release binary](https://github.com/casey/just/releases) — needs ≥ 1.31; apt/dnf ship older versions that cannot parse this repo's justfile |
 
