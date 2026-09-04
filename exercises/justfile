@@ -37,7 +37,7 @@ kotlin:
     set -euo pipefail
     jna="$(../scripts/fetch-jna.sh)"
     cd ex3-bindings/kotlin
-    kotlinc -script ex3.kts -classpath "$jna" -J-Djna.library.path=../../target/release
+    kotlinc -script ex3.kts -classpath "$jna" -J-Djna.library.path=../../target/debug
 
 # Ex 3, Swift track: the header's swiftc line (scripts/swift-corelibs-flags.sh covers the Swift devcontainer)
 swift:
@@ -48,6 +48,6 @@ swift:
     # devcontainer needs and nothing elsewhere; days/justfile says why.
     swiftc main.swift -import-objc-header ../../ex2-c-glue/include/ex2_c_glue.h \
         $(../../../scripts/swift-corelibs-flags.sh) \
-        -L ../../target/release -lex2_c_glue \
-        -Xlinker -rpath -Xlinker "$PWD/../../target/release" -o ex3
+        -L ../../target/debug -lex2_c_glue \
+        -Xlinker -rpath -Xlinker "$PWD/../../target/debug" -o ex3
     ./ex3

@@ -14,7 +14,7 @@ typedef ExPartDart = int Function(ffi.Pointer<Utf8>);
 // As shipped: one cargo workspace, three filenames, no platform check.
 String _libraryPath() {
   final exercises = File(Platform.script.toFilePath()).parent.parent.parent;
-  for (final profile in ['release', 'debug']) {
+  for (final profile in ['debug', 'release']) {
     for (final name in ['libex2_c_glue.so', 'libex2_c_glue.dylib', 'ex2_c_glue.dll']) {
       final path = '${exercises.path}/target/$profile/$name';
       if (File(path).existsSync()) return path;

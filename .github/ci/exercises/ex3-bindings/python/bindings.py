@@ -27,7 +27,7 @@ TARGET = Path(__file__).resolve().parent / ".." / ".." / "target"
 
 
 def load_library():
-    for profile in ("release", "debug"):
+    for profile in ("debug", "release"):
         for name in ("libex2_c_glue.so", "libex2_c_glue.dylib", "ex2_c_glue.dll"):
             candidate = TARGET / profile / name
             if candidate.exists():

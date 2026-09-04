@@ -10,8 +10,8 @@
 // command:
 //   swiftc main.swift -import-objc-header ../../ex2-c-glue/include/ex2_c_glue.h \
 //       $(../../../scripts/swift-corelibs-flags.sh) \
-//       -L ../../target/release -lex2_c_glue \
-//       -Xlinker -rpath -Xlinker "$PWD/../../target/release" -o ex3 \
+//       -L ../../target/debug -lex2_c_glue \
+//       -Xlinker -rpath -Xlinker "$PWD/../../target/debug" -o ex3 \
 //   && ./ex3
 //
 // (Why is this file named main.swift? Multi-file swiftc only allows

@@ -4,8 +4,10 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-# 1. Rust → shared library
-cargo build --release
+# 1. Rust → shared library. Debug, like every `cargo build` in this repo and
+#    the days' demo recipes: a release build here would leave a second copy
+#    of the library that the track loaders could pick up stale.
+cargo build
 
 # 2. Rust → C header (this is the artifact worth reading — open it!)
 mkdir -p include
@@ -23,11 +25,11 @@ case "$(uname -s)" in
     echo "native Windows: run the exercises under WSL2 — see ../../README.md, Option 2" >&2
     exit 1 ;;
 esac
-target="$(cd ../target/release && pwd)"
+target="$(cd ../target/debug && pwd)"
 # -L/-l plus -rpath against the absolute directory, not a relative path on
 # the command line: linked by a relative path the binary records exactly
 # that (rustc writes no SONAME), and test_glue then loads only from a cwd
-# whose parent has target/release/ — and silently from any unrelated one
+# whose parent has target/debug/ — and silently from any unrelated one
 # that does. This way it runs from anywhere.
 cc tests/c/test_glue.c -L"$target" -lex2_c_glue -Wl,-rpath,"$target" -o test_glue
 

@@ -2,7 +2,7 @@
 // scaffold (see .github/ci/README.md): the same file with its TODOs filled,
 // run the way the scaffold says, from this directory:
 //   kotlinc -script ex3.kts -classpath "$jna" \
-//       -J-Djna.library.path=../../target/release
+//       -J-Djna.library.path=../../target/debug
 
 import com.sun.jna.Library
 import com.sun.jna.Native

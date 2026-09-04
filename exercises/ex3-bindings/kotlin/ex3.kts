@@ -9,7 +9,7 @@
 // Ex 2 cdylib is in ../../target/, not inside ex2-c-glue/; JNA maps the
 // bare name to libex2_c_glue.so / .dylib / ex2_c_glue.dll itself):
 //   kotlinc -script ex3.kts -classpath "$jna" \
-//       -J-Djna.library.path=../../target/release
+//       -J-Djna.library.path=../../target/debug
 
 import com.sun.jna.Library
 import com.sun.jna.Native
