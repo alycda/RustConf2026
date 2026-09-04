@@ -1,0 +1,11 @@
+name: aoc_2015_12_06_dart
+description: >
+  Exercise 3 (Dart track): calls the Exercise 2 cbindgen C API from Dart
+  via dart:ffi. Not a real package, just a script with one dependency.
+publish_to: "none"
+
+environment:
+  sdk: ^3.0.0
+
+dependencies:
+  ffi: ^2.1.0

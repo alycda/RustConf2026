@@ -248,6 +248,30 @@ jobs:
           # echo above is the diff.
           echo "$out" | grep -qF 'Part 1 🎯(🦀): 3'
           echo "$out" | grep -qF 'Part 2 🎯(🦀): 2'
+      # 2015-12-06, the survey's day, on the same Dart track: the three
+      # instructions the statement walks through, in order. 998,996 lights
+      # lit; brightness 1,001,996 (every light on once, the first row toggled
+      # up two, the middle four down one). The two differ, and the second is
+      # what a uint32_t out-parameter has to carry intact.
+      - name: dart track end-to-end (2015-12-06)
+        if: matrix.track == 'dart'
+        shell: bash
+        run: |
+          if [ ! -f days/2015-12-06/dart/solve.dart ]; then
+            echo "no worked dart track on this branch — skipping"
+            exit 0
+          fi
+          (cd days && cargo build -p aoc-2015-12-06 --lib)
+          (cd days/2015-12-06 && mkdir -p include && \
+            cbindgen --config cbindgen.toml --output include/aoc_2015_12_06.h src/c_api.rs)
+          mkdir -p inputs
+          printf '%s\n' 'turn on 0,0 through 999,999' 'toggle 0,0 through 999,0' \
+            'turn off 499,499 through 500,500' > inputs/2015-12-06.txt
+          (cd days/2015-12-06/dart && dart pub get)
+          out="$(cd days/2015-12-06/dart && dart run solve.dart)"
+          echo "$out"
+          echo "$out" | grep -qF 'Part 1 🎯(🦀): 998996'
+          echo "$out" | grep -qF 'Part 2 🎯(🦀): 1001996'
 
       # Beyond the env check: on a branch that carries a worked Exercise 3
       # (Kotlin/JNA on 2021-12-02), prove the track end to end — cdylib with

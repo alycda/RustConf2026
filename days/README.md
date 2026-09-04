@@ -8,6 +8,7 @@
 | [2024-12-03](2024-12-03/) 🥇 | Mull It Over | raw string scan → `usize`; stateful parse (`do()` / `don't()`) | Golden (in progress) — Rust reference here |
 | [2015-12-01](2015-12-01/) | Not Quite Lisp | char stream → `i32`; part 2 returns a position, not a total | Rust reference — the live-demo day |
 | [2015-12-05](2015-12-05/) | Doesn't He Have Intern-Elves For This? | lines → `usize` count; one predicate per line, the ruleset swapped by function pointer | Rust reference |
+| [2015-12-06](2015-12-06/) | Probably a Fire Hazard | instruction lines → enum + rectangle → `u32`; one 1000×1000 grid walked twice, the per-light rule swapped by function pointer | Rust reference |
 | [2020-12-02](2020-12-02/) | Password Philosophy | `1-3 a: abcde` lines → struct → `usize` count | Rust reference |
 | [2021-12-02](2021-12-02/) | Dive! | command lines → enum → `i32`, the product of two accumulators | Rust reference |
 | [2022-12-01](2022-12-01/) | Calorie Counting | blank-line groups → `usize`; part 2 sums a top-3 internally, so the array is the thing worth exposing at the boundary | Rust reference |
