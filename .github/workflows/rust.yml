@@ -64,6 +64,11 @@ jobs:
       # per-day lockfile model was dropped, one shared lock is what pins every
       # day; if it can drift silently, it isn't pinning anything.
       - run: cargo test --workspace --locked
+      # The attendee scaffold too, as shipped: todo!() bodies and ignored
+      # example tests compile and the one live test runs. The Verify
+      # workflow only ever tests the solved overlay copied over this tree.
+      - run: cargo test --workspace --locked
+        working-directory: exercises
 
   lint:
     name: fmt + clippy
@@ -82,6 +87,11 @@ jobs:
       # Attendees read this code as the model to copy; warnings in the sample
       # are warnings in thirty forks of it.
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      # Same two checks on the scaffold attendees copy from.
+      - run: cargo fmt --all --check
+        working-directory: exercises
+      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+        working-directory: exercises
 
   msrv:
     name: rust 1.85 floor
@@ -106,6 +116,9 @@ jobs:
       # cargo re-resolve and it would quietly pick versions 1.85 can build,
       # proving something no attendee's checkout will reproduce.
       - run: cargo check --workspace --all-targets --locked
+      # exercises/ declares the same 1.85 floor and has its own lockfile.
+      - run: cargo check --workspace --all-targets --locked
+        working-directory: exercises
 
   # The jobs above prove the days build *bare* — a linking C compiler, no
   # system library — which is the property the feature gates exist to
