@@ -37,7 +37,9 @@ kotlin:
     set -euo pipefail
     jna="$(../scripts/fetch-jna.sh)"
     cd ex3-bindings/kotlin
-    kotlinc -script ex3.kts -classpath "$jna" -J-Djna.library.path=../../target/debug
+    # -Djna.encoding: JNA's default is the platform charset, not UTF-8; the
+    # C side reads UTF-8, so say so rather than let cp1252 or ASCII transcode.
+    kotlinc -script ex3.kts -classpath "$jna" -J-Djna.library.path=../../target/debug -J-Djna.encoding=UTF-8
 
 # Ex 3, Swift track: the header's swiftc line (scripts/swift-corelibs-flags.sh covers the Swift devcontainer)
 swift:

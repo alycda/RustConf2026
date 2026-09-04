@@ -2,7 +2,7 @@
 // scaffold (see .github/ci/README.md): the same file with its TODOs filled,
 // run the way the scaffold says, from this directory:
 //   kotlinc -script ex3.kts -classpath "$jna" \
-//       -J-Djna.library.path=../../target/debug
+//       -J-Djna.library.path=../../target/debug -J-Djna.encoding=UTF-8
 
 import com.sun.jna.Library
 import com.sun.jna.Native
@@ -10,8 +10,11 @@ import com.sun.jna.Native
 // TODO 1, done: method names match the exported symbols in the generated
 // header exactly. `String?` is the point — a nullable parameter is how a
 // null pointer can be handed across from Kotlin. JNA encodes the string with
-// jna.encoding (UTF-8 by default since 5.x; the modified-UTF-8 story from
-// Module 3 is JNI's, not JNA's).
+// jna.encoding, whose default is the platform charset (native.encoding) — not
+// UTF-8: cp1252 on Windows, ASCII in a LANG=C shell, and a non-ASCII byte
+// becomes `?` before the C side ever sees it, silently. The run line pins
+// -Djna.encoding=UTF-8, the encoding the C side reads. (The modified-UTF-8
+// story from Module 3 is JNI's, not JNA's.)
 interface Ex2Library : Library {
     fun ex_part1(input: String?): Long
     fun ex_part2(input: String?): Long

@@ -14,9 +14,18 @@
 //! rather than passing by luck on a small answer.
 
 /// Greedy selection of the `n` largest digits of `line`, in order,
-/// preferring the rightmost on a tie.
+/// keeping the leftmost on a tie (which leaves the most room to the right).
+///
+/// Only ASCII digits count; anything else on the line is skipped, and a line
+/// with fewer digits than `n` yields an empty pick. The statement never
+/// produces either, but a harness or a binding can, and a solver that panics
+/// on them panics inside Exercise 2's `extern "C"` frame — an abort.
 fn select_n_largest(line: &str, n: usize) -> Vec<u32> {
-    let digits: Vec<u32> = line.bytes().map(|b| u32::from(b - b'0')).collect();
+    let digits: Vec<u32> = line
+        .bytes()
+        .filter(u8::is_ascii_digit)
+        .map(|b| u32::from(b - b'0'))
+        .collect();
     if digits.len() < n {
         return Vec::new();
     }
@@ -42,9 +51,9 @@ pub fn part1(input: &str) -> i64 {
     input
         .lines()
         .filter(|l| !l.is_empty())
-        .map(|line| {
-            let d = select_n_largest(line, 2);
-            i64::from(d[0] * 10 + d[1])
+        .map(|line| match select_n_largest(line, 2)[..] {
+            [tens, ones] => i64::from(tens * 10 + ones),
+            _ => 0,
         })
         .sum()
 }
@@ -81,6 +90,15 @@ mod tests {
     #[test]
     fn part2_example() {
         assert_eq!(part2(EXAMPLE), 3121910778619);
+    }
+
+    /// Trailing whitespace, a lone digit, a blank line: none of them may
+    /// reach ex_part1 as a panic. Digits only count; too few is zero.
+    #[test]
+    fn hostile_lines_contribute_zero_not_a_panic() {
+        let input = "5\n \n987654321111111 \nabc";
+        assert_eq!(part1(input), 98);
+        assert_eq!(part2(input), 987654321111);
     }
 
     #[test]
