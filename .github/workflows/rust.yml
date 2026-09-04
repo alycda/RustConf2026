@@ -106,3 +106,94 @@ jobs:
       # cargo re-resolve and it would quietly pick versions 1.85 can build,
       # proving something no attendee's checkout will reproduce.
       - run: cargo check --workspace --all-targets --locked
+
+  # The jobs above prove the days build *bare* — a linking C compiler, no
+  # system library — which is the property the feature gates exist to
+  # protect. That proof is worth nothing on its own, though: a feature no
+  # job ever turns on is a feature no job can catch a break in, and the
+  # bindings behind those gates are `unsafe extern "C"` declarations that
+  # nothing type-checks against the headers they were transcribed from. So
+  # the gates get tested from both sides, and this is the cheap side.
+  #
+  # Only 2024-12-01, deliberately: its three variants need nothing a stock
+  # runner lacks. qsort is libc; cpp is one .cpp file the cc crate compiles
+  # with the runner's C++ compiler; uthash is a header-only library — one
+  # distro package on linux, one brew formula on macos, and CFLAGS carries
+  # the brew include path because the cc crate does not look under
+  # /opt/homebrew on its own. Both OSes, because the workshop's subject is
+  # linking and macos is where the attendees are. The days that link real
+  # libraries through pkg-config need the nix shell — that is the next job.
+  c-features:
+    name: C features (2024-12-01) / ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: days
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends uthash-dev
+      - if: runner.os == 'macOS'
+        run: |
+          brew install uthash
+          echo "CFLAGS=-I$(brew --prefix)/include" >> "$GITHUB_ENV"
+      # The feature-gated tests assert the published answers *and* that each
+      # C-backed answer equals the pure-Rust one — the actual claim every
+      # variant makes. --all-targets on clippy so the bindings and the
+      # feature-gated benches are linted, not just compiled.
+      - run: cargo test -p aoc-2024-12-01 --all-features --locked
+      - run: cargo clippy -p aoc-2024-12-01 --all-features --all-targets --locked -- -D warnings
+
+  # The other side of the feature gates, for the days that link real
+  # libraries: caca and tcc (2015-12-01), hyperscan and icu (2015-12-05),
+  # chipmunk and duckdb (2021-12-02), yara and espeak (2023-12-01). Every
+  # one of those build scripts finds its library through pkg-config and,
+  # when it can't, panics with "run inside the project's nix shell" — the
+  # shell is the supported way to get the C libraries, for attendees and
+  # here. So this job runs cargo through `nix-shell` against the repo's
+  # own shell.nix instead of hand-provisioning nine libraries from apt.
+  # What it proves is the exact environment an attendee gets: the two .pc
+  # files shell.nix synthesizes (chipmunk, duckdb), tinycc's shared
+  # libtcc, uthash on the cc include path, all of it.
+  #
+  # Linux only. shell.nix reads <nixpkgs> unpinned; nixpkgs-unstable is
+  # the nix installer's default channel, which the devcontainer's nix
+  # feature leaves in place (setup.sh adds home-manager and touches no
+  # other channel). Several of these packages are unproven on nixpkgs'
+  # darwin, and the c-features job above already covers macos for the
+  # variants that need no library at all.
+  #
+  # The first run pays for the nix store (rustc, the libraries, their
+  # closures) from cache.nixos.org; cache-nix-action is deliberately not
+  # here yet — measure the plain job first, add the cache if it earns it.
+  ffi:
+    name: C libraries (nix shell) / ubuntu-latest
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: cachix/install-nix-action@v31
+        with:
+          nix_path: nixpkgs=channel:nixpkgs-unstable
+      # A dry `pkg-config` roll call before cargo: when a library is
+      # missing this names it in one line, instead of a build-script
+      # panic buried under a compile.
+      - run: |
+          nix-shell ../shell.nix --run \
+            'pkg-config --modversion caca libtcc libhs icu-i18n icu-uc chipmunk duckdb yara espeak-ng'
+      # --all-features across the workspace: every feature-gated test runs,
+      # including the ones asserting the C answer equals the pure-Rust one.
+      # rustc, cargo and clippy are the shell's, not rustup's — that is the
+      # point, and shell.nix carries clippy for exactly this reason.
+      - run: nix-shell ../shell.nix --run 'cargo test --workspace --all-features --locked'
+      - run: |
+          nix-shell ../shell.nix --run \
+            'cargo clippy --workspace --all-features --all-targets --locked -- -D warnings'
