@@ -12,7 +12,7 @@
 
 [workspace]
 resolver = "3"
-members = ["ex1-pure-rust"]
+members = ["ex1-pure-rust", "ex2-c-glue"]
 
 [workspace.package]
 edition = "2024"

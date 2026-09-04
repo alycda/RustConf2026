@@ -1,0 +1,12 @@
+[package]
+name = "ex2-c-glue"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "ex2_c_glue"
+crate-type = ["cdylib"]
+
+[dependencies]
+ex1-pure-rust = { path = "../ex1-pure-rust" }

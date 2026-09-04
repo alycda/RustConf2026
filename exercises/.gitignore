@@ -2,3 +2,27 @@
 ex2-c-glue/include/*
 !ex2-c-glue/include/.gitkeep
 ex2-c-glue/test_glue
+
+# --- Exercise 3, per track ---
+#
+# Each track's documented first command leaves something the root .gitignore
+# does not name. These are scoped to this directory rather than added at the
+# root because the same filenames are tracked ON PURPOSE elsewhere in the repo
+# — the same reason ex2-c-glue's header rule is scoped instead of global.
+
+# swiftc -o ex3, the compile line main.swift documents. An executable with no
+# extension, so none of the root's suffix rules (*.o, *.out, *.so …) reach it.
+ex3-bindings/swift/ex3
+# ...and the debug companion, if you build with -g on macOS.
+ex3-bindings/swift/*.dSYM/
+
+# `dart pub add ffi`, the Dart track's documented step 1, writes this.
+# Deliberately NOT a root rule: days/*/dart/ commits its pubspec.lock, because
+# a worked example should pin what it actually resolved. This scaffold is the
+# opposite — the attendee runs `dart pub add` themselves, so the lock is their
+# machine's output and not something to hand them.
+ex3-bindings/dart/pubspec.lock
+
+# Not listed here on purpose: the Kotlin track's jna.jar (the curl in
+# ex3.kts's header) is already covered by the root's *.jar, and .dart_tool/
+# and __pycache__/ by their own root rules.
