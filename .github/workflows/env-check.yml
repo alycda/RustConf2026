@@ -176,18 +176,16 @@ jobs:
       # answers part 1 with -1 — a negative through the out-param, which a
       # naive in-band error convention would have eaten — and part 2 with 5.
       # Branches without the worked track (e.g. main today) skip cleanly.
-      # The end-to-end steps below run on linux and macos only. The first
-      # full-grid run of these steps (wip/ffi-ci, 2026-09-04) went red in
-      # every Windows cell for reasons that have nothing to do with the days:
-      # the venv python lives under Scripts/ not bin/, Git-for-Windows bash
-      # ships sha256sum but not shasum, and the tracks' library lookups know
-      # .so and .dylib but not .dll. The self-check step above still runs on
-      # Windows — that is the cell's job on the grid, and it passes. The
-      # workshop's Windows answer is WSL2 regardless (see the swift exclude
-      # in the matrix). Drop the runner.os clause from each step below to
-      # start watching native Windows again.
+      # The end-to-end steps below run on every OS their track has a cell
+      # on. Their first full-grid run (wip/ffi-ci, 2026-09-04) was red on
+      # Windows for three reasons that lived in the steps and the tracks,
+      # not in the days: the venv python is under Scripts/ not bin/,
+      # Git-for-Windows bash ships sha256sum but not shasum, and a cdylib
+      # there is aoc_<day>.dll with no lib prefix. Each step and lookup now
+      # handles its own; the workshop's Windows answer is still WSL2 (see
+      # the swift exclude in the matrix).
       - name: python track end-to-end (2015-12-01)
-        if: matrix.track == 'python' && runner.os != 'Windows'
+        if: matrix.track == 'python'
         shell: bash
         run: |
           if [ ! -f days/2015-12-01/python/solve.py ]; then
@@ -229,7 +227,7 @@ jobs:
       # spelled out here rather than invoked — same as the python cell.
       # Branches without the worked track skip cleanly.
       - name: dart track end-to-end (2015-12-05)
-        if: matrix.track == 'dart' && runner.os != 'Windows'
+        if: matrix.track == 'dart'
         shell: bash
         run: |
           if [ ! -f days/2015-12-05/dart/solve.dart ]; then
@@ -278,7 +276,7 @@ jobs:
       # the windows column is ever restored (see the os matrix above), this is
       # the line that needs `;` there.
       - name: kotlin track end-to-end (2021-12-02)
-        if: matrix.track == 'kotlin' && runner.os != 'Windows'
+        if: matrix.track == 'kotlin'
         shell: bash
         run: |
           if [ ! -f days/2021-12-02/kotlin/solve.kt ]; then
@@ -473,7 +471,7 @@ jobs:
       # over the same bytes, and they differ, so the assertions can tell
       # the parts apart. Branches without the worked track skip cleanly.
       - name: python track end-to-end (2024-12-01)
-        if: matrix.track == 'python' && runner.os != 'Windows'
+        if: matrix.track == 'python'
         shell: bash
         run: |
           if [ ! -f days/2024-12-01/python/solve.py ]; then
@@ -498,7 +496,7 @@ jobs:
       # exact bytes, and they differ, so the assertions can tell the parts
       # apart. Branches without the worked track skip cleanly.
       - name: dart track end-to-end (2024-12-01)
-        if: matrix.track == 'dart' && runner.os != 'Windows'
+        if: matrix.track == 'dart'
         shell: bash
         run: |
           if [ ! -f days/2024-12-01/dart/solve.dart ]; then
@@ -529,7 +527,7 @@ jobs:
       # match. If you change the label in kotlin/solve.kt, copy it — do not
       # retype it.
       - name: kotlin track end-to-end (2024-12-01)
-        if: matrix.track == 'kotlin' && runner.os != 'Windows'
+        if: matrix.track == 'kotlin'
         shell: bash
         run: |
           if [ ! -f days/2024-12-01/kotlin/solve.kt ]; then
@@ -619,7 +617,7 @@ jobs:
       # puzzle text and fair game. Branches without the worked track skip
       # cleanly.
       - name: python track end-to-end (2024-12-03)
-        if: matrix.track == 'python' && runner.os != 'Windows'
+        if: matrix.track == 'python'
         shell: bash
         run: |
           if [ ! -f days/2024-12-03/python/solve.py ]; then
@@ -643,7 +641,7 @@ jobs:
       # input, same pinned 161/48, same reasoning as the python cell above.
       # Branches without the worked track skip cleanly.
       - name: dart track end-to-end (2024-12-03)
-        if: matrix.track == 'dart' && runner.os != 'Windows'
+        if: matrix.track == 'dart'
         shell: bash
         run: |
           if [ ! -f days/2024-12-03/dart/solve.dart ]; then
@@ -669,7 +667,7 @@ jobs:
       # byte-for-byte (☕️ is U+2615 U+FE0F — copy it, do not retype it).
       # Branches without the worked track skip cleanly.
       - name: kotlin track end-to-end (2024-12-03)
-        if: matrix.track == 'kotlin' && runner.os != 'Windows'
+        if: matrix.track == 'kotlin'
         shell: bash
         run: |
           if [ ! -f days/2024-12-03/kotlin/solve.kt ]; then
