@@ -92,18 +92,13 @@ probe_kotlin() {
 # its own python3 to the inherited PATH, shadowing an activated .venv — the
 # probe must not turn a completed `just setup-python` into a false "not ready".
 probe_python() {
-  local py venv_py cand activate
-  py=python3
+  local py venv_py activate
+  # scripts/venv-python.sh owns the layout rule (bin/ vs Scripts/, .exe or
+  # not) and prints python3 when there is no venv; the justfiles and the
+  # Verify workflow ask it the same question.
+  py="$("$(dirname "$0")/venv-python.sh")"
   venv_py=""
-  # bin/ is the POSIX venv layout (and WSL2's); Scripts/ is what a native
-  # Windows python builds, probed with and without the .exe suffix because
-  # Git Bash's -x test is not consistent about executable extensions.
-  for cand in "$(dirname "$0")/../.venv/bin/python" \
-              "$(dirname "$0")/../.venv/Scripts/python.exe" \
-              "$(dirname "$0")/../.venv/Scripts/python"; do
-    if [ -x "$cand" ]; then venv_py="$cand" && break; fi
-  done
-  [ -n "$venv_py" ] && py="$venv_py"
+  [ "$py" != python3 ] && venv_py="$py"
   if command -v "$py" >/dev/null 2>&1; then
     if "$py" -c 'import cffi' 2>/dev/null; then
       if [ -n "$venv_py" ] && [ "$py" = "$venv_py" ] && [ -z "${VIRTUAL_ENV:-}" ]; then

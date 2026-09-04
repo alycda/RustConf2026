@@ -20,13 +20,11 @@ test:
 ex2:
     ./ex2-c-glue/build-and-test.sh
 
-# Ex 3, Python track: the repo-root venv (`just setup-python`), bin/ or Scripts/
+# Ex 3, Python track: the repo-root venv (`just setup-python`), via scripts/venv-python.sh
 python:
     #!/usr/bin/env bash
     set -euo pipefail
-    py="$(pwd)/../.venv/bin/python"
-    [ -x "$py" ] || py="$(pwd)/../.venv/Scripts/python"
-    [ -x "$py" ] || py=python3
+    py="$(../scripts/venv-python.sh)"
     "$py" ex3-bindings/python/bindings.py
 
 # Ex 3, Dart track

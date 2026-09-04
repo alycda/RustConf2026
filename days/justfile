@@ -82,10 +82,9 @@ python-demo day: (bindgen day)
     fi
     cd "{{day}}" && cargo build --lib
     cd ..
-    # Prefer the repo-local venv even when it isn't activated — same
-    # reasoning as scripts/self-check.sh's probe_python.
-    py="$(pwd)/../.venv/bin/python"
-    [ -x "$py" ] || py=python3
+    # scripts/venv-python.sh owns the venv-vs-python3 rule (shared with
+    # self-check, the exercises justfile and CI).
+    py="$(../scripts/venv-python.sh)"
     "$py" "{{day}}/python/solve.py"
 
 
