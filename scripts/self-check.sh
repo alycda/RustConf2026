@@ -58,6 +58,30 @@ check_optional() { # track, command, install hint
 # and by --track. Keep the printf rows free-form; only the return codes
 # are contract.
 
+# check_floor <required|optional> <label> <command> <sed-expr> <prefix> <floor> <what> <hint>
+# Parses `<command> --version` with <sed-expr> (which must print the minor
+# version), compares it to <floor>, and prints the verdict with <prefix> in
+# front of the minor (1. for rustc, 0. for cbindgen). Merely existing is not
+# enough for these tools: an old one passes the check above and then fails
+# at the first real command. Parse failures skip silently — a tool that can't
+# report a version was already flagged as broken by its existence check. A
+# miss counts as a required failure, or returns 1 for an optional track.
+check_floor() {
+  local kind=$1 label=$2 cmd=$3 expr=$4 prefix=$5 floor=$6 what=$7 hint=$8 minor
+  command -v "$cmd" >/dev/null 2>&1 || return 0
+  minor=$("$cmd" --version 2>/dev/null | sed -nE "$expr")
+  [ -n "$minor" ] || return 0
+  if [ "$minor" -ge "$floor" ]; then
+    printf ' %s %-10s %s%s meets the %s%s floor (%s)\n' "$PASS" "$label" "$prefix" "$minor" "$prefix" "$floor" "$what"
+    return 0
+  fi
+  printf ' %s %-10s %s %s%s is older than %s%s (%s) — %s\n' "$FAIL" "$label" "$cmd" "$prefix" "$minor" "$prefix" "$floor" "$what" "$hint"
+  if [ "$kind" = required ]; then
+    required_failures=$((required_failures + 1))
+  fi
+  return 1
+}
+
 # `swiftc --version` instead of `command -v swiftc`: /usr/bin/swiftc is the
 # same OS-image xcrun stub as /usr/bin/java — present even without the CLT,
 # runnable only once a real toolchain is installed.
@@ -119,8 +143,15 @@ probe_python() {
   return 1
 }
 
+# The Dart floor is whatever the exercise pubspec pins (`sdk: ^3.x.0`) —
+# read from there rather than copied here, so the number lives in one place.
 probe_dart() {
-  check_optional "Dart" "dart" "run: just setup-dart"
+  local pubspec floor
+  check_optional "Dart" "dart" "run: just setup-dart" || return 1
+  pubspec="$(dirname "$0")/../exercises/ex3-bindings/dart/pubspec.yaml"
+  floor=$(sed -nE 's/^[[:space:]]*sdk: \^3\.([0-9]+)\..*/\1/p' "$pubspec" 2>/dev/null)
+  [ -n "$floor" ] || return 0
+  check_floor optional "Dart floor" dart 's/^Dart SDK version: 3\.([0-9]+)\..*/\1/p' "3." "$floor" "exercises/ex3-bindings/dart/pubspec.yaml" "https://dart.dev/get-dart"
 }
 
 # --track <name>: probe one optional track, exit with its status. Handled
@@ -148,17 +179,7 @@ check_required "cbindgen" "cbindgen" "nix shell provides it: direnv allow (no ni
 # channel's rustc passes the check above and then every cargo command in days/
 # fails at manifest parse. Parse failures here skip silently — a rustc that
 # can't even report a 1.x version was already flagged as broken above.
-if command -v rustc >/dev/null 2>&1; then
-  rust_minor=$(rustc --version 2>/dev/null | sed -nE 's/^rustc 1\.([0-9]+)\..*/\1/p')
-  if [ -n "$rust_minor" ]; then
-    if [ "$rust_minor" -ge 85 ]; then
-      printf ' %s %-10s 1.%s meets the 1.85 floor (edition 2024)\n' "$PASS" "rust floor" "$rust_minor"
-    else
-      printf ' %s %-10s rustc 1.%s is older than 1.85 (edition 2024) — rustup update stable (nix: newer channel)\n' "$FAIL" "rust floor" "$rust_minor"
-      required_failures=$((required_failures + 1))
-    fi
-  fi
-fi
+check_floor required "rust floor" rustc 's/^rustc 1\.([0-9]+)\..*/\1/p' "1." 85 "edition 2024" "rustup update stable (nix: newer channel)" || true
 
 # cbindgen floor: every export in days/*/src/c_api.rs and Exercise 2's
 # lib.rs is spelled #[unsafe(no_mangle)], the edition-2024 form, and cbindgen
@@ -166,17 +187,12 @@ fi
 # identifier, found keyword unsafe"). Ubuntu 24.04 LTS packages 0.26, so a
 # distro cbindgen passes the existence check above and then Exercise 2's
 # build script dies at the header step. Same shape as the rust floor.
-if command -v cbindgen >/dev/null 2>&1; then
-  cbindgen_minor=$(cbindgen --version 2>/dev/null | sed -nE 's/^cbindgen 0\.([0-9]+)(\..*)?$/\1/p')
-  if [ -n "$cbindgen_minor" ]; then
-    if [ "$cbindgen_minor" -ge 28 ]; then
-      printf ' %s %-10s 0.%s meets the 0.28 floor (#[unsafe(no_mangle)])\n' "$PASS" "cbindgen floor" "$cbindgen_minor"
-    else
-      printf ' %s %-10s cbindgen 0.%s is older than 0.28 (#[unsafe(no_mangle)]) — cargo install cbindgen --locked (nix: newer channel)\n' "$FAIL" "cbindgen floor" "$cbindgen_minor"
-      required_failures=$((required_failures + 1))
-    fi
-  fi
-fi
+check_floor required "cbindgen floor" cbindgen 's/^cbindgen 0\.([0-9]+)(\..*)?$/\1/p' "0." 28 "#[unsafe(no_mangle)]" "cargo install cbindgen --locked (nix: newer channel)" || true
+
+# just floor: the root justfile's `mod?` needs just 1.31 (README says so), and
+# an older distro `just` cannot even parse it — the one required tool this
+# script otherwise never looks at, because `just check` is how it is run.
+check_floor required "just floor" just 's/^just 1\.([0-9]+)(\..*)?$/\1/p' "1." 31 "mod? in the justfile" "https://just.systems/man/en/installation.html (nix: newer channel)" || true
 
 # C compiler: accept cc, clang, or gcc.
 c_compiler=""
