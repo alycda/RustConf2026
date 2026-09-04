@@ -3,9 +3,9 @@
 #
 # Each recipe runs exactly the command the matching file header documents;
 # the header is the reference, the recipe is the shortcut. The Verify
-# workflow (.github/workflows/env-check.yml) spells the same lines out
-# because stock runners have no `just` — when a header changes, change all
-# three. `python`, `dart`, `kotlin` and `swift` need `ex2` first: it produces
+# workflow (.github/workflows/env-check.yml) runs these same recipes, so a
+# header, a recipe and a CI step cannot drift apart — when a header changes,
+# change the recipe. `python`, `dart`, `kotlin` and `swift` need `ex2` first: it produces
 # the header every track binds against and the library every track loads.
 
 # the first recipe is the default
