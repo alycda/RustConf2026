@@ -2,13 +2,19 @@
 """Exercise 3, Python track (cffi).
 
 Bind your Ex 2 library and call it from Python. Fill in the TODOs top to
-bottom; run with:  python3 bindings.py
+bottom; run inside the repo's venv (`just setup-python` once, then
+`source .venv/bin/activate` — `.venv\\Scripts\\activate` on Windows):
+
+    python3 bindings.py
 """
 
 import sys
 from pathlib import Path
 
-from cffi import FFI
+try:
+    from cffi import FFI
+except ImportError:
+    sys.exit("cffi not found — run: just setup-python, then: source .venv/bin/activate")
 
 ffi = FFI()
 
@@ -45,7 +51,9 @@ lib = load_library()
 EXAMPLE = "PASTE YOUR DAY'S EXAMPLE INPUT HERE"
 EXPECTED_PART1 = 0  # from the puzzle statement
 
-result = None  # replace: lib.ex_part1(EXAMPLE.encode("utf-8"))
+result = None  # TODO 3: replace with  lib.ex_part1(EXAMPLE.encode("utf-8"))
+if result is None:
+    sys.exit("TODO 3 not done — call lib.ex_part1 with the encoded example")
 
 if result != EXPECTED_PART1:
     print(f"part1 = {result}, expected {EXPECTED_PART1}")
