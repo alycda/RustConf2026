@@ -72,7 +72,8 @@ build/
 __MACOSX/
 .AppleDouble
 .LSOverride
-Icon[]
+Icon[
+]
 
 # Resource forks
 ._*
@@ -93,7 +94,8 @@ Icon[]
 .file
 .disk_label*
 lost+found
-.HFS+ Private Directory Data[]
+.HFS+ Private Directory Data[
+]
 
 # Directories potentially created on remote AFP share
 .AppleDB
@@ -182,8 +184,12 @@ $RECYCLE.BIN/
 **/inputs/*
 !/inputs/.gitkeep
 
-# cbindgen-generated headers (Exercise 2) — regenerate with
+# cbindgen-generated headers of the day crates — regenerate with
 # `just days bindgen <day>`; cbindgen is required workshop tooling, so this
 # is machine output, not source, same reasoning as **/uniffi/bindings/
-# below. Lived in days/.gitignore until that file went with days/inputs/.
-**/include/*.h
+# below. Scoped to days/*/include/ on purpose (it lived in days/.gitignore
+# until that file went with days/inputs/): a hand-written header under some
+# other include/ must stay tracked, and jj never warns about an ignored file.
+# Exercise 2's own generated header is scoped the same way in
+# exercises/.gitignore.
+/days/*/include/*.h

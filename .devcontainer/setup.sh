@@ -66,17 +66,23 @@ for candidate in \
   if [ -e "$candidate" ]; then hm_profile="$candidate"; break; fi
 done
 
-hm_wanted=""
-build_dir="$(mktemp -d)"
-trap 'rm -rf "$build_dir"' EXIT
-# A build failure here is not fatal: fall through to the switch and let it
-# report the real error, rather than swallowing a broken home.nix.
-if (cd "$build_dir" && home-manager build -f "$HOME_NIX") >/dev/null 2>&1; then
-  hm_wanted="$(readlink -f "${build_dir}/result" 2>/dev/null || true)"
-fi
 hm_current=""
 if [ -n "$hm_profile" ]; then
   hm_current="$(readlink -f "$hm_profile" 2>/dev/null || true)"
+fi
+hm_wanted=""
+# No live profile — a fresh container, since /nix is not a mounted volume —
+# means there is nothing to compare against: go straight to the switch rather
+# than pay a full, silent build first and then switch anyway. The comparison
+# earns its build on a re-run (`just _rebuild`) against a profile that exists.
+if [ -n "$hm_current" ]; then
+  build_dir="$(mktemp -d)"
+  trap 'rm -rf "$build_dir"' EXIT
+  # A build failure here is not fatal: fall through to the switch and let it
+  # report the real error, rather than swallowing a broken home.nix.
+  if (cd "$build_dir" && home-manager build -f "$HOME_NIX") >/dev/null 2>&1; then
+    hm_wanted="$(readlink -f "${build_dir}/result" 2>/dev/null || true)"
+  fi
 fi
 
 if [ -n "$hm_wanted" ] && [ "$hm_wanted" = "$hm_current" ]; then
