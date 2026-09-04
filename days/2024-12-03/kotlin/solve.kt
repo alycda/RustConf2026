@@ -60,17 +60,19 @@ private fun dayDir(): File = kotlinDir().parentFile
 private fun loadLibrary(): Aoc20241203 {
     val daysDir = dayDir().parentFile
     for (profile in listOf("debug", "release")) {
-        // A cdylib takes the host's extension, not Rust's choice: .so on
-        // Linux, .dylib on macOS. Same two-loop search as python/solve.py.
-        for (ext in listOf("so", "dylib")) {
-            val candidate = File(daysDir, "target/$profile/libaoc_2024_12_03.$ext")
+        // A cdylib takes the host's name, not Rust's choice: libaoc_2024_12_03.so
+        // on Linux, libaoc_2024_12_03.dylib on macOS, aoc_2024_12_03.dll (no lib prefix)
+        // on Windows. Same three-name search as python/solve.py — no platform
+        // check, whichever file cargo produced is the one that exists.
+        for (name in listOf("libaoc_2024_12_03.so", "libaoc_2024_12_03.dylib", "aoc_2024_12_03.dll")) {
+            val candidate = File(daysDir, "target/$profile/$name")
             if (candidate.exists()) {
                 return Native.load(candidate.absolutePath, Aoc20241203::class.java)
             }
         }
     }
     err.println(
-        "no libaoc_2024_12_03.{so,dylib} found — run: cd days && cargo build -p aoc-2024-12-03 --lib"
+        "no libaoc_2024_12_03.{so,dylib} / aoc_2024_12_03.dll found — run: cd days && cargo build -p aoc-2024-12-03 --lib"
     )
     kotlin.system.exitProcess(1)
 }

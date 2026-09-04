@@ -297,9 +297,15 @@ jobs:
           jna="jna-${jna_version}.jar"
           curl -fsSL -o "$jna" \
             "https://repo1.maven.org/maven2/net/java/dev/jna/jna/${jna_version}/${jna}"
-          echo "${jna_sha256}  ${jna}" | shasum -a 256 -c -
+          if command -v sha256sum >/dev/null 2>&1; then
+            echo "${jna_sha256}  ${jna}" | sha256sum -c -
+          else
+            echo "${jna_sha256}  ${jna}" | shasum -a 256 -c -
+          fi
           kotlinc solve.kt -classpath "$jna" -include-runtime -d solve.jar
-          out="$(java -cp "solve.jar:$jna" SolveKt)"
+          cp_sep=:
+          [ "${RUNNER_OS:-}" = Windows ] && cp_sep=';'
+          out="$(java -cp "solve.jar${cp_sep}${jna}" SolveKt)"
           echo "$out"
           # Two assertions, not one, because they fail for different reasons
           # and only one of them is a real problem.
@@ -541,9 +547,15 @@ jobs:
           jna="jna-${jna_version}.jar"
           curl -fsSL -o "$jna" \
             "https://repo1.maven.org/maven2/net/java/dev/jna/jna/${jna_version}/${jna}"
-          echo "${jna_sha256}  ${jna}" | shasum -a 256 -c -
+          if command -v sha256sum >/dev/null 2>&1; then
+            echo "${jna_sha256}  ${jna}" | sha256sum -c -
+          else
+            echo "${jna_sha256}  ${jna}" | shasum -a 256 -c -
+          fi
           kotlinc solve.kt -classpath "$jna" -include-runtime -d solve.jar
-          out="$(java -cp "solve.jar:$jna" SolveKt)"
+          cp_sep=:
+          [ "${RUNNER_OS:-}" = Windows ] && cp_sep=';'
+          out="$(java -cp "solve.jar${cp_sep}${jna}" SolveKt)"
           echo "$out"
           echo "$out" | grep -qF 'Part 1 ☕️(🦀): 11'
           echo "$out" | grep -qF 'Part 2 ☕️(🦀): 31'
@@ -676,9 +688,15 @@ jobs:
           jna="jna-${jna_version}.jar"
           curl -fsSL -o "$jna" \
             "https://repo1.maven.org/maven2/net/java/dev/jna/jna/${jna_version}/${jna}"
-          echo "${jna_sha256}  ${jna}" | shasum -a 256 -c -
+          if command -v sha256sum >/dev/null 2>&1; then
+            echo "${jna_sha256}  ${jna}" | sha256sum -c -
+          else
+            echo "${jna_sha256}  ${jna}" | shasum -a 256 -c -
+          fi
           kotlinc solve.kt -classpath "$jna" -include-runtime -d solve.jar
-          out="$(java -cp "solve.jar:$jna" SolveKt)"
+          cp_sep=:
+          [ "${RUNNER_OS:-}" = Windows ] && cp_sep=';'
+          out="$(java -cp "solve.jar${cp_sep}${jna}" SolveKt)"
           echo "$out"
           echo "$out" | grep -qF 'Part 1 ☕️(🦀): 161'
           echo "$out" | grep -qF 'Part 2 ☕️(🦀): 48'
