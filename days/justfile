@@ -129,20 +129,12 @@ kotlin-demo day: (bindgen day)
         echo "days/{{day}} has no kotlin/solve.kt — not every day carries one" >&2
         exit 1
     fi
-    jna_version=5.17.0
-    jna_sha256=b3a9408e7c51e08ef0e3bfcc08f443f6ec0f6191ba8cd7c18d53d2b22e5bdbc0
+    # The pin, the hash, the cache and the checksum tool all live in
+    # scripts/fetch-jna.sh, shared with the exercises and CI; it honours the
+    # JNA_JAR the kotlin devcontainer exports and prints the jar's path.
+    jna="$(../scripts/fetch-jna.sh)"
     cd "{{day}}" && cargo build --lib
     cd kotlin
-    jna="jna-${jna_version}.jar"
-    if [ ! -f "$jna" ]; then
-        echo "fetching $jna from Maven Central"
-        curl -fsSL -o "$jna.tmp" \
-            "https://repo1.maven.org/maven2/net/java/dev/jna/jna/${jna_version}/${jna}"
-        # Verified before it is moved into place, so an interrupted or
-        # tampered download never becomes a cached jar that later runs.
-        echo "${jna_sha256}  ${jna}.tmp" | shasum -a 256 -c - >/dev/null
-        mv "$jna.tmp" "$jna"
-    fi
     # -include-runtime bundles the Kotlin stdlib, so the result runs under
     # plain `java` — which is exactly what scripts/self-check.sh guarantees
     # for this track (kotlinc + a runnable java, nothing else).

@@ -23,6 +23,6 @@ ex3-bindings/swift/*.dSYM/
 # machine's output and not something to hand them.
 ex3-bindings/dart/pubspec.lock
 
-# Not listed here on purpose: the Kotlin track's jna.jar (the curl in
-# ex3.kts's header) is already covered by the root's *.jar, and .dart_tool/
-# and __pycache__/ by their own root rules.
+# Not listed here on purpose: the Kotlin track's JNA jar lives in
+# $XDG_CACHE_HOME (scripts/fetch-jna.sh), outside the repo; .dart_tool/ and
+# __pycache__/ are covered by their own root rules.

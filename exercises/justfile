@@ -33,25 +33,12 @@ python:
 dart:
     cd ex3-bindings/dart && dart pub get && dart run ex3.dart
 
-# Ex 3, Kotlin track: JNA_JAR if the kotlin devcontainer set it, else the pinned jar
+# Ex 3, Kotlin track: the JNA jar comes from scripts/fetch-jna.sh (JNA_JAR, else the pinned, cached one)
 kotlin:
     #!/usr/bin/env bash
     set -euo pipefail
+    jna="$(../scripts/fetch-jna.sh)"
     cd ex3-bindings/kotlin
-    jna="${JNA_JAR:-jna-5.17.0.jar}"
-    if [ ! -f "$jna" ]; then
-        jna_sha256=b3a9408e7c51e08ef0e3bfcc08f443f6ec0f6191ba8cd7c18d53d2b22e5bdbc0
-        curl -fsSL -o "$jna.tmp" \
-            "https://repo1.maven.org/maven2/net/java/dev/jna/jna/5.17.0/jna-5.17.0.jar"
-        # Verified before it is moved into place, so an interrupted or
-        # tampered download never becomes a cached jar that later runs.
-        if command -v sha256sum >/dev/null 2>&1; then
-            echo "${jna_sha256}  ${jna}.tmp" | sha256sum -c - >/dev/null
-        else
-            echo "${jna_sha256}  ${jna}.tmp" | shasum -a 256 -c - >/dev/null
-        fi
-        mv "$jna.tmp" "$jna"
-    fi
     kotlinc -script ex3.kts -classpath "$jna" -J-Djna.library.path=../../target/release
 
 # Ex 3, Swift track: the header's swiftc line, plus corelibs paths for the Swift devcontainer
