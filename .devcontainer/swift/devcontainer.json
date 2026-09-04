@@ -54,6 +54,9 @@
             }
         }
     },
-    "postCreateCommand": "bash ${containerWorkspaceFolder}/.devcontainer/setup.sh",
+    // onCreateCommand, not postCreateCommand: the switch setup.sh runs briefly
+    // empties the profile, and this hook finishes before the extension host
+    // (and rust-analyzer) starts. The full story is in setup.sh.
+    "onCreateCommand": "bash ${containerWorkspaceFolder}/.devcontainer/setup.sh",
     "postStartCommand": "bash ${containerWorkspaceFolder}/.devcontainer/poststart.sh"
 }

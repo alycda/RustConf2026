@@ -42,9 +42,13 @@ HOME_NIX="${WORKSHOP_HOME_NIX:-${SCRIPT_DIR}/home.nix}"
 # from the outside: it unlinks the old home-manager path before adding the new
 # one, so for a few seconds ~/.nix-profile/bin holds neither rustc nor cargo.
 # Anything that probes for a toolchain in that window sees it missing and, in
-# rust-analyzer's case, gives up on the workspace for good. A no-op switch
-# opens that window for nothing, and this script re-runs whenever the container
-# is rebuilt.
+# rust-analyzer's case, gives up on the workspace for good — it does not
+# re-probe, so days/ stays unloaded until someone restarts the server by hand.
+# That is why every devcontainer.json runs this script as onCreateCommand,
+# which completes before the extension host starts, rather than as
+# postCreateCommand, which runs beside it. A no-op switch opens that window
+# for nothing, and this script re-runs whenever the container is rebuilt and
+# whenever `just _rebuild` is invoked by hand.
 #
 # `home-manager build` is a plain nix-build: it evaluates the same generation
 # and writes a result symlink without touching the profile. If that path is

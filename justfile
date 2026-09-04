@@ -82,5 +82,8 @@ setup-dart:
 
 # devcontainer only: rebuild the home-manager profile (WORKSHOP_HOME_NIX is
 # set by the variant devcontainers so their extra packages survive a rebuild)
+# Goes through setup.sh rather than calling `home-manager switch` directly,
+# so a rebuild that changes nothing skips the switch (see the guard there)
+# instead of emptying the profile under a running rust-analyzer.
 _rebuild:
-    home-manager switch -b backup -f "${WORKSHOP_HOME_NIX:-.devcontainer/home.nix}"
+    bash .devcontainer/setup.sh

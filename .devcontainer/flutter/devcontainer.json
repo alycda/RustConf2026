@@ -54,15 +54,9 @@
             }
         }
     },
-    // onCreateCommand, not postCreateCommand: setup.sh runs `home-manager
-    // switch`, and a switch walks /root/.nix-profile through an intermediate
-    // generation that holds neither cargo nor rustc — the old home-manager
-    // path is unlinked before the new one goes in. postCreateCommand runs
-    // concurrently with the extension host, so rust-analyzer spawns into that
-    // few-second window, gets "No such file or directory" for both binaries,
-    // and gives up: it does not re-probe, so days/ stays unloaded until
-    // someone restarts the server by hand. onCreateCommand completes before
-    // the extension host starts, so nothing is looking when the window opens.
+    // onCreateCommand, not postCreateCommand: the switch setup.sh runs briefly
+    // empties the profile, and this hook finishes before the extension host
+    // (and rust-analyzer) starts. The full story is in setup.sh.
     "onCreateCommand": "bash ${containerWorkspaceFolder}/.devcontainer/setup.sh",
     "postStartCommand": "bash ${containerWorkspaceFolder}/.devcontainer/poststart.sh"
 }
