@@ -246,7 +246,7 @@ if [ "$required_failures" -eq 0 ]; then
   if [ "$tracks_ready" -gt 0 ]; then
     echo "${GREEN}✅ You're ready for the workshop!${NC} (One ready track is plenty — the other ○ rows can stay grey.)"
   else
-    echo "${GREEN}✅ Required toolchain ready (step -1 done).${NC} Step 0: pick ONE language track above and run its setup recipe, e.g. just setup-python"
+    echo "${GREEN}✅ Required toolchain ready — README step 2 done.${NC} Step 3: pick ONE language track above and run its setup recipe, e.g. just setup-python"
   fi
   exit 0
 else

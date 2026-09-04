@@ -46,5 +46,5 @@ This runs `scripts/self-check.sh`, which verifies every required tool *and*
 compiles and links a real C executable before declaring your machine ready. Red
 rows come with the fix command inline.
 
-Once the required rows are green, step -1 is done. The `○` rows belong to
+Once the required rows are green, step -1 — steps 1 and 2 of the README — is done. The `○` rows belong to
 the next step.

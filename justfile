@@ -77,7 +77,7 @@ setup-dart:
 # Dart track: distro installs vary — points at dart.dev
 [linux]
 setup-dart:
-    @echo "Install the Dart SDK (3.0+): https://dart.dev/get-dart"
+    @echo "Install the Dart SDK: https://dart.dev/get-dart (then: just check — it verifies the version floor)"
     @echo "Or skip that: reopen the repo in the 'Flutter/Dart track' devcontainer."
 
 # devcontainer only: rebuild the home-manager profile (WORKSHOP_HOME_NIX is

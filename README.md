@@ -110,7 +110,7 @@ can't run unattended:
 just setup-python   # Python 3.10+ and cffi, in a repo-local .venv
 just setup-swift    # swiftc — Xcode CLT on macOS, swift.org on Linux
 just setup-kotlin   # Kotlin/JNA — JDK 17+ and kotlinc (brew on macOS, sdkman on Linux)
-just setup-dart     # Dart SDK 3.0+ — brew tap on macOS, dart.dev on Linux
+just setup-dart     # Dart SDK — brew tap on macOS, dart.dev on Linux (`just check` verifies the floor)
 ```
 
 After `just setup-python`, activate the venv with `source .venv/bin/activate`
@@ -157,10 +157,11 @@ of the recipes.
 ## 6. Optional prework
 
 If you want a head start, pick your day from the menu and solve it in plain
-Rust before you arrive — no FFI, no C, just the parsing and the answer. The
-exercise scaffold that gives this a home in the repo ships with the workshop
-materials; until then a scratch cargo project is fine. Arriving with it done
-means you start the C boundary work early or help a neighbor (both count).
+Rust before you arrive — no FFI, no C, just the parsing and the answer. It
+has a home already: [`exercises/ex1-pure-rust`](exercises/ex1-pure-rust/) —
+paste your day's statement example into its tests, drop the `#[ignore]`, and
+make them pass (`just exercises test`). Arriving with it done means you
+start the C boundary work early or help a neighbor (both count).
 
 And no, doing it early doesn't spoil anything: the workshop's value is the
 *boundary* — the C glue, the bindings, and the facilitated debugging when
@@ -169,8 +170,9 @@ they misbehave. That part only happens in the room.
 ## 7. A note on AI
 
 AI assistance is welcome during the workshop — the goal is understanding the
-boundary, not typing speed. Ground rules and an honest account of what AI did
-and didn't build in this repo come with the workshop materials.
+boundary, not typing speed. The ground rules are in
+[`exercises/README.md`](exercises/README.md#ground-rules); the honest account
+of what AI did and didn't build in this repo is a slide in the workshop deck.
 
 ---
 
