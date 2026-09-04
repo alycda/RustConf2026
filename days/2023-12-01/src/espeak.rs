@@ -205,10 +205,15 @@ unsafe extern "C" {
 /// fresh `YR_RULES` per solve and needs no lock at all: "does this library
 /// have per-handle state or global state" is a question to answer before
 /// designing around it, not after `cargo test` starts failing intermittently.
-static ESPEAK: OnceLock<Mutex<()>> = OnceLock::new();
+///
+/// The lock guards a `bool`: whether espeak has been initialised. That is
+/// part of the global state too, and `Speaker::new` consults it so that
+/// `espeak_Initialize` runs once per process — see there for why twice is
+/// not a reset but a corruption.
+static ESPEAK: OnceLock<Mutex<bool>> = OnceLock::new();
 
-fn lock() -> miette::Result<MutexGuard<'static, ()>> {
-    let mutex = ESPEAK.get_or_init(|| Mutex::new(()));
+fn lock() -> miette::Result<MutexGuard<'static, bool>> {
+    let mutex = ESPEAK.get_or_init(|| Mutex::new(false));
     mutex
         .lock()
         .map_err(|_| miette::miette!("the espeak lock was poisoned by an earlier panic"))
@@ -224,7 +229,7 @@ fn lock() -> miette::Result<MutexGuard<'static, ()>> {
 /// # Safety contract this upholds
 /// The caller must hold the lock; the returned pointer is only read before it
 /// is released.
-fn phonemes_of(_guard: &MutexGuard<'static, ()>, text: &CStr) -> String {
+fn phonemes_of(_guard: &MutexGuard<'static, bool>, text: &CStr) -> String {
     let mut pointer = text.as_ptr().cast::<c_void>();
 
     // SAFETY: `pointer` addresses `text`'s NUL-terminated bytes, which outlive
@@ -263,25 +268,38 @@ impl Speaker {
     /// `shell.nix` put there. On a system install it is the packaged data
     /// directory. Nothing here hardcodes either.
     pub fn new() -> miette::Result<Self> {
-        let guard = lock()?;
+        let mut guard = lock()?;
 
-        // SAFETY: null `path` means "use the built-in data path"; the other
-        // three arguments are plain integers. Calling this more than once is
-        // documented as re-initialising, not as undefined.
-        let rate = unsafe { espeak_Initialize(AUDIO_OUTPUT_SYNCHRONOUS, 0, std::ptr::null(), 0) };
-        if rate < 0 {
-            return Err(miette::miette!(
-                "espeak_Initialize failed ({rate}) — is espeak-ng's data directory present?"
-            ));
-        }
+        // Once per process, never again. `espeak_Initialize` is not a
+        // re-entrant reset: every call runs LoadPhData, which frees and
+        // reallocates the phoneme data while pointers into the old block live
+        // on in espeak's globals. Single-threaded that is invisible — the
+        // freed block comes straight back at the same address. With other
+        // threads allocating at the same time (every other test in this
+        // crate) the new block lands elsewhere, and from the second init on
+        // every phonemisation comes back empty. Measured: 0/10 failures with
+        // the espeak tests alone or serial, 4/10 with the crate's other tests
+        // alongside, 0/20 with this guard.
+        if !*guard {
+            // SAFETY: null `path` means "use the built-in data path"; the
+            // other three arguments are plain integers.
+            let rate =
+                unsafe { espeak_Initialize(AUDIO_OUTPUT_SYNCHRONOUS, 0, std::ptr::null(), 0) };
+            if rate < 0 {
+                return Err(miette::miette!(
+                    "espeak_Initialize failed ({rate}) — is espeak-ng's data directory present?"
+                ));
+            }
 
-        let english = CString::new("en").expect("no NUL in a literal");
-        // SAFETY: `english` is a live NUL-terminated string for the call.
-        let status = unsafe { espeak_SetVoiceByName(english.as_ptr()) };
-        if status != 0 {
-            return Err(miette::miette!(
-                "espeak_SetVoiceByName(\"en\") failed ({status})"
-            ));
+            let english = CString::new("en").expect("no NUL in a literal");
+            // SAFETY: `english` is a live NUL-terminated string for the call.
+            let status = unsafe { espeak_SetVoiceByName(english.as_ptr()) };
+            if status != 0 {
+                return Err(miette::miette!(
+                    "espeak_SetVoiceByName(\"en\") failed ({status})"
+                ));
+            }
+            *guard = true;
         }
 
         let mut references = Vec::with_capacity(19);
@@ -310,7 +328,7 @@ impl Speaker {
     /// it begins with a digit's pronunciation. Per-suffix rather than
     /// per-line because a whole line is one utterance, and an utterance
     /// containing `234` is read as a *number*.
-    fn digit_at(&self, guard: &MutexGuard<'static, ()>, rest: &str) -> Option<u32> {
+    fn digit_at(&self, guard: &MutexGuard<'static, bool>, rest: &str) -> Option<u32> {
         let Ok(text) = CString::new(rest) else {
             return None;
         };
