@@ -26,9 +26,15 @@ export HOME=${HOME:-/root}
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_DIR="$(dirname "$SCRIPT_DIR")"
 
-# Add Nix channels
-nix-channel --add https://github.com/nix-community/home-manager/archive/master.tar.gz home-manager
-nix-channel --update
+# Add the home-manager channel once. An unconditional `nix-channel --update`
+# here pulled a fresh master on every rebuild, so the generation always
+# differed and the skip-if-unchanged guard below could never fire. Updating
+# home-manager is now deliberate: nix-channel --update home-manager, then
+# `just _rebuild`.
+if ! nix-channel --list | grep -q '^home-manager '; then
+  nix-channel --add https://github.com/nix-community/home-manager/archive/master.tar.gz home-manager
+  nix-channel --update home-manager
+fi
 
 # Install home-manager
 nix-shell '<home-manager>' -A install
