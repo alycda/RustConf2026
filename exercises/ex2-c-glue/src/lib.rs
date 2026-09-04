@@ -4,7 +4,7 @@
 //! safely across the boundary, into a `&str`, through your solver, and back
 //! out as an `i64` — without undefined behavior on hostile input.
 //!
-//! Worked reference for this exact shape: ../../days/2024-12-01/src/c_api.rs
+//! Worked reference for this exact shape: ../../../days/2024-12-01/src/c_api.rs
 //! (and days/2024-12-03/src/c_api.rs, which chose the panic-free parser on
 //! purpose — nothing behind an `extern "C"` frame may panic).
 

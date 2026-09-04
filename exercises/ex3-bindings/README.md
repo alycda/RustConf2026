@@ -4,26 +4,31 @@
 
 Call the library you built in Ex 2 from **one** higher-level language.
 
-## Pick your route
+## Route
 
-Every track offers two routes — pick based on how Ex 2 went:
+Bind directly against your `include/ex2_c_glue.h`. You'll touch every
+concept from Module 3 — loading, lookup, string conversion, ownership.
 
-- **Hand-written route** (recommended first): bind directly against your
-  `include/ex2_c_glue.h`. You'll touch every concept from Module 3 —
-  loading, lookup, string conversion, ownership.
-- **Generated route**: add UniFFI to your crate instead (pattern:
-  [`../../days/2024-03/uniffi/`](../../days/2024-03/uniffi/)) and let the
-  bindgen produce the bindings. Less typing, different lesson: read what it
-  generated and find where it does the steps you did by hand in Ex 2.
+## Tasks
+
+0. Ex 2 must be green. `../ex2-c-glue/build-and-test.sh` produces the
+   header every track binds against and the library every track loads;
+   both are gitignored, so they exist only after that script has run on
+   this machine.
+1. Pick **one** track below and open its file. The TODOs run top to
+   bottom; each file's header comment has the exact command to run it.
+2. Fill them in and make the run pass against your day's example.
+3. Prove the hostile-input contract from your language — the last TODO
+   in every track. That is where the debrief question below gets its answer.
 
 ## Tracks
 
 | Track | Start here | Worked reference |
 |-------|-----------|------------------|
-| Python | `python/` | `../../days/2024-03/uniffi/tests/python/` (generated) |
-| Swift | `swift/` | `../../step8-uniffi-swift/` |
-| Kotlin/JNI | `kotlin/` | `../../step7-uniffi-kotlin/` |
-| Dart | `dart/` | `../../days/2024-03/dart/` |
+| Python | `python/` | [`../../days/2024-12-01/python/solve.py`](../../days/2024-12-01/python/solve.py) |
+| Swift | `swift/` | [`../../days/2024-12-01/swift/solve.swift`](../../days/2024-12-01/swift/solve.swift) |
+| Kotlin/JNA | `kotlin/` | [`../../days/2024-12-01/kotlin/solve.kt`](../../days/2024-12-01/kotlin/solve.kt) |
+| Dart | `dart/` | [`../../days/2024-12-01/dart/solve.dart`](../../days/2024-12-01/dart/solve.dart) |
 
 The debrief question you're collecting an answer to: **what did your
 language runtime need that the C header couldn't say?**
