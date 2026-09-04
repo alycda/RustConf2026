@@ -17,8 +17,24 @@ set -euo pipefail
 version=5.17.0
 sha256=b3a9408e7c51e08ef0e3bfcc08f443f6ec0f6191ba8cd7c18d53d2b22e5bdbc0
 
+# Every consumer hands this path straight to kotlinc or java, which on Windows
+# are native binaries that cannot open an MSYS path like /c/Users/... . Git
+# Bash rewrites a lone absolute argument on its way to a native program, so
+# `kotlinc -classpath "$jna"` survives untouched — but `java -cp "solve.jar;$jna"`
+# does not, because the ';' makes it a path list MSYS leaves alone, and java
+# then silently drops the entry it cannot resolve. Convert here, once, rather
+# than at each of the five call sites. -m over -w: forward slashes, so the
+# result is still a path the calling shell can [ -f ].
+emit() {
+  if command -v cygpath >/dev/null 2>&1; then
+    cygpath -m "$1"
+  else
+    printf '%s\n' "$1"
+  fi
+}
+
 if [ -n "${JNA_JAR:-}" ] && [ -f "$JNA_JAR" ]; then
-  printf '%s\n' "$JNA_JAR"
+  emit "$JNA_JAR"
   exit 0
 fi
 
@@ -38,4 +54,4 @@ if [ ! -f "$jar" ]; then
   fi
   mv "$jar.tmp" "$jar"
 fi
-printf '%s\n' "$jar"
+emit "$jar"

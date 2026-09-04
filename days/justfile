@@ -138,7 +138,12 @@ kotlin-demo day: (bindgen day)
     # plain `java` — which is exactly what scripts/self-check.sh guarantees
     # for this track (kotlinc + a runnable java, nothing else).
     kotlinc solve.kt -classpath "$jna" -include-runtime -d solve.jar
-    java -cp "solve.jar:$jna" SolveKt
+    # ':' everywhere but Windows, where the JVM splits a classpath on ';'.
+    # cygpath is the tell that this is Git Bash driving a native Windows java
+    # — the same tell scripts/fetch-jna.sh uses to hand back a path it can open.
+    cp_sep=:
+    command -v cygpath >/dev/null 2>&1 && cp_sep=';'
+    java -cp "solve.jar${cp_sep}$jna" SolveKt
 
 
 # Exercise 3 (Swift track): call a day's cbindgen C API from Swift.
