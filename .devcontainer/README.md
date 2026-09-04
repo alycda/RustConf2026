@@ -7,7 +7,7 @@ One variant per track. Pick one — they are alternatives, not layers:
 | `git/` | the base. Everything except a track-specific toolchain |
 | `jj/` | the base plus jujutsu, and the jj cheatsheets |
 | `kotlin/` | the Kotlin/JNA track — kotlinc, JDK 17, and `JNA_JAR` |
-| `flutter/` | the Flutter/Dart track — the Flutter SDK, which ships `dart` |
+| `flutter/` | the Dart track — the Dart SDK (`dart`; the name predates dropping the Flutter SDK, which no longer builds on aarch64-linux) |
 
 The Swift track's container arrives later in the history, with its own README;
 add a row here when it does.
