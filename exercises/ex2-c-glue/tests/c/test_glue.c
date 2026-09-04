@@ -16,14 +16,16 @@ int main(void) {
     /* TODO: replace 0 with the expected answers from the puzzle statement. */
     long long expected_part1 = 0;
 
+    /* Hostile-input contract — these two pass as soon as your null/UTF-8
+     * checks are in, before Ex 1 is even solved (no edits needed). They run
+     * first so that a still-unsolved Ex 1 — whose todo!() aborts the process
+     * exactly like a wrong wrapper would — cannot hide them. */
+    assert(ex_part1(NULL) == -1);
+    assert(ex_part1("\xff\xfe not utf-8") == -1);
+
     long long got = ex_part1(example);
     printf("part1(example) = %lld (expected %lld)\n", got, expected_part1);
     assert(got == expected_part1);
-
-    /* Hostile-input contract — these two should already pass once your
-     * null/UTF-8 checks are in (no edits needed): */
-    assert(ex_part1(NULL) == -1);
-    assert(ex_part1("\xff\xfe not utf-8") == -1);
 
     printf("All Ex 2 checks passed.\n");
     return 0;
