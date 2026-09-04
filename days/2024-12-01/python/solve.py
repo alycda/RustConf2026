@@ -81,6 +81,11 @@ def call(ffi, fn, name: str, text: str) -> int:
 
 
 def main() -> None:
+    # A Windows python inherits the console's legacy code page for stdout
+    # (cp1252 on a stock runner), and the labels below have no encoding
+    # there. Say UTF-8 before the first print; a no-op where it already is.
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     ffi, lib = load_library()
 
     input_path = DAYS_DIR / "inputs" / "2024-12-01.txt"
