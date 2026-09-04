@@ -206,18 +206,12 @@ swift-demo day: (bindgen day)
     # startup with `libBlocksRuntime.so: cannot open shared object file`.
     # Compiling, linking and *loading* are three separate searches; -L answers
     # the second and only -rpath answers the third.
-    corelibs=()
-    profile="$HOME/.nix-profile"
-    if [ -d "$profile/lib/swift/linux/$(uname -m)" ]; then
-        corelibs+=(-I "$profile/lib/swift/linux/$(uname -m)")
-        corelibs+=(-Xcc "-I$profile/include")
-        corelibs+=(-L "$profile/lib/swift/linux" -L "$profile/lib")
-        corelibs+=(-Xlinker -rpath -Xlinker "$profile/lib/swift/linux")
-        corelibs+=(-Xlinker -rpath -Xlinker "$profile/lib")
-    fi
+    # The flags themselves live in scripts/swift-corelibs-flags.sh, shared
+    # with the exercises justfile and CI; it prints nothing where the layout
+    # above is absent.
     swiftc solve.swift -o .build/solve \
         -I . \
-        ${corelibs[@]+"${corelibs[@]}"} \
+        $(../../../scripts/swift-corelibs-flags.sh) \
         -L "$target/debug" -L "$target/release" \
         -l"aoc_$(printf '%s' "{{day}}" | tr - _)" \
         -Xlinker -rpath -Xlinker "$target/debug" \

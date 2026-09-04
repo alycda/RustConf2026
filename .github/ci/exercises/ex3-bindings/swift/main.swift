@@ -2,6 +2,7 @@
 // (see .github/ci/README.md): the same file with its TODOs filled, compiled
 // and run the way the scaffold says, from this directory:
 //   swiftc main.swift -import-objc-header ../../ex2-c-glue/include/ex2_c_glue.h \
+//       $(../../../scripts/swift-corelibs-flags.sh) \
 //       -L ../../target/release -lex2_c_glue \
 //       -Xlinker -rpath -Xlinker "$PWD/../../target/release" -o ex3 \
 //   && ./ex3

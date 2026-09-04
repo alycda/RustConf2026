@@ -4,8 +4,12 @@
 // so the Ex 2 cdylib is in ../../target/, not inside ex2-c-glue/; -l names
 // no extension, so the same line works on macOS and Linux. The -rpath is
 // what lets ./ex3 find the library at run time on both — an environment
-// variable would be DYLD_* on one and LD_* on the other:
+// variable would be DYLD_* on one and LD_* on the other. The script line
+// prints nothing on a Mac or a swift.org toolchain, and the Foundation paths
+// the repo's Swift devcontainer needs; `just exercises swift` is the same
+// command:
 //   swiftc main.swift -import-objc-header ../../ex2-c-glue/include/ex2_c_glue.h \
+//       $(../../../scripts/swift-corelibs-flags.sh) \
 //       -L ../../target/release -lex2_c_glue \
 //       -Xlinker -rpath -Xlinker "$PWD/../../target/release" -o ex3 \
 //   && ./ex3

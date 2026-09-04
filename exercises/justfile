@@ -39,27 +39,15 @@ kotlin:
     cd ex3-bindings/kotlin
     kotlinc -script ex3.kts -classpath "$jna" -J-Djna.library.path=../../target/release
 
-# Ex 3, Swift track: the header's swiftc line, plus corelibs paths for the Swift devcontainer
+# Ex 3, Swift track: the header's swiftc line (scripts/swift-corelibs-flags.sh covers the Swift devcontainer)
 swift:
     #!/usr/bin/env bash
     set -euo pipefail
     cd ex3-bindings/swift
-    # Same block as days/justfile's swift-demo, for the same reason: in the
-    # repo's Swift devcontainer Foundation lives in the user profile, not
-    # with the compiler, and the -rpath pair is what lets the binary load
-    # after it links. Added only when that layout exists, so a Mac and a
-    # swift.org toolchain are unaffected.
-    corelibs=()
-    profile="$HOME/.nix-profile"
-    if [ -d "$profile/lib/swift/linux/$(uname -m)" ]; then
-        corelibs+=(-I "$profile/lib/swift/linux/$(uname -m)")
-        corelibs+=(-Xcc "-I$profile/include")
-        corelibs+=(-L "$profile/lib/swift/linux" -L "$profile/lib")
-        corelibs+=(-Xlinker -rpath -Xlinker "$profile/lib/swift/linux")
-        corelibs+=(-Xlinker -rpath -Xlinker "$profile/lib")
-    fi
+    # scripts/swift-corelibs-flags.sh prints the Foundation flags the Swift
+    # devcontainer needs and nothing elsewhere; days/justfile says why.
     swiftc main.swift -import-objc-header ../../ex2-c-glue/include/ex2_c_glue.h \
-        ${corelibs[@]+"${corelibs[@]}"} \
+        $(../../../scripts/swift-corelibs-flags.sh) \
         -L ../../target/release -lex2_c_glue \
         -Xlinker -rpath -Xlinker "$PWD/../../target/release" -o ex3
     ./ex3
