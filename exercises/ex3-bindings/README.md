@@ -16,7 +16,8 @@ concept from Module 3 — loading, lookup, string conversion, ownership.
    both are gitignored, so they exist only after that script has run on
    this machine.
 1. Pick **one** track below and open its file. The TODOs run top to
-   bottom; each file's header comment has the exact command to run it.
+   bottom; each file's header comment has the exact command to run it
+   (`just exercises <track>` from the repo root runs the same line).
 2. Fill them in and make the run pass against your day's example.
 3. Prove the hostile-input contract from your language — the last TODO
    in every track. That is where the debrief question below gets its answer.

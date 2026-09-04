@@ -19,6 +19,10 @@ cheats:
 # valid in trees that predate the day library)
 mod? days
 
+# (`mod?` for the same reason as days above)
+# the workshop exercises: `just exercises ex2`, `just exercises python`, …
+mod? exercises
+
 # verify required toolchain + optional tracks (always exits 0; CI: run scripts/self-check.sh)
 check:
     -@./scripts/self-check.sh

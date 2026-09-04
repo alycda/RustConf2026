@@ -1,0 +1,80 @@
+# Exercise recipes — `just exercises <recipe>` from the repo root, or plain
+# `just <recipe>` from this directory.
+#
+# Each recipe runs exactly the command the matching file header documents;
+# the header is the reference, the recipe is the shortcut. The Verify
+# workflow (.github/workflows/env-check.yml) spells the same lines out
+# because stock runners have no `just` — when a header changes, change all
+# three. `python`, `dart`, `kotlin` and `swift` need `ex2` first: it produces
+# the header every track binds against and the library every track loads.
+
+# the first recipe is the default
+_default:
+    @just --list
+
+# Ex 1: the workspace's tests — the example tests stay ignored until you fill them in
+test:
+    cargo test --workspace --locked
+
+# Ex 2: cdylib → generated header → C harness, in one script
+ex2:
+    ./ex2-c-glue/build-and-test.sh
+
+# Ex 3, Python track: the repo-root venv (`just setup-python`), bin/ or Scripts/
+python:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    py="$(pwd)/../.venv/bin/python"
+    [ -x "$py" ] || py="$(pwd)/../.venv/Scripts/python"
+    [ -x "$py" ] || py=python3
+    "$py" ex3-bindings/python/bindings.py
+
+# Ex 3, Dart track
+dart:
+    cd ex3-bindings/dart && dart pub get && dart run ex3.dart
+
+# Ex 3, Kotlin track: JNA_JAR if the kotlin devcontainer set it, else the pinned jar
+kotlin:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd ex3-bindings/kotlin
+    jna="${JNA_JAR:-jna-5.17.0.jar}"
+    if [ ! -f "$jna" ]; then
+        jna_sha256=b3a9408e7c51e08ef0e3bfcc08f443f6ec0f6191ba8cd7c18d53d2b22e5bdbc0
+        curl -fsSL -o "$jna.tmp" \
+            "https://repo1.maven.org/maven2/net/java/dev/jna/jna/5.17.0/jna-5.17.0.jar"
+        # Verified before it is moved into place, so an interrupted or
+        # tampered download never becomes a cached jar that later runs.
+        if command -v sha256sum >/dev/null 2>&1; then
+            echo "${jna_sha256}  ${jna}.tmp" | sha256sum -c - >/dev/null
+        else
+            echo "${jna_sha256}  ${jna}.tmp" | shasum -a 256 -c - >/dev/null
+        fi
+        mv "$jna.tmp" "$jna"
+    fi
+    kotlinc -script ex3.kts -classpath "$jna" -J-Djna.library.path=../../target/release
+
+# Ex 3, Swift track: the header's swiftc line, plus corelibs paths for the Swift devcontainer
+swift:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd ex3-bindings/swift
+    # Same block as days/justfile's swift-demo, for the same reason: in the
+    # repo's Swift devcontainer Foundation lives in the user profile, not
+    # with the compiler, and the -rpath pair is what lets the binary load
+    # after it links. Added only when that layout exists, so a Mac and a
+    # swift.org toolchain are unaffected.
+    corelibs=()
+    profile="$HOME/.nix-profile"
+    if [ -d "$profile/lib/swift/linux/$(uname -m)" ]; then
+        corelibs+=(-I "$profile/lib/swift/linux/$(uname -m)")
+        corelibs+=(-Xcc "-I$profile/include")
+        corelibs+=(-L "$profile/lib/swift/linux" -L "$profile/lib")
+        corelibs+=(-Xlinker -rpath -Xlinker "$profile/lib/swift/linux")
+        corelibs+=(-Xlinker -rpath -Xlinker "$profile/lib")
+    fi
+    swiftc main.swift -import-objc-header ../../ex2-c-glue/include/ex2_c_glue.h \
+        ${corelibs[@]+"${corelibs[@]}"} \
+        -L ../../target/release -lex2_c_glue \
+        -Xlinker -rpath -Xlinker "$PWD/../../target/release" -o ex3
+    ./ex3

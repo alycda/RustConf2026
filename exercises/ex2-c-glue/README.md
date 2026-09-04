@@ -17,7 +17,7 @@ there aborts the harness exactly like a wrong wrapper would.
 1. Implement `ex_part1` in `src/lib.rs` — the TODO walks the four steps
    (null check → `CStr` → UTF-8 validation → call your solver).
 2. Fill in the example input and expected answer in `tests/c/test_glue.c`.
-3. `./build-and-test.sh` — it builds the cdylib, generates
+3. `./build-and-test.sh` (or `just exercises ex2` from the repo root) — it builds the cdylib, generates
    `include/ex2_c_glue.h`, compiles the harness, and runs it.
 4. **Read the generated header.** One minute, out loud if you like. Knowing
    what cbindgen produced is the difference between using it and trusting it.

@@ -21,5 +21,5 @@ day menu, so nothing here spoils a day an attendee picks.
 
 To reproduce a cell locally: apply the copy above in a scratch checkout
 (not in your working copy — jj would snapshot the solved files into your
-commit), then run `exercises/ex2-c-glue/build-and-test.sh` and the one
-track command from that track file's header.
+commit), then run `just exercises ex2` and `just exercises <track>` — the recipes
+run the same lines the file headers document and the workflow spells out.
