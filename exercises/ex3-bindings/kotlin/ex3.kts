@@ -1,4 +1,4 @@
-// Exercise 3, Kotlin track (hand-written route, JNA).
+// Exercise 3, Kotlin track (JNA).
 //
 // Needs JDK 17+, kotlinc, and the JNA jar:
 //   curl -fsSL -o jna.jar https://repo1.maven.org/maven2/net/java/dev/jna/jna/5.14.0/jna-5.14.0.jar

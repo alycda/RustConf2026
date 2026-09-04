@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exercise 3, Python track (hand-written route, cffi).
+"""Exercise 3, Python track (cffi).
 
 Bind your Ex 2 library and call it from Python. Fill in the TODOs top to
 bottom; run with:  python3 bindings.py

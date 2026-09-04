@@ -1,4 +1,4 @@
-// Exercise 3, Dart track (hand-written route, dart:ffi).
+// Exercise 3, Dart track (dart:ffi).
 //
 // Needs Dart SDK 3.0+ and `dart pub add ffi` in a package, or run the
 // worked pattern in ../../days/2024-03/dart/ first to see the shape.

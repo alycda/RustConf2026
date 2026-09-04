@@ -1,4 +1,4 @@
-// Exercise 3, Swift track (hand-written route).
+// Exercise 3, Swift track.
 //
 // Compile & run from this directory (adjust lib extension on Linux):
 //   swiftc main.swift -import-objc-header ../../ex2-c-glue/include/ex2_c_glue.h \
