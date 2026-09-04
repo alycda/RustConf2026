@@ -1,8 +1,9 @@
 // Exercise 3, Dart track (dart:ffi).
 //
-// Needs Dart SDK 3.0+ and `dart pub add ffi` in a package, or run the
-// worked pattern in ../../days/2024-03/dart/ first to see the shape.
-// Run:  dart run ex3.dart   (from a package with ffi in pubspec)
+// Needs Dart SDK 3.7+. pubspec.yaml beside this file declares the one
+// dependency (package:ffi); worked reference for the shape:
+// ../../../days/2024-12-01/dart/solve.dart.
+// Run from this directory:  dart pub get && dart run ex3.dart
 
 import 'dart:ffi' as ffi;
 import 'dart:io' show File, Platform, exit, stderr;

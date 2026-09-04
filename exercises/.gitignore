@@ -16,10 +16,10 @@ ex3-bindings/swift/ex3
 # ...and the debug companion, if you build with -g on macOS.
 ex3-bindings/swift/*.dSYM/
 
-# `dart pub add ffi`, the Dart track's documented step 1, writes this.
+# `dart pub get`, the Dart track's documented first command, writes this.
 # Deliberately NOT a root rule: days/*/dart/ commits its pubspec.lock, because
 # a worked example should pin what it actually resolved. This scaffold is the
-# opposite — the attendee runs `dart pub add` themselves, so the lock is their
+# opposite — the attendee runs `dart pub get` themselves, so the lock is their
 # machine's output and not something to hand them.
 ex3-bindings/dart/pubspec.lock
 
