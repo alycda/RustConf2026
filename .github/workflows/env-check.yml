@@ -166,3 +166,549 @@ jobs:
               ./scripts/self-check.sh --track "${{ matrix.track }}"
               ;;
           esac
+      # Beyond the env check: on a branch that carries a worked Exercise 3
+      # (Python/cffi on 2015-12-01), prove the track end to end — cdylib
+      # with default features (no C libraries needed), header from the
+      # cbindgen this job already installs, then solve.py against the
+      # puzzle-statement example. Real inputs stay out of CI by the same
+      # rule that keeps them out of the repo (days/.gitignore); statement
+      # examples are published in the puzzle text and fair game. "()())"
+      # answers part 1 with -1 — a negative through the out-param, which a
+      # naive in-band error convention would have eaten — and part 2 with 5.
+      # Branches without the worked track (e.g. main today) skip cleanly.
+      - name: python track end-to-end (2015-12-01)
+        if: matrix.track == 'python'
+        shell: bash
+        run: |
+          if [ ! -f days/2015-12-01/python/solve.py ]; then
+            echo "no worked python track on this branch — skipping"
+            exit 0
+          fi
+          (cd days && cargo build -p aoc-2015-12-01 --lib)
+          (cd days/2015-12-01 && mkdir -p include && \
+            cbindgen --config cbindgen.toml --output include/aoc_2015_12_01.h src/c_api.rs)
+          mkdir -p days/inputs
+          printf '()())' > days/inputs/2015-12-01.txt
+          out="$(./.venv/bin/python days/2015-12-01/python/solve.py)"
+          echo "$out"
+          echo "$out" | grep -F 'Part 1 🐍(🦀): -1'
+          echo "$out" | grep -F 'Part 2 🐍(🦀): 5'
+
+      # Beyond the env check: on a branch that carries a worked Exercise 3
+      # (Dart/dart:ffi on 2015-12-05), prove the track end to end — cdylib
+      # with default features, header from the cbindgen this job already
+      # installs, then solve.dart against the puzzle-statement examples.
+      # Real inputs stay out of CI by the same rule that keeps them out of
+      # the repo (days/.gitignore); statement examples are published in the
+      # puzzle text and fair game. The list below is both parts' examples
+      # concatenated, with `aaa` twice — deliberately, so the two answers
+      # differ (3 and 2). All nine distinct examples split into two disjoint
+      # pairs, one nice per part, which makes 2 and 2: an assertion that
+      # cannot tell part 1 from part 2, and would still pass if solve.dart
+      # called one of them twice or the C API wired both symbols to the same
+      # function. `aaa` is part-1 nice and part-2 naughty, so a second copy
+      # moves one count and not the other.
+      #
+      # Default features is the load-bearing word: this day's vectorscan and
+      # ICU variants are cargo features precisely so a stock runner with no
+      # pkg-config can build the cdylib the C API and this track need.
+      #
+      # `just` is not on a stock runner, so the dart-demo recipe's steps are
+      # spelled out here rather than invoked — same as the python cell.
+      # Branches without the worked track skip cleanly.
+      - name: dart track end-to-end (2015-12-05)
+        if: matrix.track == 'dart'
+        shell: bash
+        run: |
+          if [ ! -f days/2015-12-05/dart/solve.dart ]; then
+            echo "no worked dart track on this branch — skipping"
+            exit 0
+          fi
+          (cd days && cargo build -p aoc-2015-12-05 --lib)
+          (cd days/2015-12-05 && mkdir -p include && \
+            cbindgen --config cbindgen.toml --output include/aoc_2015_12_05.h src/c_api.rs)
+          mkdir -p days/inputs
+          printf '%s\n' ugknbfddgicrmopn aaa aaa jchzalrnumimnmhp \
+            haegwjzuvuyypxyu dvszwmarrgswjxmb qjhvhtzxzqqjkmpb xxyxx \
+            uurcxstgmygtbstg ieodomkazucvgmuy > days/inputs/2015-12-05.txt
+          (cd days/2015-12-05/dart && dart pub get)
+          out="$(cd days/2015-12-05/dart && dart run solve.dart)"
+          echo "$out"
+          # -q: the run's own two lines are echoed above, and a grep that
+          # reprints its match makes one run look like two in the log. On a
+          # mismatch the step still fails (shell: bash runs with -e) and the
+          # echo above is the diff.
+          echo "$out" | grep -qF 'Part 1 🎯(🦀): 3'
+          echo "$out" | grep -qF 'Part 2 🎯(🦀): 2'
+
+      # Beyond the env check: on a branch that carries a worked Exercise 3
+      # (Kotlin/JNA on 2021-12-02), prove the track end to end — cdylib with
+      # default features, header from the cbindgen this job already installs,
+      # then solve.kt against the puzzle-statement example. Real inputs stay
+      # out of CI by the same rule that keeps them out of the repo
+      # (days/.gitignore); statement examples are published in the puzzle text
+      # and fair game — the six commands below are the example both parts
+      # share, and they answer 150 and 900.
+      #
+      # Default features is the load-bearing word: this day's two C variants
+      # (Chipmunk2D and DuckDB) are cargo features precisely so a stock runner
+      # with no pkg-config can build the cdylib the C API and this track need.
+      # nixpkgs ships a .pc for neither library, so even a runner that *had*
+      # pkg-config would not find them — the gate is the only reason this
+      # builds at all here.
+      #
+      # `just` is not on a stock runner, so the kotlin-demo recipe's steps are
+      # spelled out here rather than invoked — same as the python cell — and
+      # the JNA jar is pinned and checksummed here exactly as the recipe pins
+      # and checksums it. Branches without the worked track skip cleanly.
+      #
+      # The `:` classpath separator is why this step is linux/macos-shaped. If
+      # the windows column is ever restored (see the os matrix above), this is
+      # the line that needs `;` there.
+      - name: kotlin track end-to-end (2021-12-02)
+        if: matrix.track == 'kotlin'
+        shell: bash
+        run: |
+          if [ ! -f days/2021-12-02/kotlin/solve.kt ]; then
+            echo "no worked kotlin track on this branch — skipping"
+            exit 0
+          fi
+          jna_version=5.17.0
+          jna_sha256=b3a9408e7c51e08ef0e3bfcc08f443f6ec0f6191ba8cd7c18d53d2b22e5bdbc0
+          (cd days && cargo build -p aoc-2021-12-02 --lib)
+          (cd days/2021-12-02 && mkdir -p include && \
+            cbindgen --config cbindgen.toml --output include/aoc_2021_12_02.h src/c_api.rs)
+          mkdir -p days/inputs
+          printf '%s\n' 'forward 5' 'down 5' 'forward 8' 'up 3' 'down 8' \
+            'forward 2' > days/inputs/2021-12-02.txt
+          cd days/2021-12-02/kotlin
+          jna="jna-${jna_version}.jar"
+          curl -fsSL -o "$jna" \
+            "https://repo1.maven.org/maven2/net/java/dev/jna/jna/${jna_version}/${jna}"
+          echo "${jna_sha256}  ${jna}" | shasum -a 256 -c -
+          kotlinc solve.kt -classpath "$jna" -include-runtime -d solve.jar
+          out="$(java -cp "solve.jar:$jna" SolveKt)"
+          echo "$out"
+          # Two assertions, not one, because they fail for different reasons
+          # and only one of them is a real problem.
+          #
+          # First the answers, matched loosely: this is the thing that must be
+          # true, and it stays true however the line is labelled.
+          echo "$out" | grep -qE '^Part 1 .*: 150$'
+          echo "$out" | grep -qE '^Part 2 .*: 900$'
+          # Then the label, byte for byte, because the `Part N <emoji>(🦀)`
+          # shape is a repo-wide convention and silent drift in it is worth a
+          # red cell. Kept separate so this failure can say which one it was —
+          # a bare `exit 1` after two correct answers reads as a broken track
+          # when it is actually a cosmetic edit that did not reach this file.
+          #
+          # Byte for byte is meant literally: this label is ☕️ = U+2615 plus
+          # U+FE0F (VARIATION SELECTOR-16). A bare ☕ (U+2615 alone) renders
+          # identically here and in most editors and will not match. If you
+          # change the label in kotlin/solve.kt, copy it — do not retype it.
+          if ! echo "$out" | grep -qF 'Part 1 ☕️(🦀): 150' \
+            || ! echo "$out" | grep -qF 'Part 2 ☕️(🦀): 900'; then
+            echo "::error::answers are correct but the label drifted — re-sync this step with days/2021-12-02/kotlin/solve.kt" >&2
+            exit 1
+          fi
+
+      # Beyond the env check: on a branch that carries a worked Exercise 3
+      # (Swift on 2023-12-01), prove the track end to end — cdylib, header from
+      # the cbindgen this job already installs, then solve.swift against the
+      # puzzle-statement example. Real inputs stay out of CI by the same rule
+      # that keeps them out of the repo (days/.gitignore); statement examples
+      # are published in the puzzle text and fair game.
+      #
+      # The four lines below are part ONE's published example, verbatim, and
+      # both assertions are numbers days/2023-12-01/src/lib.rs asserts over
+      # that same input: 142 from `test_part1`, and 142 again for part two
+      # from `test_both_parts_over_both_examples`.
+      #
+      # Verbatim is the rule, not a detail. A track's job here is to prove it
+      # gets the same answer Rust does, so it has to be handed the same bytes
+      # Rust was. An input tweaked until the numbers came out conveniently --
+      # this cell briefly had one, four lines plus `eightwothree` -- proves a
+      # track agrees with a figure that exists nowhere else in the repo, and
+      # adds a fifth thing to keep in sync.
+      #
+      # This day makes that tempting because its two parts have *different*
+      # statement examples: 142 comes from these four lines, 281 from part
+      # two's seven, and no single input yields both. A track reads one file
+      # and prints both parts, so one of the two numbers it prints is always
+      # a part the puzzle publishes no answer for. The fix is more
+      # assertions, not a different input -- the rstest grid in lib.rs covers
+      # both parts over *both* examples, so either can be used here as-is.
+      #
+      # The cost of this particular choice, stated rather than hidden: part
+      # one's example has no spelled-out digits, so both parts answer 142 and
+      # the two assertions cannot tell each other apart -- a track that ran
+      # part one twice would pass this cell. Swapping to part two's seven
+      # lines (209 and 281, also pinned by that grid) buys that back if it
+      # ever matters more than showing the number the statement is known for.
+      #
+      # `just` is not on a stock runner, so the swift-demo recipe's steps are
+      # spelled out here rather than invoked — same as the python and dart
+      # cells. Branches without the worked track skip cleanly.
+      #
+      # This track fetches nothing: no pip, no pub, no pinned jar from Maven.
+      # The C API arrives through the generated header, which module.modulemap
+      # hands to clang, so the only inputs are the ones this repo built.
+      #
+      # No `swift build`/SwiftPM here on purpose. A Package.swift would want
+      # its own manifest, its own systemLibrary target and its own opinion
+      # about where the cdylib lives; `swiftc` with an -I and two -L/-rpath
+      # pairs is the same thing the recipe does, and keeping the two identical
+      # is what makes a red cell here mean something about the track rather
+      # than about a second build system.
+      - name: swift track end-to-end (2023-12-01)
+        if: matrix.track == 'swift'
+        shell: bash
+        run: |
+          if [ ! -f days/2023-12-01/swift/solve.swift ]; then
+            echo "no worked swift track on this branch — skipping"
+            exit 0
+          fi
+          (cd days && cargo build -p aoc-2023-12-01 --lib)
+          (cd days/2023-12-01 && mkdir -p include && \
+            cbindgen --config cbindgen.toml --output include/aoc_2023_12_01.h src/c_api.rs)
+          mkdir -p days/inputs
+          inputs="$(cd days/inputs && pwd)"
+          target="$(cd days/target && pwd)"
+          cd days/2023-12-01/swift
+          mkdir -p .build
+          # Mirrors the swift-demo recipe's corelibs block, and is inert here:
+          # a stock runner's Swift ships Foundation with the toolchain, so the
+          # guard is false and no flag is added. It is spelled out anyway
+          # because this step promises to be the recipe's steps, and a cell
+          # that has quietly diverged stops meaning anything about the track.
+          # In the repo's Swift devcontainer the guard is true — see
+          # .devcontainer/swift/README.md for the failure ladder, and note the
+          # -rpath pair is not redundant with -L: -L resolves the link, only
+          # -rpath resolves the load.
+          corelibs=()
+          profile="$HOME/.nix-profile"
+          if [ -d "$profile/lib/swift/linux/$(uname -m)" ]; then
+              corelibs+=(-I "$profile/lib/swift/linux/$(uname -m)")
+              corelibs+=(-Xcc "-I$profile/include")
+              corelibs+=(-L "$profile/lib/swift/linux" -L "$profile/lib")
+              corelibs+=(-Xlinker -rpath -Xlinker "$profile/lib/swift/linux")
+              corelibs+=(-Xlinker -rpath -Xlinker "$profile/lib")
+          fi
+          swiftc solve.swift -o .build/solve \
+            -I . \
+            ${corelibs[@]+"${corelibs[@]}"} \
+            -L "$target/debug" -L "$target/release" \
+            -laoc_2023_12_01 \
+            -Xlinker -rpath -Xlinker "$target/debug" \
+            -Xlinker -rpath -Xlinker "$target/release"
+          # Run the track once per statement example — this day has two, and
+          # each part's published answer belongs to a different one. A track
+          # reads one input file and prints both parts, so each run shows and
+          # asserts only the part whose example is loaded; the other number
+          # (part two scoring part one's example, and vice versa) is already
+          # pinned in Rust by test_both_parts_over_both_examples and would
+          # only be noise in this log. What this step prints is exactly the
+          # day's two published answers, byte for byte as the track does:
+          #
+          #   Part 1 🕊️(🦀): 142
+          #   Part 2 🕊️(🦀): 281
+          #
+          # The label match is byte-exact on purpose — the `Part N <emoji>(🦀)`
+          # shape is a repo-wide convention and silent drift in it is worth a
+          # red cell. This cell shares the Kotlin cell's variation-selector
+          # trap: 🕊️ is U+1F54A DOVE followed by U+FE0F VARIATION
+          # SELECTOR-16 — seven bytes, the last three invisible — and a bare
+          # 🕊 (U+1F54A alone) renders identically but will NOT match. Do not
+          # retype the label: copy it out of days/2023-12-01/swift/solve.swift.
+          assert_part() {   # <N> <published answer>
+            local part="$1" answer="$2" out
+            out="$(./.build/solve)"
+            # Shows exactly one line — this run's part — and fails the cell
+            # if the track stopped printing it.
+            echo "$out" | grep "^Part ${part} "
+            # The answer, matched loosely: true however the line is labelled.
+            echo "$out" | grep -qE "^Part ${part} .*: ${answer}$"
+            # Then the label, byte for byte (see above).
+            if ! echo "$out" | grep -qF "Part ${part} 🕊️(🦀): ${answer}"; then
+              echo "::error::part ${part}: answer is correct but the label drifted — re-sync this step with days/2023-12-01/swift/solve.swift" >&2
+              exit 1
+            fi
+          }
+          # Part one's example, part one's published answer.
+          printf '%s\n' '1abc2' 'pqr3stu8vwx' 'a1b2c3d4e5f' 'treb7uchet' \
+            > "$inputs/2023-12-01.txt"
+          assert_part 1 142
+          # Part two's example, part two's published answer.
+          printf '%s\n' 'two1nine' 'eightwothree' 'abcone2threexyz' 'xtwone3four' \
+            '4nineeightseven2' 'zoneight234' '7pqrstsixteen' \
+            > "$inputs/2023-12-01.txt"
+          assert_part 2 281
+      # Beyond the env check: on a branch that carries a worked Exercise 3
+      # (Python/cffi on 2024-12-01), prove the track end to end — cdylib
+      # with default features (no C libraries needed), header from the
+      # cbindgen this job already installs, then solve.py against the
+      # puzzle-statement example. Real inputs stay out of CI by the same
+      # rule that keeps them out of the repo (days/.gitignore); statement
+      # examples are published in the puzzle text and fair game. The six
+      # pairs answer part 1 with 11 and part 2 with 31 — the same numbers
+      # days/2024-12-01/src/lib.rs pins in test_day1_part1/test_day1_part2
+      # over the same bytes, and they differ, so the assertions can tell
+      # the parts apart. Branches without the worked track skip cleanly.
+      - name: python track end-to-end (2024-12-01)
+        if: matrix.track == 'python'
+        shell: bash
+        run: |
+          if [ ! -f days/2024-12-01/python/solve.py ]; then
+            echo "no worked python track on this branch — skipping"
+            exit 0
+          fi
+          (cd days && cargo build -p aoc-2024-12-01 --lib)
+          (cd days/2024-12-01 && mkdir -p include && \
+            cbindgen --config cbindgen.toml --output include/aoc_2024_12_01.h src/c_api.rs)
+          mkdir -p days/inputs
+          printf '3   4\n4   3\n2   5\n1   3\n3   9\n3   3\n' > days/inputs/2024-12-01.txt
+          out="$(./.venv/bin/python days/2024-12-01/python/solve.py)"
+          echo "$out"
+          echo "$out" | grep -qF 'Part 1 🐍(🦀): 11'
+          echo "$out" | grep -qF 'Part 2 🐍(🦀): 31'
+      # Beyond the env check: on a branch that carries a worked Exercise 3
+      # (Dart/dart:ffi on 2024-12-01), prove the track end to end — same
+      # input, same pinned numbers, same reasoning as the python cell above:
+      # 11 and 31 are what test_day1_part1/test_day1_part2 assert over these
+      # exact bytes, and they differ, so the assertions can tell the parts
+      # apart. Branches without the worked track skip cleanly.
+      - name: dart track end-to-end (2024-12-01)
+        if: matrix.track == 'dart'
+        shell: bash
+        run: |
+          if [ ! -f days/2024-12-01/dart/solve.dart ]; then
+            echo "no worked dart track on this branch — skipping"
+            exit 0
+          fi
+          (cd days && cargo build -p aoc-2024-12-01 --lib)
+          (cd days/2024-12-01 && mkdir -p include && \
+            cbindgen --config cbindgen.toml --output include/aoc_2024_12_01.h src/c_api.rs)
+          mkdir -p days/inputs
+          printf '3   4\n4   3\n2   5\n1   3\n3   9\n3   3\n' > days/inputs/2024-12-01.txt
+          (cd days/2024-12-01/dart && dart pub get)
+          out="$(cd days/2024-12-01/dart && dart run solve.dart)"
+          echo "$out"
+          echo "$out" | grep -qF 'Part 1 🎯(🦀): 11'
+          echo "$out" | grep -qF 'Part 2 🎯(🦀): 31'
+      # Beyond the env check: on a branch that carries a worked Exercise 3
+      # (Kotlin/JNA on 2024-12-01), prove the track end to end — same input,
+      # same pinned 11/31 as the python and dart cells; the JNA jar is pinned
+      # and checksummed here exactly as the kotlin-demo recipe pins it.
+      # `just` is not on a stock runner, so the recipe's steps are spelled
+      # out here rather than invoked. The `:` classpath separator is why this
+      # step is linux/macos-shaped. Branches without the worked track skip
+      # cleanly.
+      #
+      # The label greps are byte-for-byte: ☕️ is U+2615 plus U+FE0F
+      # (VARIATION SELECTOR-16); a bare ☕ renders identically and will not
+      # match. If you change the label in kotlin/solve.kt, copy it — do not
+      # retype it.
+      - name: kotlin track end-to-end (2024-12-01)
+        if: matrix.track == 'kotlin'
+        shell: bash
+        run: |
+          if [ ! -f days/2024-12-01/kotlin/solve.kt ]; then
+            echo "no worked kotlin track on this branch — skipping"
+            exit 0
+          fi
+          jna_version=5.17.0
+          jna_sha256=b3a9408e7c51e08ef0e3bfcc08f443f6ec0f6191ba8cd7c18d53d2b22e5bdbc0
+          (cd days && cargo build -p aoc-2024-12-01 --lib)
+          (cd days/2024-12-01 && mkdir -p include && \
+            cbindgen --config cbindgen.toml --output include/aoc_2024_12_01.h src/c_api.rs)
+          mkdir -p days/inputs
+          printf '3   4\n4   3\n2   5\n1   3\n3   9\n3   3\n' > days/inputs/2024-12-01.txt
+          cd days/2024-12-01/kotlin
+          jna="jna-${jna_version}.jar"
+          curl -fsSL -o "$jna" \
+            "https://repo1.maven.org/maven2/net/java/dev/jna/jna/${jna_version}/${jna}"
+          echo "${jna_sha256}  ${jna}" | shasum -a 256 -c -
+          kotlinc solve.kt -classpath "$jna" -include-runtime -d solve.jar
+          out="$(java -cp "solve.jar:$jna" SolveKt)"
+          echo "$out"
+          echo "$out" | grep -qF 'Part 1 ☕️(🦀): 11'
+          echo "$out" | grep -qF 'Part 2 ☕️(🦀): 31'
+      # Beyond the env check: on a branch that carries a worked Exercise 3
+      # (Swift on 2024-12-01), prove the track end to end — same input, same
+      # pinned 11/31 as the other three cells. This track fetches nothing:
+      # the C API arrives through the generated header, which
+      # module.modulemap hands to clang. The corelibs block mirrors the
+      # swift-demo recipe and is inert on a stock runner (Foundation ships
+      # with the toolchain there); it is spelled out anyway because this
+      # step promises to be the recipe's steps. No SwiftPM on purpose —
+      # swiftc with -I and two -L/-rpath pairs is what the recipe does, and
+      # keeping the two identical is what makes a red cell mean something
+      # about the track. Branches without the worked track skip cleanly.
+      - name: swift track end-to-end (2024-12-01)
+        if: matrix.track == 'swift'
+        shell: bash
+        run: |
+          if [ ! -f days/2024-12-01/swift/solve.swift ]; then
+            echo "no worked swift track on this branch — skipping"
+            exit 0
+          fi
+          (cd days && cargo build -p aoc-2024-12-01 --lib)
+          (cd days/2024-12-01 && mkdir -p include && \
+            cbindgen --config cbindgen.toml --output include/aoc_2024_12_01.h src/c_api.rs)
+          mkdir -p days/inputs
+          printf '3   4\n4   3\n2   5\n1   3\n3   9\n3   3\n' > days/inputs/2024-12-01.txt
+          target="$(cd days/target && pwd)"
+          cd days/2024-12-01/swift
+          mkdir -p .build
+          corelibs=()
+          profile="$HOME/.nix-profile"
+          if [ -d "$profile/lib/swift/linux/$(uname -m)" ]; then
+              corelibs+=(-I "$profile/lib/swift/linux/$(uname -m)")
+              corelibs+=(-Xcc "-I$profile/include")
+              corelibs+=(-L "$profile/lib/swift/linux" -L "$profile/lib")
+              corelibs+=(-Xlinker -rpath -Xlinker "$profile/lib/swift/linux")
+              corelibs+=(-Xlinker -rpath -Xlinker "$profile/lib")
+          fi
+          swiftc solve.swift -o .build/solve \
+            -I . \
+            ${corelibs[@]+"${corelibs[@]}"} \
+            -L "$target/debug" -L "$target/release" \
+            -laoc_2024_12_01 \
+            -Xlinker -rpath -Xlinker "$target/debug" \
+            -Xlinker -rpath -Xlinker "$target/release"
+          out="$(./.build/solve)"
+          echo "$out"
+          echo "$out" | grep -qF 'Part 1 🕊️(🦀): 11'
+          echo "$out" | grep -qF 'Part 2 🕊️(🦀): 31'
+      # Beyond the env check: on a branch that carries a worked Exercise 3
+      # (Python/cffi on 2024-12-03), prove the track end to end — cdylib,
+      # header from the cbindgen this job already installs, then solve.py
+      # against part TWO's statement example: the one whose two answers
+      # differ (161/48), so the assertions can tell the parts apart. Both
+      # numbers are pinned in days/2024-12-03/src/lib.rs by
+      # test_part1_over_both_examples/test_part2_over_both_examples over
+      # these exact bytes — for both parsers, nom and the byte cursor the
+      # C API is built on. Real inputs stay out of CI by the same rule that
+      # keeps them out of the repo; statement examples are published in the
+      # puzzle text and fair game. Branches without the worked track skip
+      # cleanly.
+      - name: python track end-to-end (2024-12-03)
+        if: matrix.track == 'python'
+        shell: bash
+        run: |
+          if [ ! -f days/2024-12-03/python/solve.py ]; then
+            echo "no worked python track on this branch — skipping"
+            exit 0
+          fi
+          (cd days && cargo build -p aoc-2024-12-03 --lib)
+          (cd days/2024-12-03 && mkdir -p include && \
+            cbindgen --config cbindgen.toml --output include/aoc_2024_12_03.h src/c_api.rs)
+          mkdir -p days/inputs
+          printf "xmul(2,4)&mul[3,7]!^don't()_mul(5,5)+mul(32,64](mul(11,8)undo()?mul(8,5))" \
+            > days/inputs/2024-12-03.txt
+          out="$(./.venv/bin/python days/2024-12-03/python/solve.py)"
+          echo "$out"
+          echo "$out" | grep -qF 'Part 1 🐍(🦀): 161'
+          echo "$out" | grep -qF 'Part 2 🐍(🦀): 48'
+      # Beyond the env check: on a branch that carries a worked Exercise 3
+      # (Dart/dart:ffi on 2024-12-03), prove the track end to end — same
+      # input, same pinned 161/48, same reasoning as the python cell above.
+      # Branches without the worked track skip cleanly.
+      - name: dart track end-to-end (2024-12-03)
+        if: matrix.track == 'dart'
+        shell: bash
+        run: |
+          if [ ! -f days/2024-12-03/dart/solve.dart ]; then
+            echo "no worked dart track on this branch — skipping"
+            exit 0
+          fi
+          (cd days && cargo build -p aoc-2024-12-03 --lib)
+          (cd days/2024-12-03 && mkdir -p include && \
+            cbindgen --config cbindgen.toml --output include/aoc_2024_12_03.h src/c_api.rs)
+          mkdir -p days/inputs
+          printf "xmul(2,4)&mul[3,7]!^don't()_mul(5,5)+mul(32,64](mul(11,8)undo()?mul(8,5))" \
+            > days/inputs/2024-12-03.txt
+          (cd days/2024-12-03/dart && dart pub get)
+          out="$(cd days/2024-12-03/dart && dart run solve.dart)"
+          echo "$out"
+          echo "$out" | grep -qF 'Part 1 🎯(🦀): 161'
+          echo "$out" | grep -qF 'Part 2 🎯(🦀): 48'
+      # Beyond the env check: on a branch that carries a worked Exercise 3
+      # (Kotlin/JNA on 2024-12-03), prove the track end to end — same input,
+      # same pinned 161/48; the JNA jar is pinned and checksummed exactly as
+      # the kotlin-demo recipe pins it, and the `:` classpath separator is
+      # why this step is linux/macos-shaped. The label greps are
+      # byte-for-byte (☕️ is U+2615 U+FE0F — copy it, do not retype it).
+      # Branches without the worked track skip cleanly.
+      - name: kotlin track end-to-end (2024-12-03)
+        if: matrix.track == 'kotlin'
+        shell: bash
+        run: |
+          if [ ! -f days/2024-12-03/kotlin/solve.kt ]; then
+            echo "no worked kotlin track on this branch — skipping"
+            exit 0
+          fi
+          jna_version=5.17.0
+          jna_sha256=b3a9408e7c51e08ef0e3bfcc08f443f6ec0f6191ba8cd7c18d53d2b22e5bdbc0
+          (cd days && cargo build -p aoc-2024-12-03 --lib)
+          (cd days/2024-12-03 && mkdir -p include && \
+            cbindgen --config cbindgen.toml --output include/aoc_2024_12_03.h src/c_api.rs)
+          mkdir -p days/inputs
+          printf "xmul(2,4)&mul[3,7]!^don't()_mul(5,5)+mul(32,64](mul(11,8)undo()?mul(8,5))" \
+            > days/inputs/2024-12-03.txt
+          cd days/2024-12-03/kotlin
+          jna="jna-${jna_version}.jar"
+          curl -fsSL -o "$jna" \
+            "https://repo1.maven.org/maven2/net/java/dev/jna/jna/${jna_version}/${jna}"
+          echo "${jna_sha256}  ${jna}" | shasum -a 256 -c -
+          kotlinc solve.kt -classpath "$jna" -include-runtime -d solve.jar
+          out="$(java -cp "solve.jar:$jna" SolveKt)"
+          echo "$out"
+          echo "$out" | grep -qF 'Part 1 ☕️(🦀): 161'
+          echo "$out" | grep -qF 'Part 2 ☕️(🦀): 48'
+      # Beyond the env check: on a branch that carries a worked Exercise 3
+      # (Swift on 2024-12-03), prove the track end to end — same input, same
+      # pinned 161/48. This track fetches nothing: the C API arrives through
+      # the generated header, which module.modulemap hands to clang. The
+      # corelibs block mirrors the swift-demo recipe and is inert on a stock
+      # runner; it is spelled out anyway because this step promises to be
+      # the recipe's steps. No SwiftPM on purpose — keeping this identical
+      # to the recipe is what makes a red cell mean something about the
+      # track. Branches without the worked track skip cleanly.
+      - name: swift track end-to-end (2024-12-03)
+        if: matrix.track == 'swift'
+        shell: bash
+        run: |
+          if [ ! -f days/2024-12-03/swift/solve.swift ]; then
+            echo "no worked swift track on this branch — skipping"
+            exit 0
+          fi
+          (cd days && cargo build -p aoc-2024-12-03 --lib)
+          (cd days/2024-12-03 && mkdir -p include && \
+            cbindgen --config cbindgen.toml --output include/aoc_2024_12_03.h src/c_api.rs)
+          mkdir -p days/inputs
+          printf "xmul(2,4)&mul[3,7]!^don't()_mul(5,5)+mul(32,64](mul(11,8)undo()?mul(8,5))" \
+            > days/inputs/2024-12-03.txt
+          target="$(cd days/target && pwd)"
+          cd days/2024-12-03/swift
+          mkdir -p .build
+          corelibs=()
+          profile="$HOME/.nix-profile"
+          if [ -d "$profile/lib/swift/linux/$(uname -m)" ]; then
+              corelibs+=(-I "$profile/lib/swift/linux/$(uname -m)")
+              corelibs+=(-Xcc "-I$profile/include")
+              corelibs+=(-L "$profile/lib/swift/linux" -L "$profile/lib")
+              corelibs+=(-Xlinker -rpath -Xlinker "$profile/lib/swift/linux")
+              corelibs+=(-Xlinker -rpath -Xlinker "$profile/lib")
+          fi
+          swiftc solve.swift -o .build/solve \
+            -I . \
+            ${corelibs[@]+"${corelibs[@]}"} \
+            -L "$target/debug" -L "$target/release" \
+            -laoc_2024_12_03 \
+            -Xlinker -rpath -Xlinker "$target/debug" \
+            -Xlinker -rpath -Xlinker "$target/release"
+          out="$(./.build/solve)"
+          echo "$out"
+          echo "$out" | grep -qF 'Part 1 🕊️(🦀): 161'
+          echo "$out" | grep -qF 'Part 2 🕊️(🦀): 48'

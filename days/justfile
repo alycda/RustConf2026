@@ -18,6 +18,221 @@ test day:
 run day:
     cd {{day}} && cargo run
 
+# criterion benchmarks, where a day has them — a bonus, and not every day
+# carries one. `cargo test` skips bench targets, so what keeps these from
+# rotting is the clippy gate in `verify`: --all-targets compiles and lints a
+# bench without running it. Timings only ever come from here.
+#
+# criterion's own flags go on the end — `just days bench 2023-12-01
+# --save-baseline pure-rust`, then `--baseline pure-rust` to compare a later
+# run against it. `--bench day` is what lets them through: it skips the
+# libtest bench targets cargo generates for the lib and the bin, which
+# reject any flag they do not recognise.
+#
+# `--bench day` is also the reason this recipe takes no --features: a day
+# whose second bench races a C library against plain Rust declares
+# required-features on that target, and cargo skips it here rather than
+# failing. Run those directly, e.g.
+# `cargo bench -p aoc-<day> --bench <subject> --features <lib>`.
+bench day *args:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -f "{{day}}/benches/day.rs" ]; then
+        echo "days/{{day}} has no benchmark — not every day carries one" >&2
+        exit 1
+    fi
+    cd "{{day}}" && cargo bench --bench day -- {{args}}
+
+# cbindgen header for a day's C-callable surface (Exercise 2), where a day
+# has one — a bonus, and not every day carries one. Not committed (see
+# days/.gitignore): cbindgen is required workshop tooling, so this is
+# always a `just` call away instead of a file to keep in sync by hand.
+# Exercise 3 tracks regenerate it the same way before building against it.
+bindgen day:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -f "{{day}}/cbindgen.toml" ]; then
+        echo "days/{{day}} has no cbindgen.toml — not every day carries a C API." >&2
+        echo "To give it one (Exercise 2's shape): copy days/2023-12-01/cbindgen.toml," >&2
+        echo "add a src/c_api.rs, and set crate-type = [\"rlib\", \"cdylib\"] in Cargo.toml." >&2
+        exit 1
+    fi
+    ident="$(printf '%s' "{{day}}" | tr - _)"
+    cd "{{day}}"
+    mkdir -p include
+    # src/c_api.rs, not the crate dir: a day that also *imports* a C library
+    # keeps those `extern "C"` declarations in their own module, and cbindgen
+    # pointed at the crate root would walk them too and redeclare somebody
+    # else's API inside our header. Aiming it at the one file that defines
+    # the export surface is what keeps the header to this day's own
+    # functions — including on days that have no such module yet.
+    cbindgen --config cbindgen.toml --output "include/aoc_${ident}.h" src/c_api.rs
+    echo "wrote {{day}}/include/aoc_${ident}.h"
+
+# Exercise 3 (Python/cffi track): call a day's cbindgen C API from Python.
+# `just setup-python` once (repo-local .venv) first. Depends on `bindgen`
+# rather than duplicating its cbindgen invocation — same bonus convention
+# as `bench`/`bindgen` otherwise.
+python-demo day: (bindgen day)
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -f "{{day}}/python/solve.py" ]; then
+        echo "days/{{day}} has no python/solve.py — not every day carries one" >&2
+        exit 1
+    fi
+    cd "{{day}}" && cargo build --lib
+    cd ..
+    # Prefer the repo-local venv even when it isn't activated — same
+    # reasoning as scripts/self-check.sh's probe_python.
+    py="$(pwd)/../.venv/bin/python"
+    [ -x "$py" ] || py=python3
+    "$py" "{{day}}/python/solve.py"
+
+
+# Exercise 3 (Dart/dart:ffi track): call a day's cbindgen C API from Dart.
+# `just setup-dart` once first. Depends on `bindgen` rather than
+# duplicating its cbindgen invocation — the header isn't actually parsed
+# (dart:ffi needs signatures written as Dart types, see the day's
+# dart/solve.dart), but regenerating it keeps it available for eyeballing
+# alongside the hand-transcribed ones.
+dart-demo day: (bindgen day)
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -f "{{day}}/dart/solve.dart" ]; then
+        echo "days/{{day}} has no dart/solve.dart — not every day carries one" >&2
+        exit 1
+    fi
+    cd "{{day}}" && cargo build --lib
+    cd dart
+    dart pub get
+    dart run solve.dart
+
+
+
+# Exercise 3 (Kotlin/JNA track): call a day's cbindgen C API from Kotlin.
+# `just setup-kotlin` once first (JDK 17+ and kotlinc — what `just check`
+# probes). Depends on `bindgen` rather than duplicating its cbindgen
+# invocation — the header isn't actually parsed (JNA needs the signatures
+# written as Kotlin methods, see the day's kotlin/solve.kt), but
+# regenerating it keeps it available for eyeballing alongside the
+# hand-transcribed ones.
+#
+# JNA is the track's one dependency and there is no `pip`/`dart pub` here to
+# fetch it, so it comes straight from Maven Central — pinned and checksummed,
+# because an unpinned jar downloaded over the network and then executed is a
+# different kind of thing from a pinned one. Cached next to the script after
+# the first run; *.jar is gitignored repo-wide.
+kotlin-demo day: (bindgen day)
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -f "{{day}}/kotlin/solve.kt" ]; then
+        echo "days/{{day}} has no kotlin/solve.kt — not every day carries one" >&2
+        exit 1
+    fi
+    jna_version=5.17.0
+    jna_sha256=b3a9408e7c51e08ef0e3bfcc08f443f6ec0f6191ba8cd7c18d53d2b22e5bdbc0
+    cd "{{day}}" && cargo build --lib
+    cd kotlin
+    jna="jna-${jna_version}.jar"
+    if [ ! -f "$jna" ]; then
+        echo "fetching $jna from Maven Central"
+        curl -fsSL -o "$jna.tmp" \
+            "https://repo1.maven.org/maven2/net/java/dev/jna/jna/${jna_version}/${jna}"
+        # Verified before it is moved into place, so an interrupted or
+        # tampered download never becomes a cached jar that later runs.
+        echo "${jna_sha256}  ${jna}.tmp" | shasum -a 256 -c - >/dev/null
+        mv "$jna.tmp" "$jna"
+    fi
+    # -include-runtime bundles the Kotlin stdlib, so the result runs under
+    # plain `java` — which is exactly what scripts/self-check.sh guarantees
+    # for this track (kotlinc + a runnable java, nothing else).
+    kotlinc solve.kt -classpath "$jna" -include-runtime -d solve.jar
+    java -cp "solve.jar:$jna" SolveKt
+
+
+# Exercise 3 (Swift track): call a day's cbindgen C API from Swift.
+# `just setup-swift` once first (the Xcode CLT on macOS, swift.org on Linux —
+# what `just check` probes). Depends on `bindgen` rather than duplicating its
+# cbindgen invocation, and here the dependency is real: swift/module.modulemap
+# names the generated header, and clang has to be able to open it before
+# `import AocDay` means anything.
+#
+# No package manager, no jar to fetch, nothing pinned — the C API arrives
+# through the header, which is the point of this track.
+#
+# The two -L/-rpath pairs are the compiled-language shape of what the other
+# three tracks do at runtime: python/dart/kotlin `dlopen` a path they compute
+# by looking for debug then release, and Swift asks the linker instead. Both
+# are passed unconditionally; a directory that doesn't exist costs nothing,
+# and debug comes first for the same reason it does in those scripts. -rpath
+# takes absolute paths on purpose — the portable spelling of "next to me"
+# differs between platforms ($ORIGIN vs @loader_path) and this is a
+# development recipe, not something being shipped anywhere.
+swift-demo day: (bindgen day)
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -f "{{day}}/swift/solve.swift" ]; then
+        echo "days/{{day}} has no swift/solve.swift — not every day carries one" >&2
+        exit 1
+    fi
+    cd "{{day}}" && cargo build --lib
+    target="$(cd ../target && pwd)"
+    cd swift
+    # .build/ is Swift's own name for build output and is already ignored
+    # repo-wide; a bare `solve` beside solve.swift matches no rule in either
+    # .gitignore and would be committed. solve.swift locates itself relative
+    # to the executable, so it knows to look one level further up.
+    mkdir -p .build
+    # Where Foundation lives, when it does not live with the compiler.
+    #
+    # `solve.swift` imports Foundation, and on macOS or a swift.org toolchain
+    # that needs no flags at all — Foundation ships with Swift. In the
+    # repo's Swift devcontainer it does not: nixpkgs packages corelibs
+    # separately, home-manager installs them into the *user profile*, and
+    # `swiftc` searches only its own toolchain path. Bare, it fails with
+    # `no such module 'Foundation'`.
+    #
+    # Three directories, because one package spreads across three and the
+    # error message names the same module every time (the failure ladder is
+    # written up in .devcontainer/swift/README.md):
+    #   lib/swift/linux/<arch>  the Swift modules  (-I)      "no such module"
+    #   include                 the clang module maps (-Xcc) "missing required
+    #                                                         modules"
+    #   lib/swift/linux         libFoundation.so   (-L)      "cannot find -lFoundation"
+    #   lib                     libdispatch.so etc (-L)
+    #
+    # Added only when that layout is actually present, so a nix-shell (whose
+    # setup hooks already put corelibs on the search path) and a Mac are both
+    # unaffected. If this rots, the devcontainer README's own advice is the
+    # sturdier route: build through nixpkgs' Swift stdenv adapter or swiftpm,
+    # which wire these paths themselves rather than having a caller name them.
+    # The -rpath pair is not redundant with the -L pair, and finding that out
+    # cost a second debugging round. Built *outside* a nix-shell, the linker
+    # promotes these -L directories to RUNPATH by itself and the binary runs.
+    # Built inside one — which is how this recipe always runs — it does not:
+    # the profile paths are symlink farms rather than store paths, they are
+    # dropped from RUNPATH, and the binary links clean and then dies at
+    # startup with `libBlocksRuntime.so: cannot open shared object file`.
+    # Compiling, linking and *loading* are three separate searches; -L answers
+    # the second and only -rpath answers the third.
+    corelibs=()
+    profile="$HOME/.nix-profile"
+    if [ -d "$profile/lib/swift/linux/$(uname -m)" ]; then
+        corelibs+=(-I "$profile/lib/swift/linux/$(uname -m)")
+        corelibs+=(-Xcc "-I$profile/include")
+        corelibs+=(-L "$profile/lib/swift/linux" -L "$profile/lib")
+        corelibs+=(-Xlinker -rpath -Xlinker "$profile/lib/swift/linux")
+        corelibs+=(-Xlinker -rpath -Xlinker "$profile/lib")
+    fi
+    swiftc solve.swift -o .build/solve \
+        -I . \
+        ${corelibs[@]+"${corelibs[@]}"} \
+        -L "$target/debug" -L "$target/release" \
+        -l"aoc_$(printf '%s' "{{day}}" | tr - _)" \
+        -Xlinker -rpath -Xlinker "$target/debug" \
+        -Xlinker -rpath -Xlinker "$target/release"
+    ./.build/solve
+
 # scaffold a new day from _template, e.g. `just new 2022-12-01`
 new day:
     #!/usr/bin/env bash

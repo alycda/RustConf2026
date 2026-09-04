@@ -8,10 +8,7 @@ exists. If you arrive having read none of it, you are not behind.
 This chapter in particular is a record of things going wrong, written after
 they went wrong. Reading it first will not stop them happening to you, and it
 is not meant to. Take it now if that is how you prepare, or leave it and come
-back when something breaks and you want the diagnosis. It is also published
-ahead of the code it describes: the language tracks it draws on live on
-reference branches until they merge, so some of what follows refers to
-material that is not on `main` yet.
+back when something breaks and you want the diagnosis.
 
 > Every error in this chapter is one we hit, in the order we hit it. None of
 > them are here as warnings to help you avoid them. They're here because

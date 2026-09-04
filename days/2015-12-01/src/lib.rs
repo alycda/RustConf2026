@@ -4,6 +4,12 @@ use std::str::FromStr;
 
 use aoc_ornaments::Solution;
 
+pub mod c_api;
+#[cfg(feature = "caca")]
+pub mod caca;
+#[cfg(feature = "tcc")]
+mod tcc;
+
 /// A collection of instructions to move between floors.
 #[derive(Debug, derive_more::Deref)]
 pub struct Day(Vec<i32>);
@@ -32,31 +38,103 @@ impl FromStr for Day {
     }
 }
 
+/// Renders instructions as a C array literal, e.g. `1, -1, 1`.
+#[cfg(feature = "tcc")]
+fn floors_as_c_array(floors: &[i32]) -> String {
+    floors
+        .iter()
+        .map(i32::to_string)
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+/// Sums the instructions in plain Rust. Kept alongside [`sum_via_c`] — its
+/// JIT-compiled-C equivalent — so `benches/sum.rs` can compare the two.
+pub fn sum_pure_rust(floors: &[i32]) -> i32 {
+    floors.iter().sum()
+}
+
+/// Sums the instructions by JIT-compiling a C function with libtcc and
+/// calling it over FFI. See [`tcc`] and [`sum_pure_rust`].
+#[cfg(feature = "tcc")]
+pub fn sum_via_c(floors: &[i32]) -> miette::Result<i32> {
+    let source = format!(
+        "int solve(void) {{
+            static const int floors[] = {{ {floors} }};
+            int total = 0;
+            for (unsigned i = 0; i < sizeof(floors) / sizeof(floors[0]); i++) {{
+                total += floors[i];
+            }}
+            return total;
+        }}",
+        floors = floors_as_c_array(floors)
+    );
+
+    tcc::call_i32_fn(&source, "solve")
+}
+
+/// Finds the 1-based position of the first instruction that causes Santa to
+/// enter the basement, in plain Rust. Kept alongside [`basement_position_via_c`]
+/// so `benches/sum.rs` can compare the two.
+pub fn basement_position_pure_rust(floors: &[i32]) -> Option<i32> {
+    floors
+        .iter()
+        .scan(0, |floor, &x| {
+            *floor += x;
+            Some(*floor)
+        })
+        .position(|floor| floor < 0)
+        .map(|pos| pos as i32 + 1)
+}
+
+/// Finds the basement-entering position via a JIT-compiled C function. See
+/// [`tcc`] and [`basement_position_pure_rust`].
+#[cfg(feature = "tcc")]
+pub fn basement_position_via_c(floors: &[i32]) -> miette::Result<Option<i32>> {
+    let source = format!(
+        "int solve(void) {{
+            static const int floors[] = {{ {floors} }};
+            int total = 0;
+            for (unsigned i = 0; i < sizeof(floors) / sizeof(floors[0]); i++) {{
+                total += floors[i];
+                if (total < 0) return (int) i + 1;
+            }}
+            return -1;
+        }}",
+        floors = floors_as_c_array(floors)
+    );
+
+    match tcc::call_i32_fn(&source, "solve")? {
+        -1 => Ok(None),
+        position => Ok(Some(position)),
+    }
+}
+
 impl Solution for Day {
     type Output = i32;
 
-    /// Find the floor Santa ends up on.
+    /// Find the floor Santa ends up on — through the JIT when the `tcc`
+    /// feature is on (see [`sum_via_c`]), in plain Rust otherwise.
     fn part1(&mut self) -> miette::Result<Self::Output> {
-        Ok(self.iter().sum())
+        #[cfg(feature = "tcc")]
+        {
+            sum_via_c(&self.0)
+        }
+        #[cfg(not(feature = "tcc"))]
+        {
+            Ok(sum_pure_rust(&self.0))
+        }
     }
 
-    /// Find the position of the first instruction that causes Santa to enter the basement.
+    /// Find the position of the first instruction that causes Santa to enter
+    /// the basement — same feature switch as `part1`.
     fn part2(&mut self) -> miette::Result<Self::Output> {
-        let output = self
-            .iter()
-            // iterate over the instructions maintaining state (sum of floors)
-            .scan(0, |floor, &x| {
-                *floor += x;
-                Some(*floor)
-            })
-            // find the first position where Santa enters the basement
-            .position(|floor| floor < 0)
-            // convert the position to a 1-based index
-            .map(|pos| pos as i32 + 1)
-            // convert to Result
-            .ok_or_else(|| miette::miette!("Santa never enters the basement"))?;
+        #[cfg(feature = "tcc")]
+        let position = basement_position_via_c(&self.0)?;
+        #[cfg(not(feature = "tcc"))]
+        let position = basement_position_pure_rust(&self.0);
 
-        Ok(output)
+        position.ok_or_else(|| miette::miette!("🦀 Santa never enters the basement"))
     }
 }
 
