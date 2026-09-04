@@ -106,3 +106,48 @@ jobs:
       # cargo re-resolve and it would quietly pick versions 1.85 can build,
       # proving something no attendee's checkout will reproduce.
       - run: cargo check --workspace --all-targets --locked
+
+  # The jobs above prove the days build *bare* — a linking C compiler, no
+  # system library — which is the property the feature gates exist to
+  # protect. That proof is worth nothing on its own, though: a feature no
+  # job ever turns on is a feature no job can catch a break in, and the
+  # bindings behind those gates are `unsafe extern "C"` declarations that
+  # nothing type-checks against the headers they were transcribed from. So
+  # the gates get tested from both sides, and this is the cheap side.
+  #
+  # Only 2024-12-01, deliberately: its three variants need nothing a stock
+  # runner lacks. qsort is libc; cpp is one .cpp file the cc crate compiles
+  # with the runner's C++ compiler; uthash is a header-only library — one
+  # distro package on linux, one brew formula on macos, and CFLAGS carries
+  # the brew include path because the cc crate does not look under
+  # /opt/homebrew on its own. Both OSes, because the workshop's subject is
+  # linking and macos is where the attendees are. The days that link real
+  # libraries through pkg-config need the nix shell — that is the next job.
+  c-features:
+    name: C features (2024-12-01) / ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: days
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends uthash-dev
+      - if: runner.os == 'macOS'
+        run: |
+          brew install uthash
+          echo "CFLAGS=-I$(brew --prefix)/include" >> "$GITHUB_ENV"
+      # The feature-gated tests assert the published answers *and* that each
+      # C-backed answer equals the pure-Rust one — the actual claim every
+      # variant makes. --all-targets on clippy so the bindings and the
+      # feature-gated benches are linted, not just compiled.
+      - run: cargo test -p aoc-2024-12-01 --all-features --locked
+      - run: cargo clippy -p aoc-2024-12-01 --all-features --all-targets --locked -- -D warnings
