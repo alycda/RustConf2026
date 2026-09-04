@@ -14,6 +14,8 @@ use std::str::FromStr;
 
 use aoc_ornaments::{Solution, SolutionResult};
 
+pub mod c_api;
+
 /// Lights per side. Coordinates run 0..=999 in both axes.
 pub const GRID: usize = 1000;
 
