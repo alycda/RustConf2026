@@ -1,6 +1,8 @@
-// Copy of ../git/devcontainer.json plus a name and the WORKSHOP_HOME_NIX
+// Copy of ../git/devcontainer.json plus a name, the WORKSHOP_HOME_NIX
 // override pointing at ./home.nix (which imports the shared ../home.nix and
-// adds jujutsu). devcontainer.json has no "extends" — keep in sync by hand.
+// adds jujutsu), and the two jj identity secrets below — those are jj-only, so
+// they do not belong in the base copy. devcontainer.json has no "extends" —
+// keep the rest in sync by hand.
 {
     "name": "FFI playground (jj)",
     "image": "debian:bookworm-slim",
@@ -15,6 +17,25 @@
     "secrets": {
         "ANTHROPIC_API_KEY": {
             "description": "Claude session key from Claude Console (for Claude Code CLI)"
+        },
+        // jj is the one tool here that needs an identity handed to it. VS Code
+        // copies the host ~/.gitconfig into the container and forwards the
+        // host credential helper and ssh-agent, which is why `git` — and
+        // `jj git push`, which spawns `git` for every remote operation — need
+        // no setup. But jj reads NEITHER the copied gitconfig nor any of it
+        // for authorship: user.name/user.email come from jj's own config only,
+        // so an unconfigured container commits with an empty identity.
+        //
+        // jj reads these two variables natively (cli/src/config.rs,
+        // env_overrides_layer), so nothing has to write a config file for
+        // them: the prompt is the whole mechanism, exactly like the key above.
+        // Leave them blank to work anonymously; ./home.nix drops the empties
+        // so a later `jj config set --user` still takes effect.
+        "JJ_USER": {
+            "description": "jj author name, e.g. Ada Lovelace (sets user.name; blank to skip)"
+        },
+        "JJ_EMAIL": {
+            "description": "jj author email (sets user.email; blank to skip)"
         }
     },
     "containerEnv": {

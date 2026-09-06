@@ -54,10 +54,10 @@ worth knowing:
   outside the container against the same directory, or use `hx`, which
   home-manager installs inside it.
 
-### The API key
+### Secrets
 
-The `ANTHROPIC_API_KEY` secret is prompted for by VS Code. The CLI takes a file
-instead:
+Every variant declares `ANTHROPIC_API_KEY`. VS Code prompts for it when it
+creates the container; the CLI takes a file instead:
 
 ```sh
 echo '{"ANTHROPIC_API_KEY":"sk-..."}' > /tmp/dc-secrets.json
@@ -68,6 +68,29 @@ devcontainer up --workspace-folder . \
 
 Skip it if you are not using Claude Code in the container; the variable is
 simply unset and nothing else cares.
+
+The `jj` variant declares two more — `JJ_USER` and `JJ_EMAIL`, which jj reads
+natively as overrides for `user.name` and `user.email`:
+
+```sh
+echo '{"ANTHROPIC_API_KEY":"sk-...","JJ_USER":"Ada Lovelace","JJ_EMAIL":"ada@example.com"}' \
+  > /tmp/dc-secrets.json
+```
+
+Why jj needs telling and git does not: under VS Code the Dev Containers
+extension [copies your host `~/.gitconfig` into the container and forwards your
+credential helper and ssh-agent](https://code.visualstudio.com/remote/advancedcontainers/sharing-git-credentials),
+so git arrives configured and authenticated, and `jj git push` — which spawns
+`git` for every remote operation — inherits that. Authorship is the one thing
+that does not carry over: jj takes `user.name` / `user.email` from its own
+config and never from gitconfig, so an untold container commits with an empty
+identity. These two variables tell it, with no config file to write or persist.
+
+Leaving them blank is fine if you only read history; `jj/home.nix` drops the
+empty values so a later `jj config set --user user.name ...` still takes
+effect. Under the CLI door none of the VS Code forwarding happens, so a push
+also needs a credential helper you set up yourself (or an SSH remote and a
+forwarded agent) — the workshop itself never pushes.
 
 ## Why not just `docker run`?
 
