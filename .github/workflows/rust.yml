@@ -177,6 +177,13 @@ jobs:
   # files shell.nix synthesizes (chipmunk, duckdb), tinycc's shared
   # libtcc, uthash on the cc include path, all of it.
   #
+  # `--arg full true` on every invocation below is load-bearing: the default
+  # shell is the workshop's five required tools and nothing else, so that
+  # attendees cloning on venue Wi-Fi don't download nine C libraries they
+  # never link. This job is the reason the full list still exists, and the
+  # only thing standing between it and silent rot. Drop the flag and the
+  # pkg-config roll call is the step that tells you, in one line.
+  #
   # Linux only. shell.nix reads <nixpkgs> unpinned; nixpkgs-unstable is
   # the nix installer's default channel, which the devcontainer's nix
   # feature leaves in place (setup.sh adds home-manager and touches no
@@ -200,13 +207,13 @@ jobs:
       # missing this names it in one line, instead of a build-script
       # panic buried under a compile.
       - run: |
-          nix-shell ../shell.nix --run \
+          nix-shell ../shell.nix --arg full true --run \
             'pkg-config --modversion caca libtcc libhs icu-i18n icu-uc chipmunk duckdb yara espeak-ng'
       # --all-features across the workspace: every feature-gated test runs,
       # including the ones asserting the C answer equals the pure-Rust one.
       # rustc, cargo and clippy are the shell's, not rustup's — that is the
       # point, and shell.nix carries clippy for exactly this reason.
-      - run: nix-shell ../shell.nix --run 'cargo test --workspace --all-features --locked'
+      - run: nix-shell ../shell.nix --arg full true --run 'cargo test --workspace --all-features --locked'
       - run: |
-          nix-shell ../shell.nix --run \
+          nix-shell ../shell.nix --arg full true --run \
             'cargo clippy --workspace --all-features --all-targets --locked -- -D warnings'

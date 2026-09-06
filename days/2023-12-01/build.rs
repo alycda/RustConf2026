@@ -5,7 +5,10 @@
 //
 // nixpkgs ships yara.pc and espeak-ng.pc, so unlike 2021-12-02's chipmunk and
 // duckdb there is nothing for shell.nix to synthesize; the loop below is the
-// same three lines every C variant in this repo uses.
+// same three lines every C variant in this repo uses. Both packages live in
+// shell.nix's `full` list — the shell attendees get by default carries
+// neither, because nothing they run needs them; `nix-shell --arg full true`
+// is the one that does.
 //
 // Each library is probed only when its cargo feature is enabled (cargo exposes
 // enabled features to build scripts as CARGO_FEATURE_* env vars), so the
@@ -79,7 +82,8 @@ fn pkg_config(args: &[&str]) -> String {
     if !output.status.success() {
         panic!(
             "pkg-config could not find {name}.pc ({}). Run inside the project's nix shell \
-             (see shell.nix), which provides it.",
+             with the C libraries — `nix-shell --arg full true` (see shell.nix), which \
+             provides it.",
             String::from_utf8_lossy(&output.stderr).trim()
         );
     }

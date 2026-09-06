@@ -4,7 +4,9 @@
 // `icu` packages ship libhs.pc / icu-i18n.pc / icu-uc.pc, and the dev
 // shell's `pkg-config` setup hook points pkg-config at them automatically,
 // so `pkg-config --cflags/--libs <name>` is enough without hardcoding any
-// nix store path here.
+// nix store path here. Both packages live in shell.nix's `full` list — the
+// shell attendees get by default carries neither, because nothing they run
+// needs them; `nix-shell --arg full true` is the one that does.
 //
 // Each library is probed only when its cargo feature is enabled (cargo
 // exposes enabled features to build scripts as CARGO_FEATURE_* env vars,
@@ -22,8 +24,9 @@ fn pkg_config(args: &[&str]) -> String {
 
     if !output.status.success() {
         panic!(
-            "pkg-config {args:?} failed ({}). Run inside the project's nix shell (see \
-             shell.nix), which provides the `vectorscan` and `icu` packages.",
+            "pkg-config {args:?} failed ({}). Run inside the project's nix shell with the C \
+             libraries — `nix-shell --arg full true` (see shell.nix), which provides the \
+             `vectorscan` and `icu` packages.",
             String::from_utf8_lossy(&output.stderr).trim()
         );
     }

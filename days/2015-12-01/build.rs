@@ -4,7 +4,9 @@
 // `tinycc` packages ship caca.pc and libtcc.pc, and the dev shell's
 // `pkg-config` setup hook points pkg-config at them automatically, so
 // `pkg-config --libs <name>` is enough without hardcoding any nix store
-// path here.
+// path here. Both packages live in shell.nix's `full` list — the shell
+// attendees get by default carries neither, because nothing they run needs
+// them; `nix-shell --arg full true` is the one that does.
 //
 // Each library is probed only when its cargo feature is enabled (cargo
 // exposes enabled features to build scripts as CARGO_FEATURE_* env vars),
@@ -31,7 +33,8 @@ fn main() {
         if !libs.status.success() {
             panic!(
                 "pkg-config could not find {name}.pc ({}). Run inside the project's nix shell \
-                 (see shell.nix), which provides it.",
+                 with the C libraries — `nix-shell --arg full true` (see shell.nix), which \
+                 provides it.",
                 String::from_utf8_lossy(&libs.stderr).trim()
             );
         }

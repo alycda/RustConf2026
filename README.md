@@ -32,7 +32,11 @@ curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix 
 
 (The [upstream installer](https://nixos.org/download) works too.) Then open a
 new shell, `cd` into the repo, and run `nix-shell`. The first run downloads
-the toolchain; after that it's instant. Optional but pleasant: install
+the toolchain; after that it's instant. That shell is deliberately just the
+five required tools — the C libraries a few days link behind default-off
+cargo features are a separate, much larger download you almost certainly
+don't want on venue Wi-Fi. If you do want them, it's
+`nix-shell --arg full true`. Optional but pleasant: install
 [direnv](https://direnv.net) with
 [nix-direnv](https://github.com/nix-community/nix-direnv) and run
 `direnv allow` once — that's what [`.envrc`](./.envrc) is for, and the

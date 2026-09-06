@@ -8,9 +8,11 @@
 // anything to probe: the C++ shim is this crate's own source, and nixpkgs'
 // uthash ships headers only — no .pc file and no library to link. Inside
 // the project's nix shell the cc wrapper injects the include path for
-// every buildInputs entry (shell.nix carries uthash), so the plain
-// compiles below find <uthash.h> with no flags; off nix, put it on the
-// include path via CFLAGS=-I<dir>, which the cc crate honors.
+// every buildInputs entry, so the plain compiles below find <uthash.h>
+// with no flags — but uthash is in shell.nix's `full` list, not the shell
+// attendees get by default, so that means `nix-shell --arg full true`. Off
+// nix, put it on the include path via CFLAGS=-I<dir>, which the cc crate
+// honors.
 //
 // The cc crate is deliberately a plain (not optional) build-dependency: an
 // optional one couldn't be named from this script at all when disabled —

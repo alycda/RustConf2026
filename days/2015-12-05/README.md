@@ -27,7 +27,8 @@ Five solves of the same puzzle live in this one branch (each was built and verif
 
 Both C libraries are default-off cargo features. A bare `cargo build`
 needs neither them nor `pkg-config`, which is what keeps CI and the
-manual-setup path green; the nix shell carries both. `hyperscan` is the
+manual-setup path green; `nix-shell --arg full true` carries both (the
+default shell does not — see shell.nix). `hyperscan` is the
 module and feature name, `vectorscan` the package that provides it —
 the maintained fork of Intel's Hyperscan, same API.
 

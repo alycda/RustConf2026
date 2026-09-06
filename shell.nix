@@ -1,4 +1,35 @@
-{ pkgs ? import <nixpkgs> {} }:
+# Two shells, one file.
+#
+#   nix-shell                    the workshop shell: the five required tools
+#                                (rustc, cargo, cbindgen, a C compiler, just)
+#                                plus the small conveniences around them.
+#   nix-shell --arg full true    the above plus every C library the days'
+#                                default-off cargo features link against.
+#
+# The split exists for the room. Attendees who clone on-site pay for the
+# default shell over venue Wi-Fi, and none of the C libraries below are on
+# the path through the exercises: every one of them sits behind a cargo
+# feature that is off by default, and every build.rs skips its pkg-config
+# probe unless that feature is on (days/2021-12-02/build.rs is the pattern).
+# So the download they cannot avoid stays as small as the workshop's own
+# contract — which is what scripts/self-check.sh verifies and what
+# book/src/nix.md has always advertised.
+#
+# Measured on nixpkgs-unstable, 2026-09-06, via `nix-build --dry-run`:
+# 726.5 MiB for this shell against 1.4 GiB with `--arg full true`. The
+# libraries are not a rounding error next to the Rust toolchain; they are
+# roughly the other half of the download. Most of that half is one package:
+# espeak-ng costs ~600 MiB on its own, because nixpkgs' build wants audio
+# output and so drags in libpulseaudio and most of ffmpeg — for a day that
+# only calls espeak_TextToPhonemes and friends. duckdb is a distant second
+# at ~73 MiB; every other library here is under 20 MiB. If the full shell
+# ever needs to get cheaper, an audio-less espeak-ng is the whole game.
+#
+# `--arg full true` is what .github/workflows/rust.yml's `ffi` job passes,
+# and what anyone reaching for `cargo test --all-features` wants. direnv
+# takes it too, if you'd rather have the full set load on `cd`: change
+# .envrc's `use nix` to `use nix --arg full true`.
+{ pkgs ? import <nixpkgs> {}, full ? false }:
 
 let
   # The jj devcontainer exports WORKSHOP_HOME_NIX=<...>/.devcontainer/jj/home.nix
@@ -34,7 +65,12 @@ let
       tags: ${p.tags}
       readonly: true
   '') cheatPaths);
-  # nixpkgs ships neither of this day's two C libraries with a pkg-config
+
+  # The two derivations below are referenced only from the `full` list, and
+  # Nix is lazy, so the default shell never evaluates them — no chipmunk or
+  # duckdb path is realised, let alone downloaded.
+  #
+  # nixpkgs ships neither of 2021-12-02's two C libraries with a pkg-config
   # file: chipmunk has include/chipmunk/*.h and lib/libchipmunk.so, duckdb has
   # include/duckdb.h and lib/libduckdb.so, and `pkg-config --libs <name>` fails
   # for both even with the packages in buildInputs.
@@ -64,9 +100,10 @@ let
     Cflags: -I${pkgs.duckdb.dev}/include
     Libs: -L${pkgs.duckdb.lib}/lib -lduckdb
   '';
-in
-pkgs.mkShell {
-  buildInputs = with pkgs; [
+
+  # The workshop shell: everything an attendee needs for Exercises 1-3, and
+  # nothing whose absence they'd only discover by opting into a feature.
+  workshop = with pkgs; [
     # required workshop toolchain (verified by `just check`); mkShell's stdenv
     # already provides the C compiler and linker. `just` is required too — it
     # is how attendees invoke everything.
@@ -81,12 +118,26 @@ pkgs.mkShell {
     # safety net: python3 for the Python track; git so pure/minimal shells
     # (and jj colocated clones) get a current git (no verification needed)
     python3 git
+    # Here rather than in `full`, despite having no consumer in this list:
+    # every C-backed day's build.rs shells out to pkg-config, and the panic
+    # naming shell.nix and the missing .pc only happens if pkg-config runs at
+    # all. Leave it out of the default shell and an attendee who flips a
+    # feature on gets "failed to run pkg-config: No such file or directory"
+    # instead of the message telling them which shell to be in.
+    pkg-config
+  ];
+
+  # The C libraries behind the days' cargo features. None of these is reachable
+  # from `just check`, the exercises, or any default `cargo build` — enabling
+  # the feature is the only way to need them, and `--arg full true` is how you
+  # get them. .github/workflows/rust.yml's `ffi` job is the CI side of that.
+  cLibraries = with pkgs; [
     # 2015-12-01 banners its answer through libcaca's FIGlet engine
     # (days/2015-12-01/src/caca.rs) and JIT-compiles a C function with
     # libtcc at runtime (days/2015-12-01/src/tcc.rs), both via FFI — no
     # system-wide installs needed, `pkg-config` picks up caca.pc and
     # libtcc.pc automatically via its setup hook.
-    libcaca tinycc pkg-config
+    libcaca tinycc
     # 2015-12-05 scans lines two ways, both via FFI: through vectorscan
     # (the maintained Hyperscan fork, days/2015-12-05/src/hyperscan.rs) and
     # through ICU's regex engine via a small C shim
@@ -116,6 +167,9 @@ pkgs.mkShell {
     # buildInputs entry, which is how that day's build.rs finds <uthash.h>.
     uthash
   ];
+in
+pkgs.mkShell {
+  buildInputs = workshop ++ pkgs.lib.optionals full cLibraries;
 
   CHEAT_CONFIG_PATH = cheatConf;
 
