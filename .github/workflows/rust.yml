@@ -202,6 +202,24 @@ jobs:
       # including the ones asserting the C answer equals the pure-Rust one.
       # rustc, cargo and clippy are the shell's, not rustup's — that is the
       # point, and shell.nix carries clippy for exactly this reason.
+      # DIAGNOSTIC (throwaway branch): the 2015-12-01 tcc tests SIGSEGV
+      # intermittently on macos-latest. Does the crash track parallelism?
+      - if: runner.os == 'macOS'
+        run: |
+          nix-shell ../shell.nix --run '
+            cargo test -p aoc-2015-12-01 --all-features --locked --no-run
+            for b in $(ls target/debug/deps/aoc_2015_12_01-* | grep -v -e "\.d$" -e dSYM); do
+              n=$($b --list 2>/dev/null | grep -c ": test$"); [ "$n" = 11 ] && bin=$b
+            done
+            echo "bin=$bin"; sysctl -n hw.ncpu
+            p=0; for i in $(seq 1 20); do $bin -q >/dev/null 2>&1 || p=$((p+1)); done
+            echo "parallel: $p/20 crashed"
+            s=0; for i in $(seq 1 20); do $bin -q --test-threads=1 >/dev/null 2>&1 || s=$((s+1)); done
+            echo "single-thread: $s/20 crashed"
+            t=0; for i in $(seq 1 20); do $bin -q --test-threads=2 >/dev/null 2>&1 || t=$((t+1)); done
+            echo "two-threads: $t/20 crashed"
+            $bin --test-threads=1 2>&1 | tail -3
+          '
       - run: nix-shell ../shell.nix --run 'cargo test --workspace --all-features --locked'
       - run: |
           nix-shell ../shell.nix --run \
