@@ -34,6 +34,43 @@ let
       tags: ${p.tags}
       readonly: true
   '') cheatPaths);
+  # nixpkgs' tinycc writes its libtcc.pc through makePkgconfigItem, which only
+  # knows how to defer `placeholder "out"`; the item uses `placeholder "lib"`
+  # and `placeholder "dev"` too, and those survive into the installed file as
+  # bare 52-character hashes: `-L/0sra2y…/lib -Wl,--rpath /0sra2y…/lib`. Linux
+  # never noticed — the cc wrapper already passes the real -L for every
+  # buildInput, and GNU ld swallows the bogus path as --rpath's argument. On
+  # macOS clang rejects the stray positional path before ld runs, so
+  # 2015-12-01's `tcc` feature cannot link. The rewritten item uses the
+  # `@lib@`/`@dev@` forms that copyPkgconfigItems' substituteAllInPlace does
+  # resolve, and drops the rpath flag: on Linux the cc wrapper adds the rpath
+  # itself, and on macOS a nix dylib is found by its absolute install name.
+  #
+  # Except libtcc.dylib's install name is `@rpath/libtcc.dylib` — tinycc
+  # skips the fixDarwinDylibNames hook the rest of nixpkgs runs, so a test
+  # binary links fine and then aborts at load with "Library not loaded".
+  # The hook is added here; it rewrites the id to the store path in fixup.
+  # Costs a ~15 s source build of tcc on either platform.
+  tinycc = pkgs.tinycc.overrideAttrs (old: {
+    nativeBuildInputs =
+      (old.nativeBuildInputs or [ ])
+      ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isDarwin [ pkgs.fixDarwinDylibNames ];
+    pkgconfigItems = [
+      (pkgs.makePkgconfigItem {
+        name = "libtcc";
+        inherit (old) version;
+        description = "Tiny C compiler backend";
+        cflags = [ "-I@dev@/include" ];
+        libs = [ "-L@lib@/lib" "-ltcc" ];
+        variables = {
+          prefix = "@out@";
+          includedir = "@dev@/include";
+          libdir = "@lib@/lib";
+        };
+      })
+    ];
+  });
+
   # nixpkgs' chipmunk declares `platforms = unix` but pulls glfw2, libglut
   # and the X11 stack into buildInputs — all of it for the `chipmunk_demos`
   # binary, none of it for libchipmunk. glfw2 is `platforms = linux`, so on
