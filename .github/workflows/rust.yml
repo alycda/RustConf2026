@@ -211,7 +211,7 @@ jobs:
           nix-shell ../shell.nix --run '
             set -x
             bin=$(cargo test --workspace --all-features --locked --no-run --message-format=json 2>/dev/null \
-              | jq -r "select(.executable != null and .target.name == \"aoc-2015-12-01\" and (.target.kind | index(\"lib\"))) | .executable")
+              | jq -r "select(.executable != null and (.target.src_path | endswith(\"2015-12-01/src/lib.rs\"))) | .executable")
             echo "bin=$bin"; sysctl -n hw.ncpu; otool -L "$bin" | grep -i -e tcc -e caca
             p=0; for i in $(seq 1 20); do "$bin" -q >/dev/null 2>&1 || p=$((p+1)); done
             echo "workspace parallel: $p/20 crashed"
@@ -220,8 +220,9 @@ jobs:
             "$bin" --test-threads=1 2>&1 | tail -5 || true
           '
           # lldb from the host Xcode, outside the nix shell so it is not shadowed
-          bin=$(cd days 2>/dev/null; ls -t target/debug/deps/aoc_2015_12_01-* | grep -v -e '\.d$' -e dSYM | head -1)
-          cd days && for i in 1 2 3; do
+          cd days && bin=$(ls -t target/debug/deps/aoc_2015_12_01-* | grep -v -e '\.d$' -e dSYM | while read b; do "$b" --list 2>/dev/null | grep -q ": test$" && echo "$b" && break; done)
+          echo "lldb bin=$bin"
+          for i in 1 2 3; do
             xcrun lldb --batch -o "run --test-threads=1" -o "bt all" -o "register read" -o "disassemble --pc --count 12" -- "$bin" 2>&1 | tail -80
           done
       - run: nix-shell ../shell.nix --run 'cargo test --workspace --all-features --locked'
