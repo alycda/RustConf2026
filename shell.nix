@@ -34,6 +34,20 @@ let
       tags: ${p.tags}
       readonly: true
   '') cheatPaths);
+  # nixpkgs' chipmunk declares `platforms = unix` but pulls glfw2, libglut
+  # and the X11 stack into buildInputs — all of it for the `chipmunk_demos`
+  # binary, none of it for libchipmunk. glfw2 is `platforms = linux`, so on
+  # aarch64-darwin the evaluator refuses the whole package, and with it the
+  # whole shell (issue #1). The override drops the demo and its inputs;
+  # Chipmunk's own CMakeLists offers BUILD_DEMOS for exactly this. The
+  # library then builds on macOS from source in about a minute — nothing in
+  # cache.nixos.org has this derivation, on either platform.
+  chipmunk = pkgs.chipmunk.overrideAttrs (old: {
+    buildInputs = [ ];
+    cmakeFlags = (old.cmakeFlags or [ ]) ++ [ "-DBUILD_DEMOS=OFF" ];
+    postInstall = "";
+  });
+
   # nixpkgs ships neither of this day's two C libraries with a pkg-config
   # file: chipmunk has include/chipmunk/*.h and lib/libchipmunk.so, duckdb has
   # include/duckdb.h and lib/libduckdb.so, and `pkg-config --libs <name>` fails
@@ -46,10 +60,10 @@ let
   # $out/lib/pkgconfig/, which pkg-config's setup hook adds to PKG_CONFIG_PATH
   # like any other package's. Two libraries, two gaps, one technique.
   chipmunkPc = pkgs.writeTextDir "lib/pkgconfig/chipmunk.pc" ''
-    prefix=${pkgs.chipmunk}
+    prefix=${chipmunk}
     Name: chipmunk
     Description: Chipmunk2D rigid body physics
-    Version: ${pkgs.chipmunk.version}
+    Version: ${chipmunk.version}
     Cflags: -I''${prefix}/include
     Libs: -L''${prefix}/lib -lchipmunk -lm
   '';
