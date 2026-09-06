@@ -202,28 +202,25 @@ jobs:
       # including the ones asserting the C answer equals the pure-Rust one.
       # rustc, cargo and clippy are the shell's, not rustup's — that is the
       # point, and shell.nix carries clippy for exactly this reason.
-      # DIAGNOSTIC (throwaway branch): the `-p` build of 2015-12-01's lib
-      # tests survived 60 runs; the --workspace build of the same crate
-      # crashes (SIGSEGV once, SIGTRAP once). Loop the workspace binary and
-      # get a backtrace under lldb.
+      # DIAGNOSTIC (throwaway branch): every crash so far was cargo running
+      # the freshly built test binary itself; looping built binaries never
+      # crashes. So run the real command, with cargo's target runner set to
+      # a script that wraps each test binary in lldb and dumps a backtrace
+      # on a crash. lldb is the host Xcode's, found via xcrun.
       - if: runner.os == 'macOS'
         run: |
-          nix-shell ../shell.nix --run '
-            set -x
-            bin=$(cargo test --workspace --all-features --locked --no-run --message-format=json 2>/dev/null \
-              | jq -r "select(.executable != null and (.target.src_path | endswith(\"2015-12-01/src/lib.rs\"))) | .executable")
-            echo "bin=$bin"; sysctl -n hw.ncpu; otool -L "$bin" | grep -i -e tcc -e caca
-            p=0; for i in $(seq 1 20); do "$bin" -q >/dev/null 2>&1 || p=$((p+1)); done
-            echo "workspace parallel: $p/20 crashed"
-            s=0; for i in $(seq 1 20); do "$bin" -q --test-threads=1 >/dev/null 2>&1 || s=$((s+1)); done
-            echo "workspace single-thread: $s/20 crashed"
-            "$bin" --test-threads=1 2>&1 | tail -5 || true
-          '
-          # lldb from the host Xcode, outside the nix shell so it is not shadowed
-          cd days && bin=$(ls -t target/debug/deps/aoc_2015_12_01-* | grep -v -e '\.d$' -e dSYM | while read b; do "$b" --list 2>/dev/null | grep -q ": test$" && echo "$b" && break; done)
-          echo "lldb bin=$bin"
-          for i in 1 2 3; do
-            xcrun lldb --batch -o "run --test-threads=1" -o "bt all" -o "register read" -o "disassemble --pc --count 12" -- "$bin" 2>&1 | tail -80
+          cat > /tmp/lldb-runner.sh <<'SH'
+          #!/bin/sh
+          exec /usr/bin/xcrun lldb --batch -o run \
+            -k 'thread backtrace all' -k 'register read' -k 'disassemble --pc --count 10' \
+            -k 'image list -o -f' -k 'quit 99' -- "$@"
+          SH
+          chmod +x /tmp/lldb-runner.sh
+          export CARGO_TARGET_AARCH64_APPLE_DARWIN_RUNNER=/tmp/lldb-runner.sh
+          for attempt in 1 2 3; do
+            echo "=== attempt $attempt"
+            nix-shell ../shell.nix --run 'cargo clean -p aoc-2015-12-01; cargo test --workspace --all-features --locked 2>&1 | grep -v "^\s*Compiling"' && continue
+            echo "=== attempt $attempt FAILED"
           done
       - run: nix-shell ../shell.nix --run 'cargo test --workspace --all-features --locked'
       - run: |
