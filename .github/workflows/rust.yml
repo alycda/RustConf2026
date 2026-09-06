@@ -202,24 +202,28 @@ jobs:
       # including the ones asserting the C answer equals the pure-Rust one.
       # rustc, cargo and clippy are the shell's, not rustup's — that is the
       # point, and shell.nix carries clippy for exactly this reason.
-      # DIAGNOSTIC (throwaway branch): the 2015-12-01 tcc tests SIGSEGV
-      # intermittently on macos-latest. Does the crash track parallelism?
+      # DIAGNOSTIC (throwaway branch): the `-p` build of 2015-12-01's lib
+      # tests survived 60 runs; the --workspace build of the same crate
+      # crashes (SIGSEGV once, SIGTRAP once). Loop the workspace binary and
+      # get a backtrace under lldb.
       - if: runner.os == 'macOS'
         run: |
           nix-shell ../shell.nix --run '
-            cargo test -p aoc-2015-12-01 --all-features --locked --no-run
-            for b in $(ls target/debug/deps/aoc_2015_12_01-* | grep -v -e "\.d$" -e dSYM); do
-              n=$($b --list 2>/dev/null | grep -c ": test$"); [ "$n" = 11 ] && bin=$b
-            done
-            echo "bin=$bin"; sysctl -n hw.ncpu
-            p=0; for i in $(seq 1 20); do $bin -q >/dev/null 2>&1 || p=$((p+1)); done
-            echo "parallel: $p/20 crashed"
-            s=0; for i in $(seq 1 20); do $bin -q --test-threads=1 >/dev/null 2>&1 || s=$((s+1)); done
-            echo "single-thread: $s/20 crashed"
-            t=0; for i in $(seq 1 20); do $bin -q --test-threads=2 >/dev/null 2>&1 || t=$((t+1)); done
-            echo "two-threads: $t/20 crashed"
-            $bin --test-threads=1 2>&1 | tail -3
+            set -x
+            bin=$(cargo test --workspace --all-features --locked --no-run --message-format=json 2>/dev/null \
+              | jq -r "select(.executable != null and .target.name == \"aoc-2015-12-01\" and (.target.kind | index(\"lib\"))) | .executable")
+            echo "bin=$bin"; sysctl -n hw.ncpu; otool -L "$bin" | grep -i -e tcc -e caca
+            p=0; for i in $(seq 1 20); do "$bin" -q >/dev/null 2>&1 || p=$((p+1)); done
+            echo "workspace parallel: $p/20 crashed"
+            s=0; for i in $(seq 1 20); do "$bin" -q --test-threads=1 >/dev/null 2>&1 || s=$((s+1)); done
+            echo "workspace single-thread: $s/20 crashed"
+            "$bin" --test-threads=1 2>&1 | tail -5 || true
           '
+          # lldb from the host Xcode, outside the nix shell so it is not shadowed
+          bin=$(cd days 2>/dev/null; ls -t target/debug/deps/aoc_2015_12_01-* | grep -v -e '\.d$' -e dSYM | head -1)
+          cd days && for i in 1 2 3; do
+            xcrun lldb --batch -o "run --test-threads=1" -o "bt all" -o "register read" -o "disassemble --pc --count 12" -- "$bin" 2>&1 | tail -80
+          done
       - run: nix-shell ../shell.nix --run 'cargo test --workspace --all-features --locked'
       - run: |
           nix-shell ../shell.nix --run \
