@@ -951,8 +951,53 @@
     </div>
 
     <!-- slot: exercise-1 (solve it in Rust) -->
+    <!-- ═══ EX 1: PICK YOUR DAY ═══ -->
+    <div class="slide" data-notes="(2m brief, then 20m yours) Any day works — the boundary steps are identical, and that is the whole methodology. The medal is earned, not decorative: only days that worked end to end in ALL four tracks get one, and the two golden days are the only ones that qualify — every track CI-verified against numbers the Rust tests pin. I walk through 2024-12-03 and 2015-12-06; the survey picked those two. Launch Ex 1, twenty minutes. Done early? Help a neighbour, or take the bonus. Break at 9:55 — be strict.">
+      <span class="slide-number">09:35 — 20 min &middot; <code>exercises/ex1-pure-rust</code></span>
+      <h2>Ex 1: pick your <em>day</em></h2>
+      <p class="lead">Keep the solver pure: <code>&amp;str</code> in, <code>i64</code> out &mdash; I/O stays
+        <strong>outside</strong> the library.</p>
+      <ul class="hl-list">
+        <li><span class="bullet">▶ 🥇 2024-12-03</span><span><em>Mull It Over</em> &mdash; raw string scan &rarr;
+            <code>usize</code>; stateful parse (<code>do()</code> / <code>don't()</code>)</span></li>
+        <li><span class="bullet">▶ 2015-12-06</span><span><em>Probably a Fire Hazard</em> &mdash; instruction lines
+            &rarr; enum + rectangle &rarr; <code>u32</code>; one 1000&times;1000 grid, walked twice</span></li>
+        <li><span class="bullet">🥇 2024-12-01</span><span><em>Historian Hysteria</em> &mdash; two int lists &rarr;
+            <code>i32</code>; sort-and-zip, then a frequency map</span></li>
+        <li><span class="bullet">2015-12-01</span><span><code>()</code> floor counting &nbsp;&middot;&nbsp;
+            <strong>2015-12-05</strong> nice-string rules</span></li>
+        <li><span class="bullet">2020-12-02</span><span>password policies &nbsp;&middot;&nbsp;
+            <strong>2021-12-02</strong> submarine course</span></li>
+        <li><span class="bullet">2022-12-01</span><span>calorie sums &nbsp;&middot;&nbsp;
+            <strong>2023-12-01</strong> calibration digits</span></li>
+      </ul>
+      <p style="margin-top:1rem;opacity:.6;font-size:.85rem;">▶ the two I walk through &nbsp;&middot;&nbsp; 🥇 golden:
+        verified end to end in all four tracks</p>
+    </div>
+
 
     <!-- slot: exercise-1-bonus (find a C library, try to load it) -->
+    <!-- ═══ AHEAD OF SCHEDULE? ═══ -->
+    <div class="slide" data-notes="(2m) This slide only exists if we're ahead — fast room, AI-assisted exercises. Skip it silently otherwise. Setup for the second line: all of Eric's puzzles are loosely based on real problems he hit, so the absurdity is licensed — if the puzzles get to be absurd, so do I. The punchline is not a joke: the absurd integration is exactly the thing that inevitably ends up in production. Crates exist for all of this — use them at work. Here, design the boundary yourself. That is the durable skill, and it is how you stop inheriting other people's boundary decisions.">
+      <span class="slide-number">Bonus &mdash; only if we're ahead</span>
+      <h2>Choose your <em>adventure</em></h2>
+      <p class="lead">Their boundary was designed for <strong>their</strong> solution &mdash; not yours. If these
+        puzzles get to be absurd, so can I &mdash; because guess what inevitably ends up in production?</p>
+      <ul class="hl-list">
+        <li><span class="bullet">banner</span><span>libcaca's FIGlet engine: opaque canvas, a <code>.flf</code> font
+            from 1993, a boundary you design</span></li>
+        <li><span class="bullet">jit</span><span>generate C from your own input, compile it at runtime with libtcc,
+            benchmark the absurdity</span></li>
+        <li><span class="bullet">race</span><span>Rust vs libc <code>qsort</code> vs C++ <code>std::sort</code> —
+            and the <code>a - b</code> comparator that overflows</span></li>
+        <li><span class="bullet">uthash</span><span>beat Rust's hash maps with C; it wins, and the reason is the
+            lesson</span></li>
+        <li><span class="bullet">2nd track</span><span>same day, another language's ceremony</span></li>
+        <li><span class="bullet">shapes</span><span>structs and arrays across the boundary, on a tougher day</span>
+        </li>
+      </ul>
+    </div>
+
 
     <!-- 09:55 - 10:05 - BREAK -->
 

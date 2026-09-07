@@ -207,7 +207,6 @@ and neither side can enforce it.
     That's why we test from the OTHER side today.
 
  -->
-
 <!-- end_slide -->
 
 Four Disagreements
@@ -283,5 +282,98 @@ Fight the Boundary, Not the Puzzle
     The puzzle is already solved, so every bug is a BOUNDARY bug. That narrows the debugging space to exactly the skill we're here to build.
 
     Nothing is wasted when you document the messy middle.
+
+ -->
+
+<!-- end_slide -->
+
+Ex 1: Pick Your Day
+===
+
+20 min · `exercises/ex1-pure-rust`
+
+<!-- new_line -->
+
+Keep the solver pure: `&str` in, `i64` out — I/O stays **outside** the library
+
+<!-- new_line -->
+
+* ▶ 🥇 **2024-12-03** *Mull It Over* — raw string scan → `usize`; stateful parse (`do()` / `don't()`)
+* ▶ **2015-12-06** *Probably a Fire Hazard* — instruction lines → enum + rectangle → `u32`; one 1000×1000 grid, walked twice
+* 🥇 **2024-12-01** *Historian Hysteria* — two int lists → `i32`; sort-and-zip, then a frequency map
+* **2015-12-01** `()` floor counting · **2015-12-05** nice-string rules
+* **2020-12-02** password policies · **2021-12-02** submarine course
+* **2022-12-01** calorie sums · **2023-12-01** calibration digits
+
+<!-- new_line -->
+
+▶ the two I walk through · 🥇 golden: verified end to end in all four tracks
+
+<!-- speaker_note: |
+
+    (2m brief, then 20m yours)
+
+    (Survey landed: 2024-12-03 and 2015-12-06 are the two I walk through.
+    The rest of the menu is ordered goldens-first behind them.)
+
+    Any day works — the boundary steps are identical. That's the whole methodology.
+
+    The 🥇 rule is earned, not decorative: only days worked end to end in ALL
+    four tracks get one, and the two golden days are the only ones that
+    qualify — every track CI-verified against numbers the Rust tests pin.
+
+    Launch Ex 1, 20 min. Done early? Help a neighbour — or take the bonus.
+
+    Break at 9:55 — be strict.
+
+    ---
+
+    Menu source of truth: days/README.md in this repo.
+
+ -->
+
+<!-- end_slide -->
+
+Ahead of Schedule? Choose Your Adventure
+===
+
+Their boundary was designed for **their** solution — not yours.
+
+<!-- new_line -->
+
+If these puzzles get to be absurd, then so can I with shoving FFI in places it doesn't belong — because guess what inevitably ends up in production?
+
+<!-- new_line -->
+
+<!-- incremental_lists: true -->
+
+* **Banner your answer** — libcaca's FIGlet engine: opaque canvas, a `.flf` font from 1993, a boundary you design (`days/2015-12-01`)
+* **JIT your solver** — generate C from your own puzzle input, compile it at runtime with libtcc, benchmark the absurdity (`days/2015-12-01`)
+* **Race the sorts** — Rust vs libc `qsort` vs C++ `std::sort` behind a C shim, and the `a - b` comparator that overflows (`days/2024-12-01`)
+* **Beat Rust's hash maps with C** — part 2's frequency map through uthash; it wins, and the reason is the lesson (`days/2024-12-01`)
+* **Second track** — same day, another language's ceremony
+* **Harder shapes** — structs and arrays across the boundary on a tougher day
+
+<!-- incremental_lists: false -->
+
+<!-- speaker_note: |
+
+    (2m)
+
+    This slide only exists if we're ahead — fast room, AI-assisted exercises. Skip it silently otherwise.
+
+    Setup for the second line: all of Eric's puzzles are loosely based on real problems he encountered. So the absurdity is licensed — if the puzzles get to be absurd, so do I. And the punchline is not a joke: the absurd integration is exactly the thing that inevitably ends up in production.
+
+    The point of the menu: crates exist for all of this. Use them at work. Here, design the boundary yourself — that's the durable skill, and it's how you stop inheriting other people's boundary decisions.
+
+    (Show cargo run if the projector allows — the banner earns a laugh)
+
+    ---
+
+    Worked variants on the 2015-12-01 reference branches: libcaca banner (opaque-canvas pattern, CString NUL check, create/free contained) and libtcc JIT + criterion bench. [confirm: final public branch names at publish]
+
+    The two golden-day bullets are validated (2026-08-27, goldens line): the sort race is real (std::sort 1.2x, qsort 3.8x — the comparator overflow shipped live in the original talk and the tests pin i32::MAX/MIN because of it), and uthash at 10.6µs beats ahash's 13.1µs — the debrief line is that crossing frequency, not crossing, is the cost.
+
+    In-repo receipts for "ends up in production" (four-track merge, wip/tracks — pending validation before any of these get named on a slide): the same repo answers AoC puzzles through a speech synthesiser (espeak-ng, 2023-12-01), a malware scanner (YARA, 2023-12-01), a physics engine (Chipmunk2D, 2021-12-02), and a database (DuckDB, 2021-12-02) — every one behind a cargo feature, off by default.
 
  -->

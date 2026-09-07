@@ -3,9 +3,8 @@
 Each character of the input moves Santa up or down one floor. Part 1 asks
 where he ends up; part 2 asks when he first goes underground. As small as
 an AoC puzzle gets — which is exactly why this is the day carrying every
-FFI variation (see `days/README.md`'s "live-demo day" note): the puzzle
-logic is trivial enough that nothing about it competes for attention with
-the boundary being demonstrated.
+FFI variation: the puzzle logic is trivial enough that nothing about it
+competes for attention with the boundary being demonstrated.
 
 Five solves of the same puzzle live in this one branch (each was built and verified independently):
 
