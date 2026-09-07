@@ -169,3 +169,20 @@ Agenda
 - **11:05** — one header, four runtimes — *me*
 - **11:30** — Ex 3 · bindings in YOUR language — *you*
 - **12:00** — debrief: what broke? — *all of us*
+
+<!-- end_slide -->
+
+Self-Check
+===
+
+```sh
+git clone https://github.com/alycda/RustConf2026
+cd RustConf2026 # optional: direnv allow
+just check # or ./scripts/self-check.sh
+```
+
+<!-- new_line -->
+
+<!-- speaker_note: |
+
+ -->
