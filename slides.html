@@ -255,6 +255,19 @@
       pointer-events: none;
     }
 
+    /* QR sits on the glow's origin: the glow is a 500px circle at top:15%/right:8%,
+       so its centre is 250px in from both edges; the QR is centred on that point. */
+    .title-qr {
+      position: absolute;
+      top: calc(15% + 250px);
+      right: calc(8% + 250px);
+      width: 240px;
+      height: 240px;
+      transform: translate(50%, -50%);
+      border-radius: 8px;
+      z-index: 1;
+    }
+
     .section-slide {
       justify-content: center;
       align-items: center;
@@ -653,12 +666,14 @@
   <div class="deck">
 
     <!-- ═══ 0: TITLE ═══ -->
-    <div class="slide title-slide diamond-bg active" data-slide="0" data-notes="Good morning RustConf!">
+    <div class="slide title-slide diamond-bg active" data-slide="0" data-notes="(8:00-9:00) Good morning RustConf!">
       <div class="title-glow"></div>
+      <img class="title-qr" src="img/qr-code_white.png" alt="QR code: github.com/alycda/RustConf2026">
       <span class="tag">RustConf 2026 — Montréal</span>
       <h1>Using Advent of Code<br>as an <em>FFI Playground</em></h1>
       <p class="subtitle">Alyssa Evans</p>
-      <a class="cta">https://github.com/alycda/RustConf2026</a>
+      <a class="cta" href="https://github.com/alycda/RustConf2026" target="_blank"
+        rel="noopener">https://github.com/alycda/RustConf2026</a>
     </div>
 
   </div>

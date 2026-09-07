@@ -1,16 +1,27 @@
 ---
-title: Using Advent of Code as an
-sub_title: FFI Playground
-author: Alyssa Evans
-event: RustConf 2026
-location: Montréal
-date: 2026-09-08
 theme:
     name: catppuccin-mocha
     override:
         footer:
             style: template
-            left: "{sub_title}"
+            left: "FFI Playground"
             center: github.com/alycda/RustConf2026
-            # right: "{location}: {date}"
+            # right: "Montréal: 2026-09-08"
 ---
+
+<!-- comment: slide_background_color 0b112e -->
+<!-- font_size: 7 -->
+
+![image:w:30%](./img/qr-code.png)
+
+# Using Advent of Code as an FFI Playground
+## RustConf 2026
+
+### Montréal
+#### 2026-09-08
+
+##### Alyssa Evans
+
+<!-- no_footer -->
+
+<!-- end_slide -->
