@@ -9,6 +9,22 @@
 //! into a callable `extern "C" fn` pointer, all before the numbers come back.
 
 use std::ffi::{CStr, CString, c_char, c_int, c_void};
+use std::sync::{Mutex, PoisonError};
+
+/// One JIT at a time, enforced on this side of the boundary.
+///
+/// libtcc serialises compilation behind a semaphore of its own, but on macOS
+/// that semaphore is created lazily on first use with no synchronisation
+/// (tcc.h, `wait_sem`: `if (!p->init) p->sem = dispatch_semaphore_create(1)`).
+/// Two threads compiling for the first time in a process can both see the
+/// uninitialised flag, each create a semaphore, and both walk into the
+/// preprocessor at once — `tccpp_new` then dereferences state the other
+/// thread is still building. On macos-latest that was a SIGSEGV or SIGTRAP
+/// in this crate's parallel tests, in the first `cargo test` after a build
+/// and not in hundreds of loops of the built binary, which is what a
+/// first-use race looks like. Nothing here needs two JITs in flight, so the
+/// wrapper owns the exclusion rather than trusting the library's.
+static JIT: Mutex<()> = Mutex::new(());
 
 #[repr(C)]
 struct TCCState {
@@ -43,6 +59,9 @@ unsafe extern "C" fn collect_errors(opaque: *mut c_void, msg: *const c_char) {
 /// JIT-compiles `source` with libtcc, then calls the `int symbol(void)`
 /// function it defines and returns its result.
 pub fn call_i32_fn(source: &str, symbol: &str) -> miette::Result<i32> {
+    // A panic while holding the lock poisons it; the C state it guarded is
+    // gone with that thread, so the next caller can safely take over.
+    let _jit = JIT.lock().unwrap_or_else(PoisonError::into_inner);
     let mut errors = String::new();
 
     unsafe {
