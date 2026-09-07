@@ -186,3 +186,24 @@ just check # or ./scripts/self-check.sh
 <!-- speaker_note: |
 
  -->
+
+<!-- end_slide -->
+
+Why Is This Hard?
+===
+
+An FFI signature is a **treaty** between two runtimes that disagree about memory, types, errors, and encoding —
+
+<!-- new_line -->
+
+and neither side can enforce it.
+
+<!-- speaker_note: |
+
+    (3m) Slow down — this is the thesis of the whole morning.
+
+    The compiler checks YOUR side of the treaty only. We're making a promise to the compiler that we know what we're doing — and we MUST keep it.
+
+    That's why we test from the OTHER side today.
+
+ -->
