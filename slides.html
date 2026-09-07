@@ -268,6 +268,22 @@
       z-index: 1;
     }
 
+    /* Full-bleed image slide: one image, no chrome. The image scales to the
+       slide's padded box and keeps its aspect ratio; square cards fill the
+       height, wide ones fill the width. */
+    .image-slide {
+      justify-content: center;
+      align-items: center;
+    }
+
+    .image-slide img {
+      max-width: 100%;
+      max-height: 90vh;
+      object-fit: contain;
+      border-radius: 12px;
+      box-shadow: 0 24px 80px #00000099;
+    }
+
     .section-slide {
       justify-content: center;
       align-items: center;
@@ -680,13 +696,18 @@
     <!-- 09:00 - Part 1 -->
 
     <!-- slot: speaker-card -->
+    <!-- ═══ SPEAKER CARD ═══ -->
+    <div class="slide image-slide"
+      data-notes="(30s) Welcome to RustConf 2026 Workshops. I want to thank you all for being here with me today. My name is Alyssa and I'm going to share with you my process on how to break things in Rust while talking to other languages and their runtimes; and to help you choose your own adventure with FFI and Advent of Code.">
+      <img src="workshop.png"
+        alt="RustConf 2026 speaker card: Alyssa Evans, Staff Software Engineer, Ditto — Using Advent of Code as an FFI Playground (Workshop)">
+    </div>
 
     <!-- slot: backstory -->
 
     <!-- slot: who am I -->
 
     <!-- slot: why are we here -->
-
     <!-- slot: agenda -->
 
     <!-- slot: self-check -->

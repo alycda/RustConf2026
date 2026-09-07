@@ -60,3 +60,14 @@ theme:
 <!-- comment: 12:30 - END -->
 
 <!-- end_slide -->
+
+<!-- alignment: center -->
+![image:w:40%](./workshop.png)
+
+<!-- speaker_note: |
+
+    (30s) Welcome to RustConf 2026 Workshops. I want to thank you all for being here with me today. My name is Alyssa and I'm going to share with you my process on how to break things in Rust while talking to other languages and their runtimes; and to help you choose your own adventure with FFI and Advent of Code.
+
+    -->
+
+<!-- end_slide -->
