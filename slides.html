@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Using Advent of Code as an FFI Playground — RustConf 2026 Workshop</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap"
+    rel="stylesheet">
+  <style>
+    *,
+    *::before,
+    *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg: #0a0a0a;
+      --surface: #1d1d1d;
+      --surface-2: #2a2a2a;
+      --border: #3a3a3a;
+      --text: #f6f6f6;
+      --text-dim: #9c9c9c;
+      --light: #d6d6d6;
+      --accent: #e9ef44;
+      --accent-glow: #e9ef4422;
+      --blue: #9c9c9c;
+      --green: #d6d6d6;
+      --purple: #9c9c9c;
+      --yellow: #e9ef44;
+      --red: #e9ef44;
+      --font-display: 'Space Grotesk', 'Kairos Sans', sans-serif;
+      --font-body: 'Inter', sans-serif;
+      --font-mono: 'Space Mono', 'Aeonik Fono', monospace;
+    }
+
+    html {
+      font-size: 18px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    .deck {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 5vh 8vw;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.5s ease, transform 0.5s ease;
+      transform: translateY(12px);
+      will-change: opacity, transform;
+    }
+
+    .slide.active {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    .slide::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 70% 20%, #e9ef4407 0%, transparent 70%),
+        radial-gradient(ellipse 60% 50% at 20% 80%, #ffffff03 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .grid-bg::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 60px 60px;
+      opacity: 0.15;
+      pointer-events: none;
+    }
+
+    .diamond-bg::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(var(--text-dim) 1px, transparent 1.5px);
+      background-size: 38px 38px;
+      -webkit-mask-image: linear-gradient(90deg, transparent 30%, #000 100%);
+      mask-image: linear-gradient(90deg, transparent 30%, #000 100%);
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    .slide-number {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--accent);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+      font-weight: 500;
+    }
+
+    h1 {
+      font-family: var(--font-display);
+      font-size: 4.5rem;
+      line-height: 1.02;
+      font-weight: 500;
+      letter-spacing: -0.03em;
+      margin-bottom: 1.5rem;
+    }
+
+    h1 em {
+      color: var(--accent);
+      font-style: normal;
+    }
+
+    h2 {
+      font-family: var(--font-display);
+      font-size: 3rem;
+      font-weight: 500;
+      line-height: 1.12;
+      margin-bottom: 1.8rem;
+      letter-spacing: -0.02em;
+    }
+
+    h2 em {
+      color: var(--accent);
+      font-style: normal;
+    }
+
+    h3 {
+      font-family: var(--font-body);
+      font-size: 1.1rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.8rem;
+    }
+
+    p,
+    li {
+      font-size: 1.1rem;
+      line-height: 1.65;
+      color: var(--text-dim);
+      max-width: 52ch;
+    }
+
+    p strong,
+    li strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .lead {
+      font-size: 1.35rem;
+      color: var(--text);
+      font-weight: 300;
+      line-height: 1.6;
+      max-width: 48ch;
+    }
+
+    code {
+      font-family: var(--font-mono);
+      font-size: 0.85em;
+      background: var(--surface-2);
+      padding: 0.15em 0.45em;
+      border-radius: 4px;
+      color: var(--accent);
+      border: 1px solid var(--border);
+    }
+
+    pre {
+      font-family: var(--font-mono);
+      font-size: 0.95rem;
+      line-height: 1.6;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 8px;
+      padding: 1.5rem 1.8rem;
+      overflow-x: auto;
+      max-width: 80ch;
+      color: var(--text);
+    }
+
+    pre code {
+      background: none;
+      border: none;
+      padding: 0;
+      color: inherit;
+      font-size: 1em;
+    }
+
+    .title-slide {
+      justify-content: flex-end;
+      align-items: flex-start;
+      padding-bottom: 12vh;
+    }
+
+    .title-slide h1 {
+      font-size: 5rem;
+      margin-bottom: 0.8rem;
+    }
+
+    .title-slide .subtitle {
+      font-family: var(--font-body);
+      font-size: 1.25rem;
+      color: var(--text-dim);
+      font-weight: 300;
+      max-width: 42ch;
+      line-height: 1.5;
+      margin-bottom: 2rem;
+    }
+
+    .title-slide .tag {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--accent);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      display: inline-block;
+      padding: 0.4rem 0.8rem;
+      border: 1px solid var(--accent);
+      border-radius: 4px;
+    }
+
+    .title-glow {
+      position: absolute;
+      top: 15%;
+      right: 8%;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, var(--accent-glow) 0%, transparent 60%);
+      filter: blur(60px);
+      pointer-events: none;
+    }
+
+    .section-slide {
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+
+    .section-slide h2 {
+      font-size: 3.8rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .section-slide .section-sub {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    .mountain-icon {
+      font-size: 0.9rem;
+      margin-bottom: 0.8rem;
+      display: block;
+      color: var(--accent);
+      font-family: var(--font-mono);
+      letter-spacing: 0.3em;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3rem;
+      align-items: start;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 3px;
+      height: 100%;
+    }
+
+    .card.accent::before {
+      background: var(--accent);
+    }
+
+    .card.blue::before {
+      background: var(--blue);
+    }
+
+    .card.green::before {
+      background: var(--green);
+    }
+
+    .card.purple::before {
+      background: var(--purple);
+    }
+
+    .card.yellow::before {
+      background: var(--yellow);
+    }
+
+    .card.accent h3 {
+      color: var(--accent);
+    }
+
+    .card.blue h3 {
+      color: var(--blue);
+    }
+
+    .card.green h3 {
+      color: var(--green);
+    }
+
+    .card.purple h3 {
+      color: var(--purple);
+    }
+
+    .card.yellow h3 {
+      color: var(--yellow);
+    }
+
+    .card h3 {
+      font-size: 0.85rem;
+      margin-bottom: 0.6rem;
+      letter-spacing: 0.1em;
+    }
+
+    .card p,
+    .card li {
+      font-size: 1rem;
+      line-height: 1.55;
+    }
+
+    .card ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .card li {
+      padding: 0.3rem 0;
+    }
+
+    .card li::before {
+      content: '→';
+      margin-right: 0.6rem;
+      opacity: 0.4;
+    }
+
+    .principles {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.2rem;
+      margin-top: 0.5rem;
+    }
+
+    .principle {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.8rem 2rem;
+      position: relative;
+    }
+
+    .principle .p-num {
+      font-family: var(--font-mono);
+      font-size: 2.5rem;
+      font-weight: 700;
+      opacity: 0.08;
+      position: absolute;
+      top: 0.5rem;
+      right: 1rem;
+    }
+
+    .principle .p-title {
+      font-family: var(--font-body);
+      font-weight: 700;
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .principle p {
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    .principle.p-accent {
+      border-left: 3px solid var(--accent);
+    }
+
+    .principle.p-accent .p-title {
+      color: var(--accent);
+    }
+
+    .principle.p-blue {
+      border-left: 3px solid var(--blue);
+    }
+
+    .principle.p-blue .p-title {
+      color: var(--blue);
+    }
+
+    .principle.p-green {
+      border-left: 3px solid var(--green);
+    }
+
+    .principle.p-green .p-title {
+      color: var(--green);
+    }
+
+    .principle.p-purple {
+      border-left: 3px solid var(--purple);
+    }
+
+    .principle.p-purple .p-title {
+      color: var(--purple);
+    }
+
+    .contrast {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      margin: 1.5rem 0;
+      max-width: 700px;
+    }
+
+    .contrast-box {
+      padding: 1.5rem 1.8rem;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    .contrast-box.no {
+      background: var(--surface);
+      border-color: var(--border);
+      opacity: 0.7;
+    }
+
+    .contrast-box.no .contrast-label {
+      color: var(--text-dim);
+    }
+
+    .contrast-box.no p {
+      color: var(--text-dim);
+    }
+
+    .contrast-box.yes {
+      background: var(--surface);
+      border-color: var(--accent);
+      border-left: 3px solid var(--accent);
+    }
+
+    .contrast-box.yes .contrast-label {
+      color: var(--accent);
+    }
+
+    .contrast-label {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 0.6rem;
+      font-weight: 500;
+    }
+
+    .contrast-box p {
+      font-size: 1.05rem;
+      line-height: 1.5;
+    }
+
+    .hl-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    .hl-list li {
+      padding: 0.65rem 0;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: baseline;
+      gap: 1rem;
+    }
+
+    .hl-list li:last-child {
+      border-bottom: none;
+    }
+
+    .hl-list .bullet {
+      font-family: var(--font-mono);
+      color: var(--accent);
+      font-size: 0.8rem;
+      flex-shrink: 0;
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.8rem;
+      margin: 0.5rem 0;
+    }
+
+    .stat {
+      font-family: var(--font-display);
+      font-size: 6rem;
+      line-height: 1;
+      color: var(--accent);
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .cta {
+      display: inline-block;
+      background: var(--accent);
+      color: var(--bg);
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 0.9rem 1.6rem;
+      border-radius: 4px;
+      margin-top: 1.5rem;
+      text-decoration: none;
+    }
+
+    .progress {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--surface-2);
+      z-index: 100;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: var(--accent);
+      transition: width 0.4s ease;
+    }
+
+    .nav {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 2rem;
+      display: flex;
+      gap: 0.8rem;
+      z-index: 100;
+    }
+
+    .nav-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      transition: all 0.2s;
+      font-family: var(--font-mono);
+    }
+
+    .nav-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .slide-counter {
+      position: fixed;
+      bottom: 1.8rem;
+      left: 2rem;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      z-index: 100;
+      letter-spacing: 0.1em;
+    }
+
+    .notes {
+      position: fixed;
+      bottom: 4rem;
+      left: 2rem;
+      right: 2rem;
+      max-width: 60ch;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--yellow);
+      border-radius: 8px;
+      padding: 1rem 1.4rem;
+      font-size: 0.9rem;
+      color: var(--text-dim);
+      z-index: 99;
+      display: none;
+    }
+
+    .notes.visible {
+      display: block;
+    }
+
+    .notes .notes-label {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--yellow);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      display: block;
+      margin-bottom: 0.4rem;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="deck">
+
+    <!-- ═══ 0: TITLE ═══ -->
+    <div class="slide title-slide diamond-bg active" data-slide="0" data-notes="Good morning RustConf!">
+      <div class="title-glow"></div>
+      <span class="tag">RustConf 2026 — Montréal</span>
+      <h1>Using Advent of Code<br>as an <em>FFI Playground</em></h1>
+      <p class="subtitle">Alyssa Evans</p>
+      <a class="cta">https://github.com/alycda/RustConf2026</a>
+    </div>
+
+  </div>
+
+  <!-- ── Progress bar ── -->
+  <div class="progress">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+
+  <!-- ── Navigation ── -->
+  <!-- Both values are computed at runtime from slides.length; the dashes are
+       placeholders for the pre-script paint, not a slide count to maintain. -->
+  <div class="slide-counter"><span id="currentSlide">--</span> / <span id="totalSlides">--</span></div>
+  <div class="nav">
+    <button class="nav-btn" onclick="navigate(-1)" aria-label="Previous slide">←</button>
+    <button class="nav-btn" onclick="navigate(1)" aria-label="Next slide">→</button>
+  </div>
+
+  <!-- ── Speaker notes panel ── -->
+  <div class="notes" id="notes"><span class="notes-label">Speaker note (press N to hide)</span><span
+      id="notesText"></span></div>
+
+  <script>
+    const slides = document.querySelectorAll('.slide');
+    const total = slides.length;
+    let current = 0;
+    let notesOn = false;
+
+    function showSlide(index) {
+      slides.forEach(s => s.classList.remove('active'));
+      slides[index].classList.add('active');
+      document.getElementById('currentSlide').textContent = String(index + 1).padStart(2, '0');
+      document.getElementById('totalSlides').textContent = String(total).padStart(2, '0');
+      document.getElementById('progressBar').style.width = ((index + 1) / total * 100) + '%';
+      const note = slides[index].getAttribute('data-notes') || '';
+      document.getElementById('notesText').textContent = note;
+      document.getElementById('notes').classList.toggle('visible', notesOn && !!note);
+    }
+
+    function navigate(dir) {
+      current = Math.max(0, Math.min(total - 1, current + dir));
+      showSlide(current);
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') {e.preventDefault(); navigate(1);}
+      if (e.key === 'ArrowLeft' || e.key === 'Backspace') {e.preventDefault(); navigate(-1);}
+      if (e.key === 'Home') {e.preventDefault(); current = 0; showSlide(0);}
+      if (e.key === 'End') {e.preventDefault(); current = total - 1; showSlide(current);}
+      if (e.key === 'n' || e.key === 'N') {notesOn = !notesOn; showSlide(current);}
+    });
+
+    let touchStartX = 0;
+    document.addEventListener('touchstart', e => {touchStartX = e.touches[0].clientX;});
+    document.addEventListener('touchend', e => {
+      const diff = touchStartX - e.changedTouches[0].clientX;
+      if (Math.abs(diff) > 50) navigate(diff > 0 ? 1 : -1);
+    });
+
+    showSlide(0);
+  </script>
+
+</body>
+
+</html>
