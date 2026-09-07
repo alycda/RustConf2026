@@ -13,17 +13,19 @@ use std::sync::{Mutex, PoisonError};
 
 /// One JIT at a time, enforced on this side of the boundary.
 ///
-/// libtcc serialises compilation behind a semaphore of its own, but on macOS
-/// that semaphore is created lazily on first use with no synchronisation
-/// (tcc.h, `wait_sem`: `if (!p->init) p->sem = dispatch_semaphore_create(1)`).
-/// Two threads compiling for the first time in a process can both see the
-/// uninitialised flag, each create a semaphore, and both walk into the
-/// preprocessor at once — `tccpp_new` then dereferences state the other
-/// thread is still building. On macos-latest that was a SIGSEGV or SIGTRAP
-/// in this crate's parallel tests, in the first `cargo test` after a build
+/// libtcc serialises compilation behind a semaphore of its own, but that
+/// semaphore is created lazily on first use behind an unsynchronised flag on
+/// every platform (tcc.h, `wait_sem`: `if (!p->init) <create>, p->init = 1;`
+/// in the POSIX, Windows and macOS branches alike). Two threads compiling
+/// for the first time in a process can both see the flag unset, each create
+/// a semaphore, and both walk into the preprocessor at once — `tccpp_new`
+/// then dereferences state the other thread is still building. macOS is
+/// where it was observed to fault: a SIGSEGV or SIGTRAP in this crate's
+/// parallel tests on macos-latest, in the first `cargo test` after a build
 /// and not in hundreds of loops of the built binary, which is what a
 /// first-use race looks like. Nothing here needs two JITs in flight, so the
-/// wrapper owns the exclusion rather than trusting the library's.
+/// wrapper owns the exclusion rather than trusting the library's, on every
+/// platform.
 static JIT: Mutex<()> = Mutex::new(());
 
 #[repr(C)]
@@ -59,8 +61,16 @@ unsafe extern "C" fn collect_errors(opaque: *mut c_void, msg: *const c_char) {
 /// JIT-compiles `source` with libtcc, then calls the `int symbol(void)`
 /// function it defines and returns its result.
 pub fn call_i32_fn(source: &str, symbol: &str) -> miette::Result<i32> {
-    // A panic while holding the lock poisons it; the C state it guarded is
-    // gone with that thread, so the next caller can safely take over.
+    // Both strings are validated before tcc_new, so every exit after the
+    // TCCState exists is one of the explicit tcc_delete paths below — no
+    // `?` between allocation and free.
+    let c_source =
+        CString::new(source).map_err(|e| miette::miette!("source has a NUL byte: {e}"))?;
+    let c_symbol =
+        CString::new(symbol).map_err(|e| miette::miette!("symbol has a NUL byte: {e}"))?;
+
+    // A panic while holding the lock poisons it; whatever C state that thread
+    // was mid-way through is unreachable now, so the next caller takes over.
     let _jit = JIT.lock().unwrap_or_else(PoisonError::into_inner);
     let mut errors = String::new();
 
@@ -79,8 +89,6 @@ pub fn call_i32_fn(source: &str, symbol: &str) -> miette::Result<i32> {
         // Output type must be set before any compilation happens.
         tcc_set_output_type(state, TCC_OUTPUT_MEMORY);
 
-        let c_source =
-            CString::new(source).map_err(|e| miette::miette!("source has a NUL byte: {e}"))?;
         if tcc_compile_string(state, c_source.as_ptr()) < 0 {
             tcc_delete(state);
             return Err(miette::miette!("tcc_compile_string failed:\n{errors}"));
@@ -91,7 +99,6 @@ pub fn call_i32_fn(source: &str, symbol: &str) -> miette::Result<i32> {
             return Err(miette::miette!("tcc_relocate failed:\n{errors}"));
         }
 
-        let c_symbol = CString::new(symbol).expect("symbol name has no NUL byte");
         let func_ptr = tcc_get_symbol(state, c_symbol.as_ptr());
         if func_ptr.is_null() {
             tcc_delete(state);
