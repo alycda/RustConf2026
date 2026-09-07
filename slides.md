@@ -27,7 +27,15 @@ theme:
 
 <!-- comment: 09:00 - Part 1 -->
 
-<!-- comment: slot - welcome -->
+<!-- comment: slot - speaker card -->
+
+<!-- comment: slot - backstory -->
+
+<!-- comment: slot - who am I -->
+
+<!-- comment: slot - why are we here -->
+
+<!-- comment: slot - agenda -->
 
 <!-- comment: slot - part-1 (why is FFI hard) -->
 
