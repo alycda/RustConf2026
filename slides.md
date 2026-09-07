@@ -141,3 +141,20 @@ To break things, on purpose; and document the messy middle.
     - Evaluate whether FFI is the right architectural choice for a given situation, including honest assessment of the maintenance burden, onboarding cost, and performance trade-offs.
     - Replicate the AoC-as-FFI-playground methodology in their own learning or team onboarding — with a structured progression and a working starter template to build from.
   -->
+
+<!-- end_slide -->
+
+Agenda
+===
+
+<!-- new_line -->
+
+- NOW - self-check
+- Why is FFI Hard
+- Exercise 1 (+ bonus)
+- C as the Bridge
+- Exercise 2: Glue Layer
+- One Header, multiple runtimes
+- Exercise 3: Bindings in Your Language of Choice
+- debrief
+- what's next?
