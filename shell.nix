@@ -36,8 +36,7 @@ let
     # macOS clang rejects the stray positional path before ld runs, so
     # 2015-12-01's `tcc` feature cannot link. The rewritten item uses the
     # `@lib@`/`@dev@` forms that copyPkgconfigItems' substituteAllInPlace does
-    # resolve, and drops the rpath flag: on Linux the cc wrapper adds the rpath
-    # itself, and on macOS a nix dylib is found by its absolute install name.
+    # resolve.
     #
     # Except libtcc.dylib's install name is `@rpath/libtcc.dylib` — tinycc
     # skips the fixDarwinDylibNames hook the rest of nixpkgs runs, so a test
@@ -54,8 +53,13 @@ let
           name = "libtcc";
           inherit (old) version;
           description = "Tiny C compiler backend";
-          cflags = [ "-I@dev@/include" ];
-          libs = [ "-L@lib@/lib" "-ltcc" ];
+          # The variables are the single source for the paths; pkg-config
+          # expands ${libdir} itself. The rpath is one token — the upstream
+          # item's `-Wl,--rpath <path>` is two, and build.rs splits on
+          # whitespace — so a link that bypasses nixpkgs' wrapped linker (a
+          # ~/.cargo/config.toml `linker =`, say) still finds the dylib.
+          cflags = [ "-I\${includedir}" ];
+          libs = [ "-L\${libdir}" "-Wl,-rpath,\${libdir}" "-ltcc" ];
           variables = {
             prefix = "@out@";
             includedir = "@dev@/include";
@@ -124,7 +128,9 @@ let
   # build script the exception in a repo where they all look alike, so the
   # missing files are synthesized here instead: writeTextDir puts each at
   # $out/lib/pkgconfig/, which pkg-config's setup hook adds to PKG_CONFIG_PATH
-  # like any other package's. Two libraries, two gaps, one technique.
+  # like any other package's. Two libraries, two gaps, one technique — and a
+  # third .pc, libtcc's, fixed by a different one above: nixpkgs ships that
+  # file, just with the wrong contents, so it is overridden rather than added.
   chipmunkPc = pkgs.writeTextDir "lib/pkgconfig/chipmunk.pc" ''
     prefix=${pkgs.chipmunk}
     Name: chipmunk
