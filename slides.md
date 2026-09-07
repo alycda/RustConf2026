@@ -25,13 +25,13 @@ theme:
 
 <!-- no_footer -->
 
-<!-- comment: 09:00 - TBD -->
+<!-- comment: 09:00 - Welcome, Part 1 -->
 
-<!-- comment: 10:00 - TBD -->
+<!-- comment: 10:00 - Part 2 -->
 
-<!-- comment: 11:00 - TBD -->
+<!-- comment: 11:00 - Part 3 -->
 
-<!-- comment: 12:00 - TBD -->
+<!-- comment: 12:00 - Wrap -->
 
 <!-- comment: 12:30 - END -->
 
