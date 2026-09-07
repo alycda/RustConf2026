@@ -184,19 +184,28 @@ jobs:
   # only thing standing between it and silent rot. Drop the flag and the
   # pkg-config roll call is the step that tells you, in one line.
   #
-  # Linux only. shell.nix reads <nixpkgs> unpinned; nixpkgs-unstable is
-  # the nix installer's default channel, which the devcontainer's nix
-  # feature leaves in place (setup.sh adds home-manager and touches no
-  # other channel). Several of these packages are unproven on nixpkgs'
-  # darwin, and the c-features job above already covers macos for the
-  # variants that need no library at all.
+  # shell.nix reads <nixpkgs> unpinned; nixpkgs-unstable is the nix
+  # installer's default channel, which the devcontainer's nix feature
+  # leaves in place (setup.sh adds home-manager and touches no other
+  # channel).
+  #
+  # macOS is in the matrix because this job was Linux-only until #1: an
+  # attendee's first `nix-shell` on aarch64-darwin died evaluating
+  # nixpkgs' chipmunk (glfw2 is Linux-only, and chipmunk lists it for a
+  # demo binary), and nothing here ran shell.nix on a mac. The README's
+  # first option is macOS + nix; the job that proves the shell has to run
+  # where the attendees do.
   #
   # The first run pays for the nix store (rustc, the libraries, their
   # closures) from cache.nixos.org; cache-nix-action is deliberately not
   # here yet — measure the plain job first, add the cache if it earns it.
   ffi:
-    name: C libraries (nix shell) / ubuntu-latest
-    runs-on: ubuntu-latest
+    name: C libraries (nix shell) / ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
