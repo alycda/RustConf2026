@@ -1,6 +1,85 @@
-{ pkgs ? import <nixpkgs> {} }:
+{ nixpkgs ? import <nixpkgs> {} }:
 
 let
+  # Two nixpkgs packages are broken on darwin (details at each override). The
+  # fixes are applied as an overlay so that `pkgs.chipmunk` and `pkgs.tinycc`
+  # *are* the fixed packages everywhere below: a plain let-binding shadowing
+  # them inside `with pkgs; [ ... ]` works too, but a later `pkgs.chipmunk`
+  # anywhere in this file would silently reach the unfixed one, and on darwin
+  # that is issue #1 again with the fix sitting thirty lines above it.
+  #
+  # Each override carries a tripwire. The channel is unpinned, so the day
+  # nixpkgs fixes the package the override keeps forcing a source build for
+  # no reason; the warnIf fires on that day, instead of the comments quietly
+  # describing a nixpkgs that no longer exists.
+  pkgs = nixpkgs.extend (final: prev: let inherit (prev) lib; in {
+    chipmunk =
+      lib.warnIf
+        (!lib.any (d: (d.pname or "") == "glfw") prev.chipmunk.buildInputs)
+        "shell.nix: nixpkgs' chipmunk no longer depends on glfw2; drop the override"
+        (darwinFixes.chipmunk prev);
+    tinycc =
+      if !prev.stdenv.hostPlatform.isDarwin then prev.tinycc else
+      lib.warnIf
+        (!lib.any (i: lib.hasInfix (builtins.placeholder "lib") (i.text or "")) prev.tinycc.pkgconfigItems)
+        "shell.nix: nixpkgs' tinycc ships a libtcc.pc with real paths; drop the override"
+        (darwinFixes.tinycc prev);
+  });
+
+  darwinFixes = {
+    # nixpkgs' tinycc writes its libtcc.pc through makePkgconfigItem, which only
+    # knows how to defer `placeholder "out"`; the item uses `placeholder "lib"`
+    # and `placeholder "dev"` too, and those survive into the installed file as
+    # bare 52-character hashes: `-L/0sra2y…/lib -Wl,--rpath /0sra2y…/lib`. Linux
+    # never noticed — the cc wrapper already passes the real -L for every
+    # buildInput, and GNU ld swallows the bogus path as --rpath's argument. On
+    # macOS clang rejects the stray positional path before ld runs, so
+    # 2015-12-01's `tcc` feature cannot link. The rewritten item uses the
+    # `@lib@`/`@dev@` forms that copyPkgconfigItems' substituteAllInPlace does
+    # resolve, and drops the rpath flag: on Linux the cc wrapper adds the rpath
+    # itself, and on macOS a nix dylib is found by its absolute install name.
+    #
+    # Except libtcc.dylib's install name is `@rpath/libtcc.dylib` — tinycc
+    # skips the fixDarwinDylibNames hook the rest of nixpkgs runs, so a test
+    # binary links fine and then aborts at load with "Library not loaded".
+    # The hook is added here; it rewrites the id to the store path in fixup.
+    #
+    # darwin only (the overlay above): Linux loads libtcc fine through the cc
+    # wrapper and gets tcc from cache.nixos.org; a source build there costs
+    # ~65 s with tinycc's Linux-only installCheck. On darwin it is ~15 s.
+    tinycc = prev: prev.tinycc.overrideAttrs (old: {
+      nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ prev.fixDarwinDylibNames ];
+      pkgconfigItems = [
+        (prev.makePkgconfigItem {
+          name = "libtcc";
+          inherit (old) version;
+          description = "Tiny C compiler backend";
+          cflags = [ "-I@dev@/include" ];
+          libs = [ "-L@lib@/lib" "-ltcc" ];
+          variables = {
+            prefix = "@out@";
+            includedir = "@dev@/include";
+            libdir = "@lib@/lib";
+          };
+        })
+      ];
+    });
+
+    # nixpkgs' chipmunk declares `platforms = unix` but pulls glfw2, libglut
+    # and the X11 stack into buildInputs — all of it for the `chipmunk_demos`
+    # binary, none of it for libchipmunk. glfw2 is `platforms = linux`, so on
+    # aarch64-darwin the evaluator refuses the whole package, and with it the
+    # whole shell (issue #1). The override drops the demo and its inputs;
+    # Chipmunk's own CMakeLists offers BUILD_DEMOS for exactly this. The
+    # library then builds on macOS from source in about a minute — nothing in
+    # cache.nixos.org has this derivation, on either platform.
+    chipmunk = prev: prev.chipmunk.overrideAttrs (old: {
+      buildInputs = [ ];
+      cmakeFlags = (old.cmakeFlags or [ ]) ++ [ "-DBUILD_DEMOS=OFF" ];
+      postInstall = "";
+    });
+  };
+
   # The jj devcontainer exports WORKSHOP_HOME_NIX=<...>/.devcontainer/jj/home.nix
   # via containerEnv; impure eval reads it here. jj sheets live with that
   # variant (.devcontainer/jj/cheat/) and only its container sees them —
@@ -34,56 +113,6 @@ let
       tags: ${p.tags}
       readonly: true
   '') cheatPaths);
-  # nixpkgs' tinycc writes its libtcc.pc through makePkgconfigItem, which only
-  # knows how to defer `placeholder "out"`; the item uses `placeholder "lib"`
-  # and `placeholder "dev"` too, and those survive into the installed file as
-  # bare 52-character hashes: `-L/0sra2y…/lib -Wl,--rpath /0sra2y…/lib`. Linux
-  # never noticed — the cc wrapper already passes the real -L for every
-  # buildInput, and GNU ld swallows the bogus path as --rpath's argument. On
-  # macOS clang rejects the stray positional path before ld runs, so
-  # 2015-12-01's `tcc` feature cannot link. The rewritten item uses the
-  # `@lib@`/`@dev@` forms that copyPkgconfigItems' substituteAllInPlace does
-  # resolve, and drops the rpath flag: on Linux the cc wrapper adds the rpath
-  # itself, and on macOS a nix dylib is found by its absolute install name.
-  #
-  # Except libtcc.dylib's install name is `@rpath/libtcc.dylib` — tinycc
-  # skips the fixDarwinDylibNames hook the rest of nixpkgs runs, so a test
-  # binary links fine and then aborts at load with "Library not loaded".
-  # The hook is added here; it rewrites the id to the store path in fixup.
-  # Costs a ~15 s source build of tcc on either platform.
-  tinycc = pkgs.tinycc.overrideAttrs (old: {
-    nativeBuildInputs =
-      (old.nativeBuildInputs or [ ])
-      ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isDarwin [ pkgs.fixDarwinDylibNames ];
-    pkgconfigItems = [
-      (pkgs.makePkgconfigItem {
-        name = "libtcc";
-        inherit (old) version;
-        description = "Tiny C compiler backend";
-        cflags = [ "-I@dev@/include" ];
-        libs = [ "-L@lib@/lib" "-ltcc" ];
-        variables = {
-          prefix = "@out@";
-          includedir = "@dev@/include";
-          libdir = "@lib@/lib";
-        };
-      })
-    ];
-  });
-
-  # nixpkgs' chipmunk declares `platforms = unix` but pulls glfw2, libglut
-  # and the X11 stack into buildInputs — all of it for the `chipmunk_demos`
-  # binary, none of it for libchipmunk. glfw2 is `platforms = linux`, so on
-  # aarch64-darwin the evaluator refuses the whole package, and with it the
-  # whole shell (issue #1). The override drops the demo and its inputs;
-  # Chipmunk's own CMakeLists offers BUILD_DEMOS for exactly this. The
-  # library then builds on macOS from source in about a minute — nothing in
-  # cache.nixos.org has this derivation, on either platform.
-  chipmunk = pkgs.chipmunk.overrideAttrs (old: {
-    buildInputs = [ ];
-    cmakeFlags = (old.cmakeFlags or [ ]) ++ [ "-DBUILD_DEMOS=OFF" ];
-    postInstall = "";
-  });
 
   # nixpkgs ships neither of this day's two C libraries with a pkg-config
   # file: chipmunk has include/chipmunk/*.h and lib/libchipmunk.so, duckdb has
@@ -97,10 +126,10 @@ let
   # $out/lib/pkgconfig/, which pkg-config's setup hook adds to PKG_CONFIG_PATH
   # like any other package's. Two libraries, two gaps, one technique.
   chipmunkPc = pkgs.writeTextDir "lib/pkgconfig/chipmunk.pc" ''
-    prefix=${chipmunk}
+    prefix=${pkgs.chipmunk}
     Name: chipmunk
     Description: Chipmunk2D rigid body physics
-    Version: ${chipmunk.version}
+    Version: ${pkgs.chipmunk.version}
     Cflags: -I''${prefix}/include
     Libs: -L''${prefix}/lib -lchipmunk -lm
   '';
