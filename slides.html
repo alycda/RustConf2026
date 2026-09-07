@@ -284,6 +284,68 @@
       box-shadow: 0 24px 80px #00000099;
     }
 
+    /* Photo + text split: one landscape image on the left, a short lead and
+       a couple of links on the right. Quiet by design; it is backstory. */
+    .two-col.media {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      align-items: center;
+    }
+
+    /* Portrait photos stacked in one frame; the frame is height-bound so a
+       tall phone photo never overflows the slide. */
+    .photo-stack {
+      position: relative;
+      height: 76vh;
+      justify-self: center;
+      aspect-ratio: 3 / 4;
+      max-width: 100%;
+    }
+
+    .photo-stack img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+
+    .photo-stack .credit {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -1.8rem;
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      text-align: center;
+    }
+
+    .photo-stack .credit a {
+      color: inherit;
+      text-decoration: none;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* Step reveal: anything with data-step starts hidden; → shows the next
+       step before advancing the slide, ← hides the last one before going back.
+       The counter never moves. Presenterm's <!-- pause -->, in spirit. */
+    [data-step] {
+      opacity: 0;
+      transition: opacity 0.7s ease;
+    }
+
+    [data-step].on {
+      opacity: 1;
+    }
+
+    .hl-list a {
+      color: var(--text);
+      text-decoration: none;
+      border-bottom: 1px solid var(--accent);
+    }
+
     .section-slide {
       justify-content: center;
       align-items: center;
@@ -704,6 +766,30 @@
     </div>
 
     <!-- slot: backstory -->
+    <!-- ═══ WHAT IS THIS? ═══ -->
+    <div class="slide"
+      data-notes="This workshop evolved from my first public talk I gave at RustLA to a room of about 80-100 people and it was terrifying. Thankfully this is a much smaller audience and only slightly less intimidating than last time. And before that I began shipping my own library of tools that I called ornaments to help me solve advent of code puzzles faster and more consistently.">
+      <span class="slide-number">Background</span>
+      <h2>What is <em>this</em>?</h2>
+      <div class="two-col media">
+        <div class="photo-stack">
+          <img src="img/rustla-talk.jpg" alt="Alyssa presenting at Rust LA, January 2026">
+          <img src="img/rustla-room.jpg" data-step="1" alt="The packed room at Rust LA, January 2026">
+          <span class="credit" data-step="1">photo: <a
+              href="https://www.lawrenceharvey.com/newsroom/rust-la-kicks-off-2026-with-a-packed-community-meetup-in-los-angeles"
+              target="_blank" rel="noopener">Lawrence Harvey, Rust LA kicks off 2026</a></span>
+        </div>
+        <div>
+          <p class="lead">Prior Art</p>
+          <ul class="hl-list">
+            <li><span class="bullet">talk</span><a href="https://github.com/alycda/aoc-ffi" target="_blank"
+                rel="noopener">alycda/aoc-ffi</a></li>
+            <li><span class="bullet">puzzle pieces</span><a href="https://github.com/alycda/AoC-Ornaments"
+                target="_blank" rel="noopener">alycda/AoC-Ornaments</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
 
     <!-- slot: who am I -->
 
@@ -761,6 +847,7 @@
     function showSlide(index) {
       slides.forEach(s => s.classList.remove('active'));
       slides[index].classList.add('active');
+      steps(index).forEach(el => el.classList.remove('on'));
       document.getElementById('currentSlide').textContent = String(index + 1).padStart(2, '0');
       document.getElementById('totalSlides').textContent = String(total).padStart(2, '0');
       document.getElementById('progressBar').style.width = ((index + 1) / total * 100) + '%';
@@ -769,7 +856,29 @@
       document.getElementById('notes').classList.toggle('visible', notesOn && !!note);
     }
 
+    function steps(index) {
+      return Array.from(slides[index].querySelectorAll('[data-step]'))
+        .sort((a, b) => Number(a.dataset.step) - Number(b.dataset.step));
+    }
+
     function navigate(dir) {
+      const st = steps(current);
+      if (dir > 0) {
+        const pending = st.filter(el => !el.classList.contains('on'));
+        if (pending.length) {
+          const n = pending[0].dataset.step;
+          pending.filter(el => el.dataset.step === n).forEach(el => el.classList.add('on'));
+          return;
+        }
+      }
+      if (dir < 0) {
+        const shown = st.filter(el => el.classList.contains('on'));
+        if (shown.length) {
+          const n = shown[shown.length - 1].dataset.step;
+          shown.filter(el => el.dataset.step === n).forEach(el => el.classList.remove('on'));
+          return;
+        }
+      }
       current = Math.max(0, Math.min(total - 1, current + dir));
       showSlide(current);
     }

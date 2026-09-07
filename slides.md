@@ -71,3 +71,25 @@ theme:
     -->
 
 <!-- end_slide -->
+
+What Is This?
+===
+
+![image:w:40%](./img/rustla-talk.jpg)
+
+<!-- font_size: 2 -->
+<!-- alignment: center -->
+Prior Art: [alycda/aoc-ffi](https://github.com/alycda/aoc-ffi) · [alycda/AoC-Ornaments](https://github.com/alycda/AoC-Ornaments)
+
+<!-- end_slide -->
+
+What Is This?
+===
+
+![image:w:40%](./img/rustla-room.jpg)
+
+<!-- font_size: 2 -->
+<!-- alignment: center -->
+Prior Art: [alycda/aoc-ffi](https://github.com/alycda/aoc-ffi) · [alycda/AoC-Ornaments](https://github.com/alycda/AoC-Ornaments)
+
+photo: [Lawrence Harvey](https://www.lawrenceharvey.com/newsroom/rust-la-kicks-off-2026-with-a-packed-community-meetup-in-los-angeles)
