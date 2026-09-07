@@ -93,3 +93,25 @@ What Is This?
 Prior Art: [alycda/aoc-ffi](https://github.com/alycda/aoc-ffi) · [alycda/AoC-Ornaments](https://github.com/alycda/AoC-Ornaments)
 
 photo: [Lawrence Harvey](https://www.lawrenceharvey.com/newsroom/rust-la-kicks-off-2026-with-a-packed-community-meetup-in-los-angeles)
+
+<!-- end_slide -->
+
+Who Am I?
+===
+
+
+Staff Software Engineer, SDKs at [Ditto](https://ditto.com) 
+
+<!-- speaker_note: |
+
+    Last year I joined Ditto as a Staff Software Engineer. FFI is literally my day job. 
+    
+
+
+    Before Ditto, I spent 6 years in Free Ad-Supported Streaming TV (FAST) 
+
+        building Web Applications for Connected TVs and game consoles. 
+
+        Then I became _that engineer_ who kept pushing to adopt Rust.
+
+    -->
