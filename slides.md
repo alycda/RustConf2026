@@ -37,9 +37,13 @@ theme:
 
 <!-- comment: slot - agenda -->
 
+<!-- comment: slot - self-check -->
+
 <!-- comment: slot - part-1 (why is FFI hard) -->
 
 <!-- comment: slot - exercise-1 (solve it in Rust) -->
+
+<!-- comment: 09:55 - 10:05 - BREAK -->
 
 <!-- comment: 10:00 - Part 2 -->
 
