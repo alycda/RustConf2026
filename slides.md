@@ -9,7 +9,7 @@ theme:
             # right: "Montréal: 2026-09-08"
 ---
 
-<!-- comment: 08:00 - DOORS-->
+<!-- comment: 08:00 - 09:00 - DOORS -->
 <!-- comment: slide_background_color 0b112e -->
 <!-- font_size: 7 -->
 
@@ -43,15 +43,25 @@ theme:
 
 <!-- comment: slot - exercise-1 (solve it in Rust) -->
 
+<!-- comment: slot - exercise-1-bonus (find a C library, try to load it) -->
+
 <!-- comment: 09:55 - 10:05 - BREAK -->
 
-<!-- comment: 10:00 - Part 2 -->
+<!-- comment: 10:05 - Part 2 -->
+
+<!-- comment: slot - lecture-2 (C as the bridge — live demo) -->
 
 <!-- comment: slot - part-2 (wrap it in C) -->
 
-<!-- comment: 11:00 - Part 3 -->
+<!-- comment: 10:55 - 11:05 - BREAK -->
+
+<!-- comment: 11:05 - Part 3 -->
+
+<!-- comment: slot - lecture-3 (one header, four runtimes) -->
 
 <!-- comment: slot - part-3 (bindings) -->
+
+<!-- comment: slot - exercise-3-bonus (try another language) -->
 
 <!-- comment: 12:00 - Wrap -->
 
@@ -149,12 +159,13 @@ Agenda
 
 <!-- new_line -->
 
-- NOW - self-check
-- Why is FFI Hard
-- Exercise 1 (+ bonus)
-- C as the Bridge
-- Exercise 2: Glue Layer
-- One Header, multiple runtimes
-- Exercise 3: Bindings in Your Language of Choice
-- debrief
-- what's next?
+- **NOW** — self-check + pick your day — *you*
+- **9:15** — why FFI is harder than it looks — *me*
+- **9:35** — Ex 1 · your day, pure Rust — *you*
+- **9:55** — break
+- **10:05** — C as the bridge (live demo) — *me*
+- **10:25** — Ex 2 · wrap it in a C boundary — *you*
+- **10:55** — break
+- **11:05** — one header, four runtimes — *me*
+- **11:30** — Ex 3 · bindings in YOUR language — *you*
+- **12:00** — debrief: what broke? — *all of us*
