@@ -587,3 +587,26 @@ Generated Bindings
 languages calling the same Rust — before lunch
 
 <!-- speaker_note: (point at the room — this number is theirs, not mine) -->
+
+<!-- end_slide -->
+
+Debrief: What Broke?
+===
+
+<!-- incremental_lists: true -->
+
+1. What broke — and what did the error **actually tell you**?
+2. What did your language **hide** from you?
+3. What surprised you in the **generated** code?
+
+<!-- incremental_lists: false -->
+
+<!-- new_line -->
+
+Best bug in the room gets a retelling.
+
+<!-- speaker_note: |
+
+    Facilitate, don't lecture. Harvest 3–4 stories; connect each to its pattern — encoding, ownership, hidden bridging.
+
+ -->
