@@ -14,6 +14,14 @@ set -euo pipefail
 repo="$(cd "$(dirname "$0")/../.." && pwd)"
 scratch="${1:?usage: module2.sh <scratch-dir>}"
 mkdir -p "$scratch"
+scratch="$(cd "$scratch" && pwd)"
+# The scratch dir gets its exercises/ wiped and rebuilt. Never let that be
+# the repo (or anything inside it): `module2.sh .` must not delete the tree.
+case "$scratch" in
+    "$repo"|"$repo"/*)
+        echo "module2.sh: scratch dir must be outside the repo, got $scratch" >&2
+        exit 2 ;;
+esac
 rm -rf "$scratch/exercises"
 tar --exclude=target -C "$repo" -cf - exercises | tar -xf - -C "$scratch"
 cd "$scratch/exercises/ex2-c-glue"
