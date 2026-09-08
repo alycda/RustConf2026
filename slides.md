@@ -488,11 +488,11 @@ asciinema play -i 2 docs/demo/module2.cast
 
 <!-- speaker_note: |
 
-    The money beat: invalid UTF-8 in, sentinel out, no crash — the boundary checks EARNED that.
-
-    Then the todo!() still inside: a panic across extern "C" aborts. Rust won't let a lie cross the border.
-
     Read the generated header aloud — it's the demo's centrepiece.
+
+    First run, the todo!() still inside: a panic across extern "C" aborts. Rust won't let a lie cross the border.
+
+    Then the four steps, rebuild, and the money beat: invalid UTF-8 in, sentinel out, no crash — the boundary checks EARNED that.
 
     (Demo-gods fallback: `asciinema play docs/demo/module2.cast` — 27s, the same three acts; docs/demo/module2.sh re-records it)
 

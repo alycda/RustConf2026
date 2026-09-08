@@ -1103,7 +1103,7 @@ pub unsafe extern "C" fn ex_part1(input: *const c_char) -> i64</code></pre>
 
     <!-- ═══ LIVE: RUST → HEADER → C CALLER ═══ -->
     <div class="slide"
-      data-notes="Demo: ex2 with 2024-12-03 as the Ex 1 solver — the crate and harness the room opens at 10:25. The money beat: invalid UTF-8 in, sentinel out, no crash — the boundary checks EARNED that. Then the todo!() still inside: a panic across extern C aborts. Rust won't let a lie cross the border. Read the generated header aloud — it's the demo's centrepiece. (Demo-gods fallback: asciinema play docs/demo/module2.cast — 27s, the same three acts)">
+      data-notes="Demo: ex2 with 2024-12-03 as the Ex 1 solver — the crate and harness the room opens at 10:25. Read the generated header aloud — it's the demo's centrepiece. First run, the todo!() still inside: a panic across extern C aborts. Rust won't let a lie cross the border. Then the four steps, rebuild, and the money beat: invalid UTF-8 in, sentinel out, no crash — the boundary checks EARNED that. (Demo-gods fallback: asciinema play docs/demo/module2.cast — 27s, the same three acts)">
       <span class="slide-number">02 &mdash; C as the bridge &middot; live</span>
       <h2>Rust &rarr; header &rarr; <em>C caller</em></h2>
       <p class="lead">Four commands, one boundary &mdash; from <code>exercises/ex2-c-glue</code>.</p>
