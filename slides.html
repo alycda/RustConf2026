@@ -1159,7 +1159,9 @@ cc tests/c/test_glue.c -L target/debug -lex2_c_glue -o test_glue
       id="notesText"></span></div>
 
   <script>
-    const slides = document.querySelectorAll('.slide');
+    // data-skip: presenterm's skip_slide — the slide stays in the file and in
+    // DOM order, but out of the run. Remove the attribute to unskip.
+    const slides = document.querySelectorAll('.slide:not([data-skip])');
     const total = slides.length;
     let current = 0;
     let notesOn = false;
