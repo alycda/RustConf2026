@@ -1,0 +1,10 @@
+---
+syntax: bash
+tags: [ demo ]
+---
+# copy a beat to the host clipboard — no pbcopy in the devcontainer, so scripts/clip.sh
+# uses OSC 52 and the terminal emulator does the copying (Mac: falls through to pbcopy)
+cheat demo/cc | scripts/clip.sh
+
+# the same from the recipe: -n prints the command instead of running it
+cd exercises/ex2-c-glue && just -n cc 2>&1 | ../../scripts/clip.sh
