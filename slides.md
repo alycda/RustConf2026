@@ -549,6 +549,44 @@ Module 3 · 11:05
 
 <!-- end_slide -->
 
+Load, Then Look Up
+===
+
+Two questions the header can't answer: **where** is the library, and **what** is it called here?
+
+<!-- new_line -->
+
+<!-- incremental_lists: true -->
+
+* **Python / Dart** — you compute the path. `../../target/{debug,release}/` × three names: `libex2_c_glue.so` · `libex2_c_glue.dylib` · `ex2_c_glue.dll`. No platform check — whichever file cargo produced is the one that exists.
+* **Kotlin / JNA** — `Native.load("ex2_c_glue")`: bare name in, JNA does the three-name mapping. You give it `jna.library.path`.
+* **Swift** — no runtime search at all. `-L` finds it for the link, `-rpath` for the run. Same search, spelled to the linker.
+* **Lookup** — cffi reads the header · JNA matches method names to symbols · Dart looks up a string · Swift got typed functions from clang
+
+<!-- incremental_lists: false -->
+
+<!-- new_line -->
+
+Nothing in `ex2_c_glue.h` says where `libex2_c_glue` lives. It never will.
+
+<!-- speaker_note: |
+
+    (6m) The header is a treaty about calls. Two things happen before any call and the header is silent on both.
+
+    [next: Python / Dart]  three filenames because three OSes name a cdylib three ways — and Windows drops the lib prefix. No if-platform: try all three, whichever exists is the one cargo built. First Windows run ever is what taught this.
+    [next: Kotlin]  JNA does that same mapping itself from the bare name — you only tell it where to look.
+    [next: Swift]  the compiled-language spelling of the same search. -L answers the linker, -rpath answers the loader — two flags because link time and run time are different questions. Skip -rpath and the link succeeds and the run doesn't. Ex 2's cc line had the same shape.
+    [next: Lookup]  four answers to "what is it called": Python parses the header as data; JNA matches your method NAMES to exported symbols; Dart looks up a literal string; Swift asked clang and got a typed function. That gradient is the debrief-two slide — hold it.
+
+    ---
+
+    Sources: exercises/ex3-bindings/{python/bindings.py,dart/ex3.dart} TODO 2 comments (three names, no platform check); kotlin/ex3.kts header (JNA maps the bare name itself, -Djna.library.path); swift/main.swift header (-L/-rpath, an env var would be DYLD_* on one OS and LD_* on the other). book/src/boundary.md "Where the library is at run time is a third question again" — and the Swift devcontainer ladder: a module resolving is not the same as its library loading.
+
+    [6m]
+ -->
+
+<!-- end_slide -->
+
 Ex 3: One Header, Four Runtimes
 ===
 

@@ -1186,6 +1186,23 @@ cc tests/c/test_glue.c -L../target/debug -lex2_c_glue \
       <span class="section-sub">Module 3 &middot; bindings</span>
     </div>
 
+    <!-- ═══ LOAD, THEN LOOK UP ═══ -->
+    <div class="slide"
+      data-notes="(6m) The header is a treaty about calls. Two things happen before any call and the header is silent on both. Python/Dart: three filenames because three OSes name a cdylib three ways — Windows drops the lib prefix. No if-platform: try all three, whichever exists is the one cargo built. Kotlin: JNA does that mapping itself from the bare name — you only tell it where to look. Swift: -L answers the linker, -rpath answers the loader — link time and run time are different questions; skip -rpath and the link succeeds and the run doesn't. Lookup: Python parses the header as data; JNA matches your method NAMES to symbols; Dart looks up a literal string; Swift asked clang and got a typed function. That gradient is the debrief-two slide — hold it.">
+      <span class="slide-number">03 &mdash; One header, four runtimes</span>
+      <h2>Load, then <em>look up</em></h2>
+      <p class="lead">Two questions the header can't answer: <strong>where</strong> is the library, and <strong>what</strong> is it called here?</p>
+      <ul class="hl-list">
+        <li><span class="bullet">python / dart</span><span>you compute the path: <code>../../target/{debug,release}/</code> &times; three names
+            &mdash; <code>libex2_c_glue.so</code> &middot; <code>libex2_c_glue.dylib</code> &middot; <code>ex2_c_glue.dll</code>. No platform check.</span></li>
+        <li><span class="bullet">kotlin / jna</span><span><code>Native.load("ex2_c_glue")</code>: bare name in, JNA does the three-name mapping. You give it
+            <code>jna.library.path</code>.</span></li>
+        <li><span class="bullet">swift</span><span>no runtime search at all. <code>-L</code> finds it for the link, <code>-rpath</code> for the run. Same search, spelled to the linker.</span></li>
+        <li><span class="bullet">lookup</span><span>cffi reads the header &middot; JNA matches method names to symbols &middot; Dart looks up a string &middot; Swift got typed functions from clang</span></li>
+      </ul>
+      <p class="lead">Nothing in <code>ex2_c_glue.h</code> says where <code>libex2_c_glue</code> lives. It never will.</p>
+    </div>
+
     <!-- ═══ EX 3: ONE HEADER, FOUR RUNTIMES ═══ -->
     <div class="slide"
       data-notes="The spectrum IS the lesson: Swift hides everything, Dart hides nothing. Neither end is better — but you must KNOW what's hidden, because hidden work still fails. It just fails further from your code. Launch Ex 3. Collect your debrief answer as you go: what did your runtime need that the header couldn't say? Golden-day branches are the safety net. Done early? The Ex 3 bonus — a second track. Timing valve: shrink to 25 if the room is behind.">
