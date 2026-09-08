@@ -1203,6 +1203,25 @@ cc tests/c/test_glue.c -L../target/debug -lex2_c_glue \
       <p class="lead">Nothing in <code>ex2_c_glue.h</code> says where <code>libex2_c_glue</code> lives. It never will.</p>
     </div>
 
+    <!-- ═══ THE STRING CROSSES — THEN WHAT? ═══ -->
+    <div class="slide"
+      data-notes="(7m) Ex 2 made you do the conversion by hand — null check, CStr, UTF-8 check. Every runtime does it again on its side, and they disagree about how much to show you. Swift: the bridge is free-looking, not free — a NUL-terminated copy still gets made, valid only for the call. Hidden work still fails, just further from your code. Kotlin: JNA's default is the platform charset, not UTF-8 — the justfile pins it; the M1 modified-UTF-8 story lives next door. Python: explicit and honest — cffi adds the NUL, so what does a string with a NUL in the middle become? Rust's String can hold one; CString refuses it. Dart: nothing hidden — you allocate, you free, you hold the pointer. Closing: four spellings of NULL, one answer: -1, not a crash. Launch is the next slide. (unverified in-repo: Swift nil, Dart nullptr.)">
+      <span class="slide-number">03 &mdash; One header, four runtimes</span>
+      <h2>The string crosses &mdash; <em>then what?</em></h2>
+      <p class="lead">One <code>const char *</code>, four prices &mdash; and four spellings of NULL.</p>
+      <ul class="hl-list">
+        <li><span class="bullet">swift</span><span><code>String</code> &rarr; <code>UnsafePointer&lt;CChar&gt;</code> bridged for you. UTF-8 inside since Swift 5, so what's left to pay?
+            NULL: the imported parameter is Optional &mdash; <code>nil</code></span></li>
+        <li><span class="bullet">kotlin / jna</span><span><code>String</code> &rarr; <code>const char*</code> for you, in the <strong>platform charset</strong> unless
+            <code>-Djna.encoding=UTF-8</code>. NULL: declare <code>String?</code>, pass <code>null</code></span></li>
+        <li><span class="bullet">python / cffi</span><span><code>.encode("utf-8")</code> yourself; cffi adds the terminator. What about an embedded NUL?
+            NULL: <code>ffi.NULL</code></span></li>
+        <li><span class="bullet">dart / ffi</span><span><code>toNativeUtf8()</code> allocates. <code>calloc.free</code> in a <code>finally</code> &mdash; that's yours.
+            NULL: <code>nullptr</code></span></li>
+      </ul>
+      <p class="lead">Every track ends the same way: <code>ex_part1(NULL) == -1</code>. The contract you wrote in Ex 2 &mdash; proved from the outside.</p>
+    </div>
+
     <!-- ═══ EX 3: ONE HEADER, FOUR RUNTIMES ═══ -->
     <div class="slide"
       data-notes="The spectrum IS the lesson: Swift hides everything, Dart hides nothing. Neither end is better — but you must KNOW what's hidden, because hidden work still fails. It just fails further from your code. Launch Ex 3. Collect your debrief answer as you go: what did your runtime need that the header couldn't say? Golden-day branches are the safety net. Done early? The Ex 3 bonus — a second track. Timing valve: shrink to 25 if the room is behind.">

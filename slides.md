@@ -587,6 +587,49 @@ Nothing in `ex2_c_glue.h` says where `libex2_c_glue` lives. It never will.
 
 <!-- end_slide -->
 
+The String Crosses — Then What?
+===
+
+One `const char *`, four prices — and four spellings of NULL
+
+<!-- new_line -->
+
+<!-- incremental_lists: true -->
+
+* **Swift** — `String` → `UnsafePointer<CChar>` bridged for you. UTF-8 inside since Swift 5, so what's left to pay? NULL: the imported parameter is Optional — `nil`
+* **Kotlin / JNA** — `String` → `const char*` for you, in the **platform charset** unless `-Djna.encoding=UTF-8`. NULL: declare `String?`, pass `null`
+* **Python / cffi** — `.encode("utf-8")` yourself; cffi adds the terminator. What about an embedded NUL? NULL: `ffi.NULL`
+* **Dart / ffi** — `toNativeUtf8()` allocates. `calloc.free` in a `finally` — that's yours. NULL: `nullptr`
+
+<!-- incremental_lists: false -->
+
+<!-- new_line -->
+
+Every track ends the same way: `ex_part1(NULL) == -1`. The contract you wrote in Ex 2 — proved from the outside.
+
+<!-- speaker_note: |
+
+    (7m) Ex 2 made you do the conversion by hand — null check, CStr, UTF-8 check. Every runtime does it again on its side, and they disagree about how much to show you.
+
+    [next: Swift]  the bridge is free-looking, not free: a NUL-terminated copy still gets made for the call, and the pointer is only valid for the call. Hidden work still fails, just further from your code.
+    [next: Kotlin]  JNA's default is the platform charset, not UTF-8 — the justfile pins it. The M1 modified-UTF-8 story lives next door: fine with ASCII in every test, then someone's name has an emoji.
+    [next: Python]  explicit and honest. Ask the file's question: cffi adds the NUL — so what does a string with a NUL in the middle become? Rust's String can hold one; CString refuses it.
+    [next: Dart]  nothing hidden. You allocate, you free, you hold the pointer. Dart makes you do what Swift hid — the file asks which you prefer.
+    [next: closing]  four spellings of NULL, one answer: -1, not a crash. The sentinel you chose in Ex 2 is what each runtime now checks for.
+
+    Launch is the next slide.
+
+    ---
+
+    Sources: exercises/ex3-bindings/{swift/main.swift TODO 1–3, kotlin/ex3.kts TODO 1+3, python/bindings.py TODO 3–4, dart/ex3.dart TODO 3}; exercises/justfile pins -Djna.encoding=UTF-8 with the comment "JNA's default is the platform charset, not UTF-8". Swift UTF-8 storage: swift.org/blog/utf8-string (Swift 5).
+
+    [unverified] nil and nullptr: the Swift file only hints "the imported signature takes an Optional pointer" and the Dart file has no NULL TODO at all — neither spelling is proven in-repo. Python's ffi.NULL and Kotlin's String? are in the files.
+
+    [7m]
+ -->
+
+<!-- end_slide -->
+
 Ex 3: One Header, Four Runtimes
 ===
 
