@@ -1243,7 +1243,7 @@ cc tests/c/test_glue.c -L../target/debug -lex2_c_glue \
 
     <!-- ═══ WHO ACTUALLY READ THE HEADER? ═══ -->
     <div class="slide"
-      data-notes="Debrief, part two. You told me what your runtime needed that the header couldn't say — now: did your runtime read the header at all? Only one did. Swift handed it to clang and got typed functions back; a stale header is a compile error. Python read it as data at runtime — it can't drift, but nobody verified it. Dart and Kotlin never opened it: the header sat there as documentation while the treaty got re-typed by hand. Segue: the only way to buy Swift's guarantee for the other three is to generate the binding from the source of truth — UniFFI. That's section 5 of the reference card, not a slide today.">
+      data-notes="Debrief, part two. You told me what your runtime needed that the header couldn't say — now: did your runtime read the header at all? Only one did. Swift handed it to clang and got typed functions back; a stale header is a compile error. Python read it as data at runtime — it can't drift, but nobody verified it. Dart and Kotlin never opened it: the header sat there as documentation while the treaty got re-typed by hand. Segue: the only way to buy Swift's guarantee for the other three is to generate the binding from the source of truth — UniFFI. Not today.">
       <span class="slide-number">12:00 &mdash; Debrief &middot; part two</span>
       <h2>Who actually <em>read</em> the header?</h2>
       <p class="lead">One header, four treaties &mdash; enforced, consumed, copied, remembered.</p>
@@ -1336,7 +1336,7 @@ if !*guard {
 
     <!-- ═══ YES, AI HELPED BUILD THIS ═══ -->
     <div class="slide"
-      data-notes="Full transparency: AGENTS.md in the repo itemizes what AI did here. Use it the same way during exercises — delegate the boring, own the boundary.">
+      data-notes="Full transparency — this is what AI did here, and what it didn't. Use it the same way during exercises: delegate the boring, own the boundary.">
       <span class="slide-number">12:00 &mdash; Debrief</span>
       <h2>Yes, <em>AI</em> helped build this</h2>
       <div class="two-col">
@@ -1384,7 +1384,6 @@ if !*guard {
       <img class="title-qr" src="img/qr-code_white.png" alt="QR code: github.com/alycda/RustConf2026">
       <span class="tag">Nothing is wasted</span>
       <h1>when you document<br>the <em>messy middle</em></h1>
-      <p class="subtitle"><code>docs/reference-card.pdf</code> &mdash; the one-page boundary-patterns card</p>
       <a class="cta" href="https://github.com/alycda/RustConf2026" target="_blank"
         rel="noopener">https://github.com/alycda/RustConf2026</a>
     </div>

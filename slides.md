@@ -659,7 +659,7 @@ Only one track keeps the guarantee your Ex 2 C harness had: `#include`, then a c
 
     Debrief, part two. You told me what your runtime needed that the header couldn't say — now: did your runtime read the header at all? Only one did. Swift handed it to clang and got typed functions back; a stale header is a compile error. Python read it as data at runtime — it can't drift, but nobody verified it. Dart and Kotlin never opened it: the header sat there as documentation while the treaty got re-typed by hand.
 
-    Segue: the only way to buy Swift's guarantee for the other three is to generate the binding from the source of truth — UniFFI. That's §5 of the reference card, not a slide today.
+    Segue: the only way to buy Swift's guarantee for the other three is to generate the binding from the source of truth — UniFFI. Not today.
 
     ---
 
@@ -672,7 +672,7 @@ Only one track keeps the guarantee your Ex 2 C harness had: `#include`, then a c
 
     As of 2026-08-27 the goldens line makes this slide literal instead of assembled: days/2024-12-01 and days/2024-12-03 each carry ALL FOUR tracks against ONE header on ONE day — enforced, consumed, copied and remembered, side by side over the same two functions, every cell CI-asserted against numbers the Rust tests pin. If a track question needs a receipt mid-slide, point there: the four files sit in one directory and their headers cross-reference each other's trade.
 
-    FAQ ("why not add the check to the others?"): ffigen (Dart) and jextract (Kotlin) exist — but they ARE generated bindings, i.e. the reference card's §5. Wiring one up is bonus/afternoon material, not a fix; the uneven gradient is the exhibit.
+    FAQ ("why not add the check to the others?"): ffigen (Dart) and jextract (Kotlin) exist — but they ARE generated bindings — the same C shape plus a toolchain. Wiring one up is bonus/afternoon material, not a fix; the uneven gradient is the exhibit.
 
  -->
 
@@ -842,7 +842,7 @@ AI writes any binding in a minute. It can't build your intuition for **where to 
 
 <!-- speaker_note: |
 
-    Full transparency: AGENTS.md in the repo itemizes what AI did here. Use it the same way during exercises — delegate the boring, own the boundary.
+    Full transparency — this is what AI did here, and what it didn't. Use it the same way during exercises: delegate the boring, own the boundary.
 
  -->
 
@@ -884,10 +884,6 @@ when you document the **messy middle**
 ![image:w:30%](./img/qr-code.png)
 
 github.com/alycda/RustConf2026
-
-<!-- new_line -->
-
-`docs/reference-card.pdf` — the one-page boundary-patterns card
 
 <!-- speaker_note: |
 
