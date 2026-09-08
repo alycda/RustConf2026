@@ -483,7 +483,7 @@ cc tests/c/test_glue.c -L../target/debug -lex2_c_glue \
 <!-- new_line -->
 
 ```bash +exec +acquire_terminal
-asciinema play -i 2 docs/demo/module2.cast
+just demo   # asciinema play docs/demo/module2.cast, borrowed from nix if absent
 ```
 
 <!-- speaker_note: |
