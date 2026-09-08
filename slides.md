@@ -357,6 +357,29 @@ raw string scan → `usize`; stateful parse (`do()` / `don't()`)
 
 <!-- end_slide -->
 
+▶ 2015-12-06: Probably a Fire Hazard
+===
+
+instruction lines → enum + rectangle → `u32`; one 1000×1000 grid walked twice, the per-light rule swapped by function pointer
+
+<!-- new_line -->
+
+> **TODO(walk-through):** the example input, the parse, and the one line that becomes the boundary.
+
+<!-- speaker_note: |
+
+    TODO: the 2015-12-06 walk-through — how long, what to show (the instruction lines to an enum plus a rectangle, the 1000×1000 grid walked twice, the per-light rule swapped by function pointer), and where the boundary will bite it in Ex 2.
+
+    ---
+
+    Rust reference: days/2015-12-06 (Rust + Dart tracks, cbindgen.toml present — not golden).
+
+
+    [??s]
+ -->
+
+<!-- end_slide -->
+
 Ahead of Schedule? Choose Your Adventure
 ===
 
