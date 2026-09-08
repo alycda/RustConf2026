@@ -784,3 +784,29 @@ AI writes any binding in a minute. It can't build your intuition for **where to 
     AGENTS.md is on the older deck's chain (ynoksmxn), not this one — bring it across before this line is said out loud.
 
  -->
+
+<!-- end_slide -->
+
+Take the Playground Home
+===
+
+<!-- incremental_lists: true -->
+
+1. Pick a solved problem → progress the boundary: **primitives → strings → structs → errors → async**
+2. Reference solutions unlocked **today** — compare, argue, learn twice
+3. Add a day. Add a language. Break something new.
+4. Bring it to your team — **the compiler errors become the curriculum**
+
+<!-- incremental_lists: false -->
+
+<!-- speaker_note: |
+
+    The methodology is the takeaway, not the code.
+
+    Reference branches just went public — everything you fought with has a worked answer now. The comparison is where the second half of the learning lives.
+
+    ---
+
+    Timing valve: wrap compresses to 8 min if the room ran long.
+
+ -->
