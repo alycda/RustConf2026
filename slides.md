@@ -751,3 +751,36 @@ When Is FFI the Right Call?
     Migration: strangler fig, not big bang.
 
  -->
+
+<!-- end_slide -->
+
+Yes, AI Helped Build This
+===
+
+**Delegated to AI:**
+
+* C test boilerplate, makefiles
+* glibc archaeology
+* "suggest a day to abuse"
+
+<!-- new_line -->
+
+**Kept human:**
+
+* boundary design, ownership contracts
+* reading the segfault
+* knowing when the answer is wrong
+
+<!-- new_line -->
+
+AI writes any binding in a minute. It can't build your intuition for **where to look when it breaks.** That was today.
+
+<!-- speaker_note: |
+
+    Full transparency: AGENTS.md in the repo itemizes what AI did here. Use it the same way during exercises — delegate the boring, own the boundary.
+
+    ---
+
+    AGENTS.md is on the older deck's chain (ynoksmxn), not this one — bring it across before this line is said out loud.
+
+ -->
