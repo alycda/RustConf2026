@@ -810,3 +810,32 @@ Take the Playground Home
     Timing valve: wrap compresses to 8 min if the room ran long.
 
  -->
+
+<!-- end_slide -->
+
+Nothing Is Wasted
+===
+
+when you document the **messy middle**
+
+<!-- new_line -->
+
+![image:w:30%](./img/qr-code.png)
+
+github.com/alycda/RustConf2026
+
+<!-- new_line -->
+
+`docs/reference-card.pdf` — the one-page boundary-patterns card
+
+<!-- speaker_note: |
+
+    (End with energy — thank them, take questions in the hall)
+
+    Q&A runs to 12:30; the wrap slide stays up.
+
+    ---
+
+    docs/reference-card.pdf is on the older deck's chain (ynoksmxn), not this one — bring it across or take the line off the slide.
+
+ -->
