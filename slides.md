@@ -610,3 +610,53 @@ Best bug in the room gets a retelling.
     Facilitate, don't lecture. Harvest 3–4 stories; connect each to its pattern — encoding, ownership, hidden bridging.
 
  -->
+
+<!-- end_slide -->
+
+Debrief Seed: What Windows Hid
+===
+
+<!-- skip_slide -->
+
+First full three-OS run of the merged tree: **red only on Windows** — and not one failure was in the days.
+
+<!-- incremental_lists: true -->
+
+* `.venv/bin/python` → `.venv/Scripts/python` — same venv, the interpreter moved
+* `shasum` → `sha256sum` — Git-for-Windows bash is a different bash
+* `java -cp "a.jar:b.jar"` → `;` — with `:` the JVM loads neither and says nothing
+* `libaoc_2015_12_05.so` / `.dylib` → `aoc_2015_12_05.dll` — no `lib` prefix
+* `print("Part 1 🐍(🦀): …")` → `UnicodeEncodeError: 'charmap'` — stdout inherited **cp1252**
+
+<!-- incremental_lists: false -->
+
+<!-- new_line -->
+
+```python
+for name in ("libaoc_2015_12_05.so", "libaoc_2015_12_05.dylib", "aoc_2015_12_05.dll"):
+```
+
+No platform check — whichever file cargo produced is the one that exists.
+
+<!-- speaker_note: |
+
+    My own answer to question two, if the room is quiet.
+
+    The tracks were green on linux for weeks. The merge put them on the full grid — first Windows run ever.
+    [next: Scripts]  the venv is the same venv; the interpreter moved
+    [next: sha256sum]  bash on Windows is a different bash
+    [next: classpath]  the one that fails silently — nothing loads, no error
+    [next: dll]  same cdylib, different name — three filenames, no platform check
+    [next: cp1252]  Dart and Kotlin printed the same snake and crab. Python asked the console.
+
+    None of these are FFI. All of them sit on the boundary.
+
+    ---
+
+    Found 2026-09-04 on wip/ffi-ci: gate commit → one fix per track → gate lifted → UTF-8 stdout.
+    Self-check passed in every Windows cell throughout; the workshop's Windows answer is still WSL2.
+    sys.stdout.reconfigure(encoding="utf-8") — a no-op where stdout is already UTF-8.
+
+
+    [??s]
+ -->

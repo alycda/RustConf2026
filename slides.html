@@ -1136,6 +1136,29 @@ cc tests/c/test_glue.c -L target/debug -lex2_c_glue -o test_glue
       <p class="lead">Best bug in the room gets a retelling.</p>
     </div>
 
+    <!-- ═══ DEBRIEF SEED: WHAT WINDOWS HID (skip) ═══ -->
+    <div class="slide" data-skip
+      data-notes="My own answer to question two, if the room is quiet. The tracks were green on linux for weeks. The merge put them on the full grid — first Windows run ever. [next: Scripts] the venv is the same venv; the interpreter moved. [next: sha256sum] bash on Windows is a different bash. [next: classpath] the one that fails silently — nothing loads, no error. [next: dll] same cdylib, different name — three filenames, no platform check. [next: cp1252] Dart and Kotlin printed the same snake and crab. Python asked the console. None of these are FFI. All of them sit on the boundary. [??s]">
+      <span class="slide-number">Debrief seed &mdash; backup</span>
+      <h2>What <em>Windows</em> hid</h2>
+      <p class="lead">First full three-OS run of the merged tree: <strong>red only on Windows</strong> &mdash; and not
+        one failure was in the days.</p>
+      <ul class="hl-list">
+        <li><span class="bullet">Scripts</span><span><code>.venv/bin/python</code> &rarr; <code>.venv/Scripts/python</code>
+            &mdash; same venv, the interpreter moved</span></li>
+        <li><span class="bullet">sha256sum</span><span><code>shasum</code> &rarr; <code>sha256sum</code> &mdash;
+            Git-for-Windows bash is a different bash</span></li>
+        <li><span class="bullet">classpath</span><span><code>java -cp "a.jar:b.jar"</code> &rarr; <code>;</code> &mdash;
+            with <code>:</code> the JVM loads neither and says nothing</span></li>
+        <li><span class="bullet">dll</span><span><code>libaoc_2015_12_05.so</code> / <code>.dylib</code> &rarr;
+            <code>aoc_2015_12_05.dll</code> &mdash; no <code>lib</code> prefix</span></li>
+        <li><span class="bullet">cp1252</span><span><code>print("Part 1 🐍(🦀): …")</code> &rarr;
+            <code>UnicodeEncodeError: 'charmap'</code> &mdash; stdout inherited <strong>cp1252</strong></span></li>
+      </ul>
+      <pre><code>for name in ("libaoc_2015_12_05.so", "libaoc_2015_12_05.dylib", "aoc_2015_12_05.dll"):</code></pre>
+      <p style="margin-top:.8rem;">No platform check &mdash; whichever file cargo produced is the one that exists.</p>
+    </div>
+
     <!-- 12:30 - END -->
 
   </div>
