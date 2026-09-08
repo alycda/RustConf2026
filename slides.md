@@ -578,3 +578,12 @@ Generated Bindings
     docs/reference-card.pdf is on the older deck's chain (ynoksmxn), not this one — bring it across or drop the pointer.
 
  -->
+
+<!-- end_slide -->
+
+×4
+===
+
+languages calling the same Rust — before lunch
+
+<!-- speaker_note: (point at the room — this number is theirs, not mine) -->
