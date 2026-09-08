@@ -471,7 +471,8 @@ Four commands, one boundary
 ```sh
 cargo build                              # Rust → shared library
 cbindgen --output include/ex2_c_glue.h   # Rust → C header (read it!)
-cc tests/c/test_glue.c -L target/debug -lex2_c_glue -o test_glue
+cc tests/c/test_glue.c -L../target/debug -lex2_c_glue \
+   -Wl,-rpath,"$PWD/../target/debug" -o test_glue
 ./test_glue
 ```
 
@@ -497,7 +498,7 @@ asciinema play -i 2 docs/demo/module2.cast
 
     ---
 
-    The four beats are exercises/ex2-c-glue/build-and-test.sh, which calls itself "the same four beats as the Module 2 demo". Trimmed for the slide: the real cc line links against ../target/debug (one cargo workspace) and adds -Wl,-rpath so test_glue runs from any cwd; the library takes the host's name (libex2_c_glue.so / .dylib).
+    The four beats are exercises/ex2-c-glue/build-and-test.sh, which calls itself "the same four beats as the Module 2 demo", cwd exercises/ex2-c-glue. ../target/debug because the exercises are one cargo workspace; the rpath is what lets test_glue find libex2_c_glue.so (.dylib on macOS) at run time — without it the link succeeds and the run doesn't.
 
     [confirm: which day's c_api.rs the live demo drives — 2024-12-03 and 2015-12-06 both carry one; ex2's harness is the shape either way]
 

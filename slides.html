@@ -1109,7 +1109,8 @@ pub unsafe extern "C" fn ex_part1(input: *const c_char) -> i64</code></pre>
       <p class="lead">Four commands, one boundary.</p>
       <pre><code>cargo build                              # Rust → shared library
 cbindgen --output include/ex2_c_glue.h   # Rust → C header (read it!)
-cc tests/c/test_glue.c -L target/debug -lex2_c_glue -o test_glue
+cc tests/c/test_glue.c -L../target/debug -lex2_c_glue \
+   -Wl,-rpath,"$PWD/../target/debug" -o test_glue
 ./test_glue</code></pre>
       <p style="margin-top:1.2rem;">&hellip;then we feed it <strong>garbage</strong> and watch the contract hold.</p>
       <button class="cast-btn" data-cast="cast-module2">&#9654; replay the recording &mdash; docs/demo/module2.cast</button>
