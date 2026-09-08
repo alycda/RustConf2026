@@ -466,7 +466,7 @@ Design rule: expose the **narrowest surface that works** — what crosses the bo
 Live: Rust → Header → C Caller
 ===
 
-Four commands, one boundary
+Four commands, one boundary — from `exercises/ex2-c-glue`
 
 ```sh
 cargo build                              # Rust → shared library
