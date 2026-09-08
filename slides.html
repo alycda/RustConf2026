@@ -1081,6 +1081,25 @@ cc tests/c/test_glue.c -L target/debug -lex2_c_glue -o test_glue
     </div>
 
     <!-- slot: part-3 (bindings) -->
+    <!-- ═══ WHO ACTUALLY READ THE HEADER? ═══ -->
+    <div class="slide"
+      data-notes="Debrief, part two. You told me what your runtime needed that the header couldn't say — now: did your runtime read the header at all? Only one did. Swift handed it to clang and got typed functions back; a stale header is a compile error. Python read it as data at runtime — it can't drift, but nobody verified it. Dart and Kotlin never opened it: the header sat there as documentation while the treaty got re-typed by hand. Segue: the only way to buy Swift's guarantee for the other three is to generate the binding from the source of truth — which is the next slide.">
+      <span class="slide-number">03 &mdash; One header, four runtimes</span>
+      <h2>Who actually <em>read</em> the header?</h2>
+      <p class="lead">One header, four treaties &mdash; enforced, consumed, copied, remembered.</p>
+      <ul class="hl-list">
+        <li><span class="bullet">swift</span><span>clang compiles against it. Drift is a compile error.
+            <strong>Enforced.</strong></span></li>
+        <li><span class="bullet">python / cffi</span><span>reads it at runtime, derives every call. Can't drift &mdash;
+            but trusts it blind. <strong>Consumed.</strong></span></li>
+        <li><span class="bullet">dart / ffi</span><span>never opens it. Typedefs hand-transcribed, header as reference.
+            <strong>Copied.</strong></span></li>
+        <li><span class="bullet">kotlin / jna</span><span>never opens it either. Interface hand-mapped, kept in sync by
+            care. <strong>Remembered.</strong></span></li>
+      </ul>
+      <p style="margin-top:1rem;">Only one track keeps the guarantee your Ex 2 C harness had: <code>#include</code>, then a
+        compiler.</p>
+    </div>
 
     <!-- slot: exercise-3-bonus (try another language) -->
 
