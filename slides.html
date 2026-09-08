@@ -1461,8 +1461,8 @@ if !*guard {
     }
 
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') {e.preventDefault(); navigate(1);}
-      if (e.key === 'ArrowLeft' || e.key === 'Backspace') {e.preventDefault(); navigate(-1);}
+      if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ' || e.key === 'Enter') {e.preventDefault(); navigate(1);}
+      if (e.key === 'ArrowLeft' || e.key === 'PageUp' || e.key === 'Backspace') {e.preventDefault(); navigate(-1);}
       if (e.key === 'Home') {e.preventDefault(); current = 0; showSlide(0);}
       if (e.key === 'End') {e.preventDefault(); current = total - 1; showSlide(current);}
       if (e.key === 'n' || e.key === 'N') {notesOn = !notesOn; showSlide(current);}
