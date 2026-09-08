@@ -487,7 +487,7 @@ cc tests/c/test_glue.c -L target/debug -lex2_c_glue -o test_glue
 
     Read the generated header aloud — it's the demo's centrepiece.
 
-    (Demo-gods fallback: TODO — recorded run or script, staged offline)
+    (Demo-gods fallback: `asciinema play docs/demo/module2.cast` — 27s, the same three acts; docs/demo/module2.sh re-records it)
 
     ---
 
