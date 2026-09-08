@@ -414,3 +414,39 @@ Design rule: expose the **narrowest surface that works** — what crosses the bo
     Signature is exercises/ex2-c-glue/src/lib.rs verbatim (edition 2024 via exercises/Cargo.toml). The worked shape with an out-param instead of an in-band i64: days/2024-12-03/src/c_api.rs.
 
  -->
+
+<!-- end_slide -->
+
+Live: Rust → Header → C Caller
+===
+
+Four commands, one boundary
+
+```sh
+cargo build                              # Rust → shared library
+cbindgen --output include/ex2_c_glue.h   # Rust → C header (read it!)
+cc tests/c/test_glue.c -L target/debug -lex2_c_glue -o test_glue
+./test_glue
+```
+
+<!-- new_line -->
+
+…then we feed it **garbage** and watch the contract hold.
+
+<!-- speaker_note: |
+
+    The money beat: invalid UTF-8 in, sentinel out, no crash — the boundary checks EARNED that.
+
+    Then the todo!() still inside: a panic across extern "C" aborts. Rust won't let a lie cross the border.
+
+    Read the generated header aloud — it's the demo's centrepiece.
+
+    (Demo-gods fallback: TODO — recorded run or script, staged offline)
+
+    ---
+
+    The four beats are exercises/ex2-c-glue/build-and-test.sh, which calls itself "the same four beats as the Module 2 demo". Trimmed for the slide: the real cc line links against ../target/debug (one cargo workspace) and adds -Wl,-rpath so test_glue runs from any cwd; the library takes the host's name (libex2_c_glue.so / .dylib).
+
+    [confirm: which day's c_api.rs the live demo drives — 2024-12-03 and 2015-12-06 both carry one; ex2's harness is the shape either way]
+
+ -->
