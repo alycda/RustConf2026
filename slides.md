@@ -779,10 +779,6 @@ AI writes any binding in a minute. It can't build your intuition for **where to 
 
     Full transparency: AGENTS.md in the repo itemizes what AI did here. Use it the same way during exercises — delegate the boring, own the boundary.
 
-    ---
-
-    AGENTS.md is on the older deck's chain (ynoksmxn), not this one — bring it across before this line is said out loud.
-
  -->
 
 <!-- end_slide -->
