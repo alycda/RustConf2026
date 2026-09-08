@@ -377,3 +377,12 @@ If these puzzles get to be absurd, then so can I with shoving FFI in places it d
     In-repo receipts for "ends up in production" (four-track merge, wip/tracks — pending validation before any of these get named on a slide): the same repo answers AoC puzzles through a speech synthesiser (espeak-ng, 2023-12-01), a malware scanner (YARA, 2023-12-01), a physics engine (Chipmunk2D, 2021-12-02), and a database (DuckDB, 2021-12-02) — every one behind a cargo feature, off by default.
 
  -->
+
+<!-- end_slide -->
+
+C as the Bridge
+===
+
+Module 2 · 10:05
+
+<!-- speaker_note: (back from break — energy reset) -->
