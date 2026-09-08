@@ -555,3 +555,26 @@ Only one track keeps the guarantee your Ex 2 C harness had: `#include`, then a c
     FAQ ("why not add the check to the others?"): ffigen (Dart) and jextract (Kotlin) exist — but they ARE generated bindings, i.e. the next slide. Wiring one up is bonus/afternoon material, not a fix; the uneven gradient is the exhibit.
 
  -->
+
+<!-- end_slide -->
+
+Generated Bindings
+===
+
+> **TODO(uniffi):** decide — a short UniFFI teaser here, or reference-card only.
+> Run-sheet valve: M3 trims to 12 min by moving UniFFI off-deck — the landing
+> spot exists: `docs/reference-card.pdf` §5 (cbindgen vs UniFFI, one-mode rule).
+
+<!-- speaker_note: |
+
+    If kept: Result → exceptions, snake_case → camelCase, Python/Kotlin/Swift generated from one crate. One interface mode per crate — UDL or proc-macros, never both.
+
+    In-repo receipt either way (days/2024-12-01/src/cpp.rs): the original talk reached C++'s std::sort through autocxx — which generated exactly the one pointer-plus-length extern "C" signature the golden day now hand-writes, at the price of a bindgen/libclang build-time dependency a stock runner doesn't have. Generated bindings are the same C shape plus a toolchain; that sentence works whether this slide stays or moves to the card.
+
+    ---
+
+    [confirm] the unbuildable-uniffi-crates war story (which repo? what actually happened?) before telling it.
+
+    docs/reference-card.pdf is on the older deck's chain (ynoksmxn), not this one — bring it across or drop the pointer.
+
+ -->
