@@ -540,6 +540,15 @@ A sentinel is only a sentinel if your day's answers can never **be** it — that
 
 <!-- end_slide -->
 
+One Header, Four Runtimes
+===
+
+Module 3 · 11:05
+
+<!-- speaker_note: (back from break — the header hasn't changed since Ex 2. Only the caller does.) -->
+
+<!-- end_slide -->
+
 Ex 3: One Header, Four Runtimes
 ===
 
