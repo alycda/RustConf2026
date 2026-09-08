@@ -567,6 +567,41 @@ languages calling the same Rust — before lunch
 
 <!-- end_slide -->
 
+Ahead of Schedule? Try Another Language
+===
+
+Same header, same day — a second runtime's ceremony
+
+<!-- new_line -->
+
+<!-- incremental_lists: true -->
+
+* **Cross the spectrum** — did Swift hide it? Do it in Dart. Did Dart make you free it? See what Swift did for you.
+* **Same four steps** — load, look up, convert the string, prove the hostile-input contract — different runtime, different answers
+* **The answer key is one directory over** — the golden days carry all four tracks against one header (`days/2024-12-01`, `days/2024-12-03`)
+
+<!-- incremental_lists: false -->
+
+<!-- new_line -->
+
+Your debrief answer, twice: what did the **second** runtime need that the header couldn't say?
+
+<!-- speaker_note: |
+
+    (2m) Only if we're ahead — skip it silently otherwise.
+
+    The point is the comparison, not the second binding: two runtimes against one header is the whole of lecture 3, in your own hands. Pick the far end of the spectrum from the one you just did.
+
+    ---
+
+    Tracks and worked references: exercises/ex3-bindings/README.md. The second track needs its toolchain — `just check` says which rows are green.
+
+
+    [??s]
+ -->
+
+<!-- end_slide -->
+
 Debrief: What Broke?
 ===
 
