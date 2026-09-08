@@ -386,3 +386,31 @@ C as the Bridge
 Module 2 · 10:05
 
 <!-- speaker_note: (back from break — energy reset) -->
+
+<!-- end_slide -->
+
+The Incantation
+===
+
+Every word has a job
+
+```rust
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ex_part1(input: *const c_char) -> i64
+```
+
+<!-- new_line -->
+
+Design rule: expose the **narrowest surface that works** — what crosses the boundary is what you maintain *forever*.
+
+<!-- speaker_note: |
+
+    Read the signature aloud — every piece has a job. `unsafe` is honest labeling: C++ engineers write unsafe code constantly, they just don't label it. We label it and contain it to ONE file.
+
+    Edition 2024 spells it `#[unsafe(no_mangle)]`: exporting a symbol is an unsafe promise too — a name collision is UB the linker arranges.
+
+    ---
+
+    Signature is exercises/ex2-c-glue/src/lib.rs verbatim (edition 2024 via exercises/Cargo.toml). The worked shape with an out-param instead of an in-band i64: days/2024-12-03/src/c_api.rs.
+
+ -->

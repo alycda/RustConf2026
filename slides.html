@@ -1011,6 +1011,18 @@
       <span class="section-sub">Module 2 &middot; live demo</span>
     </div>
 
+    <!-- ═══ THE INCANTATION ═══ -->
+    <div class="slide"
+      data-notes="Read the signature aloud — every piece has a job. unsafe is honest labeling: C++ engineers write unsafe code constantly, they just don't label it. We label it and contain it to ONE file. Edition 2024 spells it unsafe(no_mangle): exporting a symbol is an unsafe promise too — a name collision is UB the linker arranges.">
+      <span class="slide-number">02 &mdash; C as the bridge</span>
+      <h2>The <em>incantation</em></h2>
+      <p class="lead">Every word has a job.</p>
+      <pre><code>#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ex_part1(input: *const c_char) -> i64</code></pre>
+      <p style="margin-top:1.2rem;">Design rule: expose the <strong>narrowest surface that works</strong> &mdash; what
+        crosses the boundary is what you maintain <em>forever</em>.</p>
+    </div>
+
     <!-- slot: part-2 (wrap it in C) -->
 
     <!-- 10:55 - 11:05 - BREAK -->
