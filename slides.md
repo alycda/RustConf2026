@@ -714,3 +714,40 @@ Measure, don't assume.
 
     [??s]
  -->
+
+<!-- end_slide -->
+
+When Is FFI the Right Call?
+===
+
+<!-- incremental_lists: true -->
+
+1. **Team** — who maintains the boundary in two years?
+2. **Timeline** — the ecosystem's rewrite arrives on **its** schedule, not yours
+3. **Consistency** — same logic on six platforms? FFI earns its keep.
+4. **Performance** — **measure it.** No, FFI wasn't faster. It's fun, though.
+
+<!-- incremental_lists: false -->
+
+<!-- speaker_note: |
+
+    "You can totally write this in Rust — and someone maybe already did. But it's probably already written in C, so why wait?"
+
+    The figlet story: the standard.flf font in this repo is from 1993. The pure-Rust rewrite started in 2019 and hit 1.0 this March — seven years. The libcaca boundary in days/2015-12-01 landed the same day it was started. [confirm: quote a properly measured port time, not the commit gap]
+
+    Rewrites are best-case, and when one matures, adopt it — FFI is the bridge that doesn't bet against the future. But it's the same-day answer, and for thirty years it was the ONLY answer.
+
+    Honest caveat both ways: production bindings cost more than the rewrite estimate says, too.
+
+    Big-O lies — benchmark your actual data. Real numbers, measured in-repo (aarch64, bench profile):
+
+    - 2015-12-01, pure sum vs the libtcc JIT: ~557ns vs ~1.27ms — ~2,300x. The gap is per-call compile/relocate/teardown, not the arithmetic.
+    - 2024-12-01 sort race (1000 i32): pure Rust ~4.1µs, C++ std::sort through a C shim ~5.0µs (~1.2x), libc qsort ~15.7µs (~3.8x — every comparison is an indirect call the boundary can't inline).
+    - The asterisk that keeps point 4 honest: 2024-12-01's part-2 lookup race — naive scan ~99µs, std HashMap ~23µs, ahash ~13µs, uthash through FFI ~10.6µs. The C hash table WON. Crossing frequency is the cost, not crossing: per-comparison qsort loses 3.8x, two bulk crossings amortized over a thousand lookups beat ahash.
+    - So the slide line stays true as comedy and needs the asterisk as engineering: "No, FFI wasn't faster — except the time it was, and the difference was how often we crossed."
+
+    Sometimes the battle-tested C library IS the right answer — the boundary you built today is how you use it well. In-repo proof: 2015-12-05 answers is_nice through ICU's regex engine AND vectorscan (Hyperscan) — two industrial engines, one boundary pattern (days/2015-12-05); vectorscan beat plain Rust at part 1 and lost part 2 by 6-9x, which is a better lesson than either half alone.
+
+    Migration: strangler fig, not big bang.
+
+ -->

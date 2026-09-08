@@ -1180,6 +1180,35 @@ if !*guard {
       <p class="lead" data-step="2">Measure, don't assume.</p>
     </div>
 
+    <!-- ═══ WHEN IS FFI THE RIGHT CALL? ═══ -->
+    <div class="slide"
+      data-notes="You can totally write this in Rust — and someone maybe already did. But it's probably already written in C, so why wait? The figlet story: the standard.flf font in this repo is from 1993. The pure-Rust rewrite started in 2019 and hit 1.0 this March — seven years. The libcaca boundary landed the same day it was started. Rewrites are best-case, and when one matures, adopt it — FFI is the bridge that doesn't bet against the future. Honest caveat both ways: production bindings cost more than the rewrite estimate says, too. Big-O lies — benchmark your actual data. No, FFI wasn't faster — except the time it was, and the difference was how often we crossed. Migration: strangler fig, not big bang.">
+      <span class="slide-number">12:00 &mdash; Debrief</span>
+      <h2>When is FFI the <em>right call</em>?</h2>
+      <div class="principles">
+        <div class="principle p-accent">
+          <span class="p-num">01</span>
+          <p class="p-title">Team</p>
+          <p>Who maintains the boundary in two years?</p>
+        </div>
+        <div class="principle">
+          <span class="p-num">02</span>
+          <p class="p-title">Timeline</p>
+          <p>The ecosystem's rewrite arrives on <strong>its</strong> schedule, not yours.</p>
+        </div>
+        <div class="principle">
+          <span class="p-num">03</span>
+          <p class="p-title">Consistency</p>
+          <p>Same logic on six platforms? FFI earns its keep.</p>
+        </div>
+        <div class="principle">
+          <span class="p-num">04</span>
+          <p class="p-title">Performance</p>
+          <p><strong>Measure it.</strong> No, FFI wasn't faster. It's fun, though.</p>
+        </div>
+      </div>
+    </div>
+
     <!-- 12:30 - END -->
 
   </div>
