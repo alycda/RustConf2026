@@ -877,7 +877,8 @@
     </div>
 
     <!-- ═══ FOUR DISAGREEMENTS ═══ -->
-    <div class="slide" data-notes="(5m) After 20 years of breaking things on the internet, encoding bugs are still the ones that ship silently. And errors — so what actually crosses the boundary? Integers. That's it.">
+    <div class="slide"
+      data-notes="(5m) After 20 years of breaking things on the internet, encoding bugs are still the ones that ship silently. And errors — so what actually crosses the boundary? Integers. That's it.">
       <span class="slide-number">01 — Why is this hard?</span>
       <h2>Four <em>disagreements</em></h2>
       <div class="principles">
@@ -905,7 +906,8 @@
     </div>
 
     <!-- ═══ IT'S JUST A STRING ═══ -->
-    <div class="slide" data-notes="(7m) Modified UTF-8: NUL encodes as TWO bytes, and supplementary characters differ too. It works with ASCII in every test you write — then someone's name has an emoji. Sometimes the failure is silent corruption, not a crash; the crash is the easy case. Rust's String CAN hold an interior NUL — CString is what refuses it. Swift's String has been UTF-8 internally since Swift 5; the UTF-16 lives in the ObjC bridge.">
+    <div class="slide"
+      data-notes="(7m) Modified UTF-8: NUL encodes as TWO bytes, and supplementary characters differ too. It works with ASCII in every test you write — then someone's name has an emoji. Sometimes the failure is silent corruption, not a crash; the crash is the easy case. Rust's String CAN hold an interior NUL — CString is what refuses it. Swift's String has been UTF-8 internally since Swift 5; the UTF-16 lives in the ObjC bridge.">
       <span class="slide-number">01 — Why is this hard?</span>
       <h2>&ldquo;It's just a <em>string</em>&rdquo;</h2>
       <ul class="hl-list">
@@ -921,6 +923,31 @@
         <li><span class="bullet">dart</span><span>UTF-16 code units; <code>toNativeUtf8()</code> &mdash; and
             <strong>you</strong> free it</span></li>
       </ul>
+    </div>
+
+    <!-- ═══ FIGHT THE BOUNDARY ═══ -->
+    <div class="slide"
+      data-notes="(5m) This is how I reinforced FFI when I joined Ditto: onboarding onto a Rust core serving a dozen platform SDKs, I went back to my AoC solutions and wrapped them in increasingly cursed ways — in public. The puzzle is already solved, so every bug is a BOUNDARY bug. That narrows the debugging space to exactly the skill we're here to build.">
+      <span class="slide-number">01 — Why is this hard?</span>
+      <h2>Fight the <em>boundary</em>, not the puzzle</h2>
+      <div class="two-col">
+        <div>
+          <p class="lead">AoC gives you</p>
+          <ul class="hl-list">
+            <li><span class="bullet">01</span><span>pre-solved problems</span></li>
+            <li><span class="bullet">02</span><span>every I/O shape: ints, strings, structs, grids</span></li>
+            <li><span class="bullet">03</span>Zero production baggage — break it with joy</li>
+          </ul>
+        </div>
+        <div>
+          <p class="lead">Instead of</p>
+          <ul class="hl-list">
+            <li><span class="bullet">01</span><span>fighting the domain <em>and</em> the boundary</span></li>
+            <li><span class="bullet">02</span><span>asymptotic-notation anxiety</span></li>
+            <li><span class="bullet">03</span><span>you get to save Christmas instead</span></li>
+          </ul>
+        </div>
+      </div>
     </div>
 
     <!-- slot: exercise-1 (solve it in Rust) -->

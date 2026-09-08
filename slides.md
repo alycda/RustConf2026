@@ -257,3 +257,31 @@ Four Disagreements
     Rust String CAN hold interior NUL — CString is what refuses. Swift String is UTF-8 internally since Swift 5; UTF-16 lives in the ObjC bridge.
 
  -->
+
+<!-- end_slide -->
+
+Fight the Boundary, Not the Puzzle
+===
+
+**AoC gives you:**
+
+* pre-solved problems
+* every I/O shape: ints, strings, structs, grids
+
+<!-- new_line -->
+
+**Instead of:**
+
+* fighting the domain AND the boundary
+* asymptotic-notation anxiety
+* you get to save Christmas instead
+
+<!-- speaker_note: |
+
+    (5m) This is how I reinforced FFI when I joined Ditto: onboarding onto a Rust core serving a dozen platform SDKs, I went back to my AoC solutions and wrapped them in increasingly cursed ways — in public.
+
+    The puzzle is already solved, so every bug is a BOUNDARY bug. That narrows the debugging space to exactly the skill we're here to build.
+
+    Nothing is wasted when you document the messy middle.
+
+ -->
