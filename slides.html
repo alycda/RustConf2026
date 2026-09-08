@@ -876,6 +876,34 @@
         types, errors, and encoding — and neither side can enforce it.</p>
     </div>
 
+    <!-- ═══ FOUR DISAGREEMENTS ═══ -->
+    <div class="slide" data-notes="(5m) After 20 years of breaking things on the internet, encoding bugs are still the ones that ship silently. And errors — so what actually crosses the boundary? Integers. That's it.">
+      <span class="slide-number">01 — Why is this hard?</span>
+      <h2>Four <em>disagreements</em></h2>
+      <div class="principles">
+        <div class="principle p-accent">
+          <span class="p-num">01</span>
+          <p class="p-title">Memory</p>
+          <p>Who allocates, who frees, who is <em>sure</em>?</p>
+        </div>
+        <div class="principle">
+          <span class="p-num">02</span>
+          <p class="p-title">Types</p>
+          <p>Rust's <code>String</code> doesn't exist over there. Neither does <code>Result</code>.</p>
+        </div>
+        <div class="principle">
+          <span class="p-num">03</span>
+          <p class="p-title">Errors</p>
+          <p>Panics don't cross. Exceptions don't cross. <strong>Integers cross.</strong></p>
+        </div>
+        <div class="principle">
+          <span class="p-num">04</span>
+          <p class="p-title">Encoding</p>
+          <p>&ldquo;it's just a string&rdquo;</p>
+        </div>
+      </div>
+    </div>
+
     <!-- slot: exercise-1 (solve it in Rust) -->
 
     <!-- slot: exercise-1-bonus (find a C library, try to load it) -->

@@ -207,3 +207,25 @@ and neither side can enforce it.
     That's why we test from the OTHER side today.
 
  -->
+
+<!-- end_slide -->
+
+Four Disagreements
+===
+
+<!-- incremental_lists: true -->
+
+1. **Memory** — who allocates, who frees, who's *sure*?
+2. **Types** — Rust's `String` doesn't exist over there. Neither does `Result`.
+3. **Errors** — panics don't cross. Exceptions don't cross. Integers cross.
+4. **Encoding** — "it's just a string"
+
+<!-- incremental_lists: false -->
+
+<!-- speaker_note: |
+
+    (5m) After 20 years of breaking things on the internet, encoding bugs are still the ones that ship silently.
+
+    Errors: so what actually crosses the boundary? Integers.
+
+ -->
