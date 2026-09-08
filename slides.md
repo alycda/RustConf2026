@@ -334,6 +334,29 @@ Keep the solver pure: `&str` in, `i64` out — I/O stays **outside** the library
 
 <!-- end_slide -->
 
+▶ 🥇 2024-12-03: Mull It Over
+===
+
+raw string scan → `usize`; stateful parse (`do()` / `don't()`)
+
+<!-- new_line -->
+
+> **TODO(walk-through):** the example input, the parse, and the one line that becomes the boundary.
+
+<!-- speaker_note: |
+
+    TODO: the 2024-12-03 walk-through — how long, what to show (the puzzle statement's example, the stateful do()/don't() parse, the &str in / i64 out shape), and where the boundary will bite it in Ex 2.
+
+    ---
+
+    Rust reference: days/2024-12-03 (golden — all four tracks against one header). Both statement examples answer 161 for part 1 (src/lib.rs tests).
+
+
+    [??s]
+ -->
+
+<!-- end_slide -->
+
 Ahead of Schedule? Choose Your Adventure
 ===
 
