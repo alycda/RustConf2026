@@ -1287,7 +1287,7 @@ cc tests/c/test_glue.c -L../target/debug -lex2_c_glue \
     <!-- ═══ WHO ACTUALLY READ THE HEADER? ═══ -->
     <div class="slide"
       data-notes="Debrief, part two. You told me what your runtime needed that the header couldn't say — now: did your runtime read the header at all? Only one did. Swift handed it to clang and got typed functions back; a stale header is a compile error. Python read it as data at runtime — it can't drift, but nobody verified it. Dart and Kotlin never opened it: the header sat there as documentation while the treaty got re-typed by hand. Segue: the only way to buy Swift's guarantee for the other three is to generate the binding from the source of truth — UniFFI. Not today.">
-      <span class="slide-number">12:00 &mdash; Debrief &middot; part two</span>
+      <span class="slide-number">12:10 &mdash; Debrief &middot; part two</span>
       <h2>Who actually <em>read</em> the header?</h2>
       <p class="lead">One header, four treaties &mdash; enforced, consumed, copied, remembered.</p>
       <ul class="hl-list">
@@ -1351,7 +1351,7 @@ if !*guard {
     <!-- ═══ WHEN IS FFI THE RIGHT CALL? ═══ -->
     <div class="slide"
       data-notes="You can totally write this in Rust — and someone maybe already did. But it's probably already written in C, so why wait? The figlet story: the standard.flf font in this repo is from 1993. The pure-Rust rewrite started in 2019 and hit 1.0 this March — seven years. The libcaca boundary landed the same day it was started. Rewrites are best-case, and when one matures, adopt it — FFI is the bridge that doesn't bet against the future. Honest caveat both ways: production bindings cost more than the rewrite estimate says, too. Big-O lies — benchmark your actual data. No, FFI wasn't faster — except the time it was, and the difference was how often we crossed. Migration: strangler fig, not big bang.">
-      <span class="slide-number">12:00 &mdash; Debrief</span>
+      <span class="slide-number">12:15 &mdash; Debrief</span>
       <h2>When is FFI the <em>right call</em>?</h2>
       <div class="principles">
         <div class="principle p-accent">
@@ -1380,7 +1380,7 @@ if !*guard {
     <!-- ═══ YES, AI HELPED BUILD THIS ═══ -->
     <div class="slide"
       data-notes="Full transparency — this is what AI did here, and what it didn't. Use it the same way during exercises: delegate the boring, own the boundary.">
-      <span class="slide-number">12:00 &mdash; Debrief</span>
+      <span class="slide-number">Debrief</span>
       <h2>Yes, <em>AI</em> helped build this</h2>
       <div class="two-col">
         <div>
