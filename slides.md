@@ -479,6 +479,12 @@ cc tests/c/test_glue.c -L target/debug -lex2_c_glue -o test_glue
 
 …then we feed it **garbage** and watch the contract hold.
 
+<!-- new_line -->
+
+```bash +exec +acquire_terminal
+asciinema play -i 2 docs/demo/module2.cast
+```
+
 <!-- speaker_note: |
 
     The money beat: invalid UTF-8 in, sentinel out, no crash — the boundary checks EARNED that.
