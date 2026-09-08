@@ -180,6 +180,10 @@ of what AI did and didn't build in this repo is a slide in the workshop deck.
 
 ---
 
+Keep [`docs/reference-card.pdf`](docs/reference-card.pdf) open during the
+exercises — one page of boundary patterns, string-encoding gotchas, and
+ownership contracts.
+
 **Checklist before you travel:**
 
 - [ ] `just check` prints green on the required rows

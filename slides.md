@@ -834,8 +834,4 @@ github.com/alycda/RustConf2026
 
     Q&A runs to 12:30; the wrap slide stays up.
 
-    ---
-
-    docs/reference-card.pdf is on the older deck's chain (ynoksmxn), not this one — bring it across or take the line off the slide.
-
  -->
