@@ -1159,6 +1159,27 @@ cc tests/c/test_glue.c -L target/debug -lex2_c_glue -o test_glue
       <p style="margin-top:.8rem;">No platform check &mdash; whichever file cargo produced is the one that exists.</p>
     </div>
 
+    <!-- ═══ DEBRIEF SEED: GLOBAL STATE, TWICE (skip) ═══ -->
+    <div class="slide" data-skip
+      data-notes="The day's README already says it: ask whether a library's state is per-handle or global before you design around it. The lock was there. The tests still went red. [next: table] alone: green. serial: green. together: four in ten. That's not a race in my code — every espeak call was already under one lock. [next: code] espeak_Initialize isn't a reset. Every call reloads the phoneme data — frees it, reallocates it — and pointers into the old block survive. Single-threaded, the block comes back at the same address, so it works. Add nineteen other tests allocating and it doesn't. Initialise once. The bool lives inside the mutex because is-it-initialised is global state too. [next: measure] YARA next door: fresh rules per solve, no lock, no once. Same puzzle, opposite answer. [??s]">
+      <span class="slide-number">Debrief seed &mdash; backup</span>
+      <h2>Global state, <em>twice</em></h2>
+      <p class="lead"><code>cargo test</code> with every C library on &mdash; first run of the new job</p>
+      <ul class="hl-list">
+        <li><span class="bullet">0/10</span><span>espeak tests alone, parallel</span></li>
+        <li><span class="bullet">0/10</span><span>all 26, <code>--test-threads=1</code></span></li>
+        <li><span class="bullet"><strong>4/10</strong></span><span>all 26, parallel</span></li>
+        <li><span class="bullet">0/20</span><span>all 26, parallel, initialise once</span></li>
+      </ul>
+      <pre data-step="1"><code>let mut guard = lock()?;            // Mutex&lt;bool&gt;: is espeak initialised?
+if !*guard {
+    espeak_Initialize(AUDIO_OUTPUT_SYNCHRONOUS, 0, std::ptr::null(), 0);
+    espeak_SetVoiceByName(english.as_ptr());
+    *guard = true;
+}</code></pre>
+      <p class="lead" data-step="2">Measure, don't assume.</p>
+    </div>
+
     <!-- 12:30 - END -->
 
   </div>

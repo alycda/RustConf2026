@@ -660,3 +660,57 @@ No platform check — whichever file cargo produced is the one that exists.
 
     [??s]
  -->
+
+<!-- end_slide -->
+
+Debrief Seed: Global State, Twice
+===
+
+<!-- skip_slide -->
+
+`cargo test` with every C library on — first run of the new job
+
+| espeak tests | runs failed |
+|---|---|
+| alone, parallel | 0/10 |
+| all 26, `--test-threads=1` | 0/10 |
+| all 26, parallel | **4/10** |
+| all 26, parallel, initialise once | 0/20 |
+
+<!-- pause -->
+
+```rust
+let mut guard = lock()?;            // Mutex<bool>: is espeak initialised?
+if !*guard {
+    espeak_Initialize(AUDIO_OUTPUT_SYNCHRONOUS, 0, std::ptr::null(), 0);
+    espeak_SetVoiceByName(english.as_ptr());
+    *guard = true;
+}
+```
+
+<!-- pause -->
+
+Measure, don't assume.
+
+<!-- speaker_note: |
+
+    The day's README already says it: ask whether a library's state is per-handle or global before you design around it. The lock was there. The tests still went red.
+
+    [next: table]  alone: green. serial: green. together: four in ten.
+      That's not a race in my code — every espeak call was already under one lock.
+    [next: code]  espeak_Initialize isn't a reset. Every call reloads the phoneme data — frees it, reallocates it — and pointers into the old block survive.
+      Single-threaded, the block comes back at the same address, so it works. Add nineteen other tests allocating and it doesn't.
+
+    Initialise once. The bool lives inside the mutex because "is it initialised" is global state too.
+    [next: measure]  YARA next door: fresh rules per solve, no lock, no once. Same puzzle, opposite answer.
+
+    ---
+
+    Measured 2026-09-04, espeak-ng 1.52.0.1 from nixpkgs, 16 cores; CI hit it first try on a 4-core runner.
+    Instrumented: init 1 fine, inits 2–7 all nineteen references empty — "1" and "one" both "".
+    Locale, core count, and yara-as-culprit each ruled out before the fix.
+    Code on the slide is trimmed: the real block is inside unsafe, with the error checks (days/2023-12-01/src/espeak.rs).
+
+
+    [??s]
+ -->
