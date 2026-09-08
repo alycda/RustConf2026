@@ -1083,7 +1083,7 @@ cc tests/c/test_glue.c -L target/debug -lex2_c_glue -o test_glue
     <!-- slot: part-3 (bindings) -->
     <!-- ═══ WHO ACTUALLY READ THE HEADER? ═══ -->
     <div class="slide"
-      data-notes="Debrief, part two. You told me what your runtime needed that the header couldn't say — now: did your runtime read the header at all? Only one did. Swift handed it to clang and got typed functions back; a stale header is a compile error. Python read it as data at runtime — it can't drift, but nobody verified it. Dart and Kotlin never opened it: the header sat there as documentation while the treaty got re-typed by hand. Segue: the only way to buy Swift's guarantee for the other three is to generate the binding from the source of truth — which is the next slide.">
+      data-notes="Debrief, part two. You told me what your runtime needed that the header couldn't say — now: did your runtime read the header at all? Only one did. Swift handed it to clang and got typed functions back; a stale header is a compile error. Python read it as data at runtime — it can't drift, but nobody verified it. Dart and Kotlin never opened it: the header sat there as documentation while the treaty got re-typed by hand. Segue: the only way to buy Swift's guarantee for the other three is to generate the binding from the source of truth — UniFFI. That's section 5 of the reference card, not a slide today.">
       <span class="slide-number">03 &mdash; One header, four runtimes</span>
       <h2>Who actually <em>read</em> the header?</h2>
       <p class="lead">One header, four treaties &mdash; enforced, consumed, copied, remembered.</p>
@@ -1099,16 +1099,6 @@ cc tests/c/test_glue.c -L target/debug -lex2_c_glue -o test_glue
       </ul>
       <p style="margin-top:1rem;">Only one track keeps the guarantee your Ex 2 C harness had: <code>#include</code>, then a
         compiler.</p>
-    </div>
-
-    <!-- ═══ GENERATED BINDINGS ═══ -->
-    <div class="slide"
-      data-notes="If kept: Result → exceptions, snake_case → camelCase, Python/Kotlin/Swift generated from one crate. One interface mode per crate — UDL or proc-macros, never both. In-repo receipt either way: the original talk reached C++'s std::sort through autocxx, which generated exactly the one pointer-plus-length extern C signature the golden day now hand-writes — at the price of a bindgen/libclang build-time dependency a stock runner doesn't have. Generated bindings are the same C shape plus a toolchain.">
-      <span class="slide-number">03 &mdash; One header, four runtimes</span>
-      <h2>Generated <em>bindings</em></h2>
-      <p class="lead"><strong>TODO(uniffi):</strong> decide &mdash; a short UniFFI teaser here, or reference-card only.
-        Run-sheet valve: M3 trims to 12 min by moving UniFFI off-deck &mdash; the landing spot exists:
-        <code>docs/reference-card.pdf</code> &sect;5 (cbindgen vs UniFFI, one-mode rule).</p>
     </div>
 
     <!-- ═══ ×4 ═══ -->

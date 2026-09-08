@@ -539,7 +539,7 @@ Only one track keeps the guarantee your Ex 2 C harness had: `#include`, then a c
 
     Debrief, part two. You told me what your runtime needed that the header couldn't say — now: did your runtime read the header at all? Only one did. Swift handed it to clang and got typed functions back; a stale header is a compile error. Python read it as data at runtime — it can't drift, but nobody verified it. Dart and Kotlin never opened it: the header sat there as documentation while the treaty got re-typed by hand.
 
-    Segue: the only way to buy Swift's guarantee for the other three is to generate the binding from the source of truth — which is the next slide.
+    Segue: the only way to buy Swift's guarantee for the other three is to generate the binding from the source of truth — UniFFI. That's §5 of the reference card, not a slide today.
 
     ---
 
@@ -552,30 +552,7 @@ Only one track keeps the guarantee your Ex 2 C harness had: `#include`, then a c
 
     As of 2026-08-27 the goldens line makes this slide literal instead of assembled: days/2024-12-01 and days/2024-12-03 each carry ALL FOUR tracks against ONE header on ONE day — enforced, consumed, copied and remembered, side by side over the same two functions, every cell CI-asserted against numbers the Rust tests pin. If a track question needs a receipt mid-slide, point there: the four files sit in one directory and their headers cross-reference each other's trade.
 
-    FAQ ("why not add the check to the others?"): ffigen (Dart) and jextract (Kotlin) exist — but they ARE generated bindings, i.e. the next slide. Wiring one up is bonus/afternoon material, not a fix; the uneven gradient is the exhibit.
-
- -->
-
-<!-- end_slide -->
-
-Generated Bindings
-===
-
-> **TODO(uniffi):** decide — a short UniFFI teaser here, or reference-card only.
-> Run-sheet valve: M3 trims to 12 min by moving UniFFI off-deck — the landing
-> spot exists: `docs/reference-card.pdf` §5 (cbindgen vs UniFFI, one-mode rule).
-
-<!-- speaker_note: |
-
-    If kept: Result → exceptions, snake_case → camelCase, Python/Kotlin/Swift generated from one crate. One interface mode per crate — UDL or proc-macros, never both.
-
-    In-repo receipt either way (days/2024-12-01/src/cpp.rs): the original talk reached C++'s std::sort through autocxx — which generated exactly the one pointer-plus-length extern "C" signature the golden day now hand-writes, at the price of a bindgen/libclang build-time dependency a stock runner doesn't have. Generated bindings are the same C shape plus a toolchain; that sentence works whether this slide stays or moves to the card.
-
-    ---
-
-    [confirm] the unbuildable-uniffi-crates war story (which repo? what actually happened?) before telling it.
-
-    docs/reference-card.pdf is on the older deck's chain (ynoksmxn), not this one — bring it across or drop the pointer.
+    FAQ ("why not add the check to the others?"): ffigen (Dart) and jextract (Kotlin) exist — but they ARE generated bindings, i.e. the reference card's §5. Wiring one up is bonus/afternoon material, not a fix; the uneven gradient is the exhibit.
 
  -->
 
