@@ -1418,7 +1418,10 @@ if !*guard {
     let current = 0;
     let notesOn = false;
 
+    let activeCast = null; // the open replay overlay's close(), if any
+
     function showSlide(index) {
+      if (activeCast) activeCast();
       slides.forEach(s => s.classList.remove('active'));
       slides[index].classList.add('active');
       steps(index).forEach(el => el.classList.remove('on'));
@@ -1479,7 +1482,7 @@ if !*guard {
       const screen = slide.querySelector('.cast-screen');
       const events = document.getElementById(btn.dataset.cast).textContent.trim().split('\n').slice(1)
         .map(l => JSON.parse(l)).filter(e => e[1] === 'o');
-      let lines = [[]], style = {b: 0, d: 0, col: ''}, paused = false, timer = null, i = 0, stopped = false;
+      let lines = [[]], style = {b: 0, d: 0, col: ''}, paused = false, timer = null, i = 0, stopped = false, done = false;
       const esc = t => t.replace(/&/g, '&amp;').replace(/</g, '&lt;');
       const paint = () => {
         screen.innerHTML = lines.map(l => l.map(s =>
@@ -1511,17 +1514,28 @@ if !*guard {
         feed(events[i][2]); paint();
         i += 1;
         if (i < events.length) timer = setTimeout(step, Math.min(events[i][0], 2) * 1000);
+        else done = true;
       };
       const close = () => {
         stopped = true; clearTimeout(timer);
         overlay.classList.remove('on');
         document.removeEventListener('keydown', keys, true);
+        if (activeCast === close) activeCast = null;
       };
       const keys = e => {
+        // Finished: any key closes, and the key falls through to the deck —
+        // one forward press on a clicker closes and advances.
+        if (done) { close(); return; }
         e.stopPropagation(); e.preventDefault();
         if (e.key === 'Escape') close();
-        else if (e.key === ' ') { paused = !paused; if (!paused) step(); }
+        else if (e.key === ' ') {
+          paused = !paused;
+          clearTimeout(timer); // no second chain on a quick pause-and-resume
+          if (!paused) step();
+        }
       };
+      if (activeCast) activeCast();
+      activeCast = close;
       document.addEventListener('keydown', keys, true);
       overlay.classList.add('on');
       screen.innerHTML = '';
