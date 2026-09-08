@@ -519,45 +519,6 @@ Ex 3: One Header, Four Runtimes
 
 <!-- end_slide -->
 
-Who Actually Read the Header?
-===
-
-One header, four treaties — enforced, consumed, copied, remembered
-
-<!-- incremental_lists: true -->
-
-* **Swift** — clang compiles against it. Drift is a compile error. **Enforced.**
-* **Python / cffi** — reads it at runtime, derives every call. Can't drift — but trusts it blind. **Consumed.**
-* **Dart / ffi** — never opens it. Typedefs hand-transcribed, header as reference. **Copied.**
-* **Kotlin / JNA** — never opens it either. Interface hand-mapped, kept in sync by care. **Remembered.**
-
-<!-- incremental_lists: false -->
-
-Only one track keeps the guarantee your Ex 2 C harness had: `#include`, then a compiler.
-
-<!-- speaker_note: |
-
-    Debrief, part two. You told me what your runtime needed that the header couldn't say — now: did your runtime read the header at all? Only one did. Swift handed it to clang and got typed functions back; a stale header is a compile error. Python read it as data at runtime — it can't drift, but nobody verified it. Dart and Kotlin never opened it: the header sat there as documentation while the treaty got re-typed by hand.
-
-    Segue: the only way to buy Swift's guarantee for the other three is to generate the binding from the source of truth — UniFFI. That's §5 of the reference card, not a slide today.
-
-    ---
-
-    Receipts, verified in-repo 2026-08-25:
-    - swift/module.modulemap (2023-12-01): "This file is the whole reason this track differs from the other three." No hand-transcribed signature anywhere in solve.swift.
-    - python/solve.py (2015-12-01): reads include/aoc_2015_12_01.h, strips the preprocessor lines, feeds ffi.cdef(); regenerates via `just days bindgen` if the header is missing.
-    - dart/solve.dart (2015-12-05): "hand-transcribed from include/aoc_2015_12_05.h below."
-    - kotlin/solve.kt (2021-12-02): self-describes as "the least checked — nothing here verifies that the header still says what this interface assumes."
-    - Ex 2's C harness (tests/c/test_glue.c) #includes the generated header — C and Swift are the two places a compiler checks it.
-
-    As of 2026-08-27 the goldens line makes this slide literal instead of assembled: days/2024-12-01 and days/2024-12-03 each carry ALL FOUR tracks against ONE header on ONE day — enforced, consumed, copied and remembered, side by side over the same two functions, every cell CI-asserted against numbers the Rust tests pin. If a track question needs a receipt mid-slide, point there: the four files sit in one directory and their headers cross-reference each other's trade.
-
-    FAQ ("why not add the check to the others?"): ffigen (Dart) and jextract (Kotlin) exist — but they ARE generated bindings, i.e. the reference card's §5. Wiring one up is bonus/afternoon material, not a fix; the uneven gradient is the exhibit.
-
- -->
-
-<!-- end_slide -->
-
 ×4
 ===
 
@@ -620,6 +581,45 @@ Best bug in the room gets a retelling.
 <!-- speaker_note: |
 
     Facilitate, don't lecture. Harvest 3–4 stories; connect each to its pattern — encoding, ownership, hidden bridging.
+
+ -->
+
+<!-- end_slide -->
+
+Who Actually Read the Header?
+===
+
+One header, four treaties — enforced, consumed, copied, remembered
+
+<!-- incremental_lists: true -->
+
+* **Swift** — clang compiles against it. Drift is a compile error. **Enforced.**
+* **Python / cffi** — reads it at runtime, derives every call. Can't drift — but trusts it blind. **Consumed.**
+* **Dart / ffi** — never opens it. Typedefs hand-transcribed, header as reference. **Copied.**
+* **Kotlin / JNA** — never opens it either. Interface hand-mapped, kept in sync by care. **Remembered.**
+
+<!-- incremental_lists: false -->
+
+Only one track keeps the guarantee your Ex 2 C harness had: `#include`, then a compiler.
+
+<!-- speaker_note: |
+
+    Debrief, part two. You told me what your runtime needed that the header couldn't say — now: did your runtime read the header at all? Only one did. Swift handed it to clang and got typed functions back; a stale header is a compile error. Python read it as data at runtime — it can't drift, but nobody verified it. Dart and Kotlin never opened it: the header sat there as documentation while the treaty got re-typed by hand.
+
+    Segue: the only way to buy Swift's guarantee for the other three is to generate the binding from the source of truth — UniFFI. That's §5 of the reference card, not a slide today.
+
+    ---
+
+    Receipts, verified in-repo 2026-08-25:
+    - swift/module.modulemap (2023-12-01): "This file is the whole reason this track differs from the other three." No hand-transcribed signature anywhere in solve.swift.
+    - python/solve.py (2015-12-01): reads include/aoc_2015_12_01.h, strips the preprocessor lines, feeds ffi.cdef(); regenerates via `just days bindgen` if the header is missing.
+    - dart/solve.dart (2015-12-05): "hand-transcribed from include/aoc_2015_12_05.h below."
+    - kotlin/solve.kt (2021-12-02): self-describes as "the least checked — nothing here verifies that the header still says what this interface assumes."
+    - Ex 2's C harness (tests/c/test_glue.c) #includes the generated header — C and Swift are the two places a compiler checks it.
+
+    As of 2026-08-27 the goldens line makes this slide literal instead of assembled: days/2024-12-01 and days/2024-12-03 each carry ALL FOUR tracks against ONE header on ONE day — enforced, consumed, copied and remembered, side by side over the same two functions, every cell CI-asserted against numbers the Rust tests pin. If a track question needs a receipt mid-slide, point there: the four files sit in one directory and their headers cross-reference each other's trade.
+
+    FAQ ("why not add the check to the others?"): ffigen (Dart) and jextract (Kotlin) exist — but they ARE generated bindings, i.e. the reference card's §5. Wiring one up is bonus/afternoon material, not a fix; the uneven gradient is the exhibit.
 
  -->
 
