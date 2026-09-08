@@ -98,4 +98,3 @@ learning intact:
   fail for everyone.
 - Follow the existing exercise-folder pattern when adding stages:
   `exercises/exN-*/README.md`, one directory per workshop block.
-- Facilitator and dev-environment details live in `CLAUDE.md`.
