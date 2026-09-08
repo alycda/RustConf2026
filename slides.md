@@ -500,7 +500,7 @@ asciinema play -i 2 docs/demo/module2.cast
 
     The four beats are exercises/ex2-c-glue/build-and-test.sh, which calls itself "the same four beats as the Module 2 demo", cwd exercises/ex2-c-glue. ../target/debug because the exercises are one cargo workspace; the rpath is what lets test_glue find libex2_c_glue.so (.dylib on macOS) at run time — without it the link succeeds and the run doesn't.
 
-    [confirm: which day's c_api.rs the live demo drives — 2024-12-03 and 2015-12-06 both carry one; ex2's harness is the shape either way]
+    Demo day: 2024-12-03 (Mull It Over) as the Ex 1 solver inside exercises/ex2-c-glue — the same crate and C harness the room opens at 10:25, so what they watch is what they do next. Each beat: `just <build|bindgen|cc|run>` from exercises/ex2-c-glue, or `cheat demo/<beat> | scripts/clip.sh` to paste it by hand.
 
  -->
 
