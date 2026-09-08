@@ -1,0 +1,6 @@
+---
+syntax: bash
+tags: [ demo ]
+---
+# 4/4 run it — NULL and invalid UTF-8 go in first; a todo!() still inside aborts here
+./test_glue
