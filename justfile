@@ -27,6 +27,18 @@ mod? exercises
 check:
     -@./scripts/self-check.sh
 
+# asciinema is deliberately not in shell.nix (my rig, not the workshop's
+# contract), so the recipe borrows it when absent.
+
+# Presenter only: replay the recorded Module 2 demo — the demo-gods fallback for the Live slide
+demo:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! command -v asciinema >/dev/null; then
+        exec nix-shell -p asciinema --run "asciinema play -i 2 docs/demo/module2.cast"
+    fi
+    asciinema play -i 2 docs/demo/module2.cast
+
 # Language-track setup (Exercise 3 — pick ONE track; see `just check`).
 # Required Rust/C toolchain comes from shell.nix, not from these recipes.
 

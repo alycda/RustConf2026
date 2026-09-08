@@ -20,6 +20,11 @@ test:
 ex2:
     ./ex2-c-glue/build-and-test.sh
 
+# Ex 2 one beat at a time: `just exercises glue build|bindgen|cc|run` (or
+# `just build` … from inside ex2-c-glue). `mod?`: valid in trees that
+# predate the ex2 justfile.
+mod? glue 'ex2-c-glue'
+
 # Ex 3, Python track: the repo-root venv (`just setup-python`), via scripts/venv-python.sh
 python:
     #!/usr/bin/env bash
