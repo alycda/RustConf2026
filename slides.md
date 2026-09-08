@@ -484,3 +484,35 @@ A sentinel is only a sentinel if your day's answers can never **be** it — that
     Timing valve: this block can run +10 by trimming M3.
 
  -->
+
+<!-- end_slide -->
+
+Ex 3: One Header, Four Runtimes
+===
+
+30 min · `exercises/ex3-bindings` — in **your** language
+
+<!-- incremental_lists: true -->
+
+* **Swift** — auto-bridges `String` → `const char*`. Free lunch? Hidden work.
+* **Kotlin / JNA** — interface + `Native.load()`. Mind the default encoding.
+* **Python / cffi** — paste the header, `.encode()` yourself. Explicit, honest.
+* **Dart / ffi** — typedef pairs, hand-transcribed signatures, `toNativeUtf8()`, you free. Maximum honesty.
+
+<!-- incremental_lists: false -->
+
+<!-- speaker_note: |
+
+    The spectrum IS the lesson: Swift hides everything, Dart hides nothing. Neither end is better — but you must KNOW what's hidden, because hidden work still fails. It just fails further from your code.
+
+    Launch Ex 3. Collect your debrief answer as you go: what did your runtime need that the header couldn't say?
+
+    Golden-day branches are the safety net. Done early? The Ex 3 bonus — a second track.
+
+    ---
+
+    Dart is the extreme answer to the debrief question: dart:ffi never reads the C header at all — signatures are hand-transcribed as Dart types (days/2015-12-05/dart/solve.dart), and the generated header exists so you can eyeball your transcription. A typo'd transcription compiles and corrupts silently — the treaty, unenforced.
+
+    Timing valve: shrink to 25 if the room is behind.
+
+ -->

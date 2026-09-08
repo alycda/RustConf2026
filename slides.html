@@ -1062,6 +1062,23 @@ cc tests/c/test_glue.c -L target/debug -lex2_c_glue -o test_glue
     <!-- 11:05 - Part 3 -->
 
     <!-- slot: lecture-3 (one header, four runtimes) -->
+    <!-- ═══ EX 3: ONE HEADER, FOUR RUNTIMES ═══ -->
+    <div class="slide"
+      data-notes="The spectrum IS the lesson: Swift hides everything, Dart hides nothing. Neither end is better — but you must KNOW what's hidden, because hidden work still fails. It just fails further from your code. Launch Ex 3. Collect your debrief answer as you go: what did your runtime need that the header couldn't say? Golden-day branches are the safety net. Done early? The Ex 3 bonus — a second track. Timing valve: shrink to 25 if the room is behind.">
+      <span class="slide-number">03 &mdash; 11:30, 30 min &middot; <code>exercises/ex3-bindings</code></span>
+      <h2>Ex 3: one header, <em>four runtimes</em></h2>
+      <p class="lead">In <strong>your</strong> language.</p>
+      <ul class="hl-list">
+        <li><span class="bullet">swift</span><span>auto-bridges <code>String</code> &rarr; <code>const char*</code>. Free
+            lunch? Hidden work.</span></li>
+        <li><span class="bullet">kotlin / jna</span><span>interface + <code>Native.load()</code>. Mind the default
+            encoding.</span></li>
+        <li><span class="bullet">python / cffi</span><span>paste the header, <code>.encode()</code> yourself. Explicit,
+            honest.</span></li>
+        <li><span class="bullet">dart / ffi</span><span>typedef pairs, hand-transcribed signatures,
+            <code>toNativeUtf8()</code>, you free. Maximum honesty.</span></li>
+      </ul>
+    </div>
 
     <!-- slot: part-3 (bindings) -->
 
