@@ -450,3 +450,37 @@ cc tests/c/test_glue.c -L target/debug -lex2_c_glue -o test_glue
     [confirm: which day's c_api.rs the live demo drives — 2024-12-03 and 2015-12-06 both carry one; ex2's harness is the shape either way]
 
  -->
+
+<!-- end_slide -->
+
+Ex 2: Panics Don't Cross
+===
+
+30 min · `exercises/ex2-c-glue`
+
+<!-- new_line -->
+
+**✗ let it panic** — a panic crossing `extern "C"` **aborts the process** (Rust ≥ 1.81). No stack trace for the caller. Just gone.
+
+<!-- new_line -->
+
+**✓ validate + sentinel** — null check → `CStr` → UTF-8 check → call → in-band error value
+
+<!-- new_line -->
+
+A sentinel is only a sentinel if your day's answers can never **be** it — that proof is about your puzzle, not about C.
+
+<!-- speaker_note: |
+
+    Ex 2 is exactly this: four TODO steps, C harness provided. Step 0 is running the harness before implementing anything — watch the abort once, on purpose.
+
+    Spend one minute reading the generated header — knowing what cbindgen produced is the difference between using it and trusting it.
+
+    Done early? Help a neighbour.
+
+    ---
+
+    ex2 ships INVALID_INPUT = -1 (exercises/ex2-c-glue/src/lib.rs). 2015-12-01 is the counterexample: floors are signed, -1 is a reachable answer, so there -1 is not a sentinel — the slide's last line, in one day.
+    Timing valve: this block can run +10 by trimming M3.
+
+ -->

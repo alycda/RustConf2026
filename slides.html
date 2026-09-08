@@ -1037,6 +1037,25 @@ cc tests/c/test_glue.c -L target/debug -lex2_c_glue -o test_glue
     </div>
 
     <!-- slot: part-2 (wrap it in C) -->
+    <!-- ═══ EX 2: PANICS DON'T CROSS ═══ -->
+    <div class="slide"
+      data-notes="Ex 2 is exactly this: four TODO steps, C harness provided. Step 0 is running the harness before implementing anything — watch the abort once, on purpose. Spend one minute reading the generated header — knowing what cbindgen produced is the difference between using it and trusting it. Done early? Help a neighbour. Timing valve: this block can run +10 by trimming M3.">
+      <span class="slide-number">10:25 &mdash; 30 min &middot; <code>exercises/ex2-c-glue</code></span>
+      <h2>Ex 2: panics <em>don't cross</em></h2>
+      <div class="contrast">
+        <div class="contrast-box no">
+          <p class="contrast-label">✗ let it panic</p>
+          <p>A panic crossing <code>extern "C"</code> <strong>aborts the process</strong> (Rust &ge; 1.81). No stack
+            trace for the caller. Just gone.</p>
+        </div>
+        <div class="contrast-box yes">
+          <p class="contrast-label">✓ validate + sentinel</p>
+          <p>null check &rarr; <code>CStr</code> &rarr; UTF-8 check &rarr; call &rarr; in-band error value</p>
+        </div>
+      </div>
+      <p class="lead">A sentinel is only a sentinel if your day's answers can never <strong>be</strong> it &mdash; that proof
+        is about your puzzle, not about C.</p>
+    </div>
 
     <!-- 10:55 - 11:05 - BREAK -->
 
