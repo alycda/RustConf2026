@@ -229,3 +229,31 @@ Four Disagreements
     Errors: so what actually crosses the boundary? Integers.
 
  -->
+
+<!-- end_slide -->
+
+"It's Just a String"
+===
+
+<!-- incremental_lists: true -->
+
+* **Rust** — UTF-8; `CString` refuses interior NUL — validation at the boundary
+* **C** — bytes + NUL terminator, no promises whatsoever
+* **Swift** — UTF-8 inside (since Swift 5); the NSString bridge is UTF-16 — hidden work
+* **JVM** — **modified** UTF-8 via JNI. Not quite UTF-8. Really.
+* **Python** — unicode object; you `.encode()` first — explicit, honest
+* **Dart** — UTF-16 code units; `toNativeUtf8()` — and **you** free it
+
+<!-- incremental_lists: false -->
+
+<!-- speaker_note: |
+
+    (7m) Modified UTF-8: NUL encodes as TWO bytes, and supplementary characters differ too. Works with ASCII in every test — then someone's name has an emoji.
+
+    Sometimes the failure is silent corruption, not a crash. The crash is the easy case.
+
+    ---
+
+    Rust String CAN hold interior NUL — CString is what refuses. Swift String is UTF-8 internally since Swift 5; UTF-16 lives in the ObjC bridge.
+
+ -->

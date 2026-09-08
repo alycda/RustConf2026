@@ -904,6 +904,25 @@
       </div>
     </div>
 
+    <!-- ═══ IT'S JUST A STRING ═══ -->
+    <div class="slide" data-notes="(7m) Modified UTF-8: NUL encodes as TWO bytes, and supplementary characters differ too. It works with ASCII in every test you write — then someone's name has an emoji. Sometimes the failure is silent corruption, not a crash; the crash is the easy case. Rust's String CAN hold an interior NUL — CString is what refuses it. Swift's String has been UTF-8 internally since Swift 5; the UTF-16 lives in the ObjC bridge.">
+      <span class="slide-number">01 — Why is this hard?</span>
+      <h2>&ldquo;It's just a <em>string</em>&rdquo;</h2>
+      <ul class="hl-list">
+        <li><span class="bullet">rust</span><span>UTF-8; <code>CString</code> refuses interior NUL &mdash;
+            validation at the boundary</span></li>
+        <li><span class="bullet">c</span><span>bytes + NUL terminator, no promises whatsoever</span></li>
+        <li><span class="bullet">swift</span><span>UTF-8 inside (since Swift 5); the NSString bridge is UTF-16
+            &mdash; hidden work</span></li>
+        <li><span class="bullet">jvm</span><span><strong>modified</strong> UTF-8 via JNI. Not quite UTF-8.
+            Really.</span></li>
+        <li><span class="bullet">python</span><span>unicode object; you <code>.encode()</code> first &mdash;
+            explicit, honest</span></li>
+        <li><span class="bullet">dart</span><span>UTF-16 code units; <code>toNativeUtf8()</code> &mdash; and
+            <strong>you</strong> free it</span></li>
+      </ul>
+    </div>
+
     <!-- slot: exercise-1 (solve it in Rust) -->
 
     <!-- slot: exercise-1-bonus (find a C library, try to load it) -->
