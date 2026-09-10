@@ -1,0 +1,6 @@
+# crate_universe reads these directly; they stay the single source of truth
+# for every dependency version in the repo.
+exports_files([
+    "Cargo.toml",
+    "Cargo.lock",
+])

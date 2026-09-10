@@ -1,0 +1,7 @@
+# Puzzle inputs are never committed (.gitignore); this glob is empty in a
+# fresh clone and non-empty once an attendee drops theirs in.
+filegroup(
+    name = "day_inputs",
+    srcs = glob(["*.txt"], allow_empty = True),
+    visibility = ["//visibility:public"],
+)

@@ -1,0 +1,6 @@
+exports_files([
+    "gen_day_build.py",
+    # Bazel's own lockfile for the cbindgen tool tree. Deliberately NOT
+    # days/Cargo.lock: see the comment on crate.from_specs in MODULE.bazel.
+    "Cargo.lock",
+])

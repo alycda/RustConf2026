@@ -1,0 +1,106 @@
+"""Bazel overlay for the FFI playground — evaluation, not the supported path.
+
+`just` remains the attendee contract (README: five tools, no Bazel). This
+module exists to answer one question: at 275 solved days, each with FFI in
+at least one direction, does a real cross-language build graph pay for
+itself? See docs/bazel-evaluation.md.
+
+Deps come from the *existing* Cargo manifests via crate_universe's
+`from_cargo`, so days/Cargo.toml and days/Cargo.lock stay the single source
+of truth for versions. Nothing here duplicates a dependency pin.
+"""
+
+module(
+    name = "rustconf2026",
+    version = "0.0.0",
+)
+
+bazel_dep(name = "rules_rust", version = "0.74.0")
+bazel_dep(name = "rules_cc", version = "0.2.19")
+bazel_dep(name = "bazel_skylib", version = "1.9.2")
+bazel_dep(name = "platforms", version = "1.1.0")
+
+# The toolchain is pinned to the floor the day crates declare
+# (rust-version = "1.85"), which is what .github/workflows/rust.yml's `msrv`
+# job installs by hand. Under Bazel the floor is the build, not a separate
+# job: there is no "stable" configuration that could silently pass.
+rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
+rust.toolchain(
+    edition = "2024",
+    versions = ["1.85.0"],
+)
+use_repo(rust, "rust_toolchains")
+
+register_toolchains("@rust_toolchains//:all")
+
+
+# cannot avoid: `members = ["*"]` in days/Cargo.toml registers a new day by
+# existing, and MODULE.bazel has no glob. At 275 days this list is
+# generated, not hand-maintained — see tools/gen_day_build.py.
+crate = use_extension("@rules_rust//crate_universe:extensions.bzl", "crate")
+
+# Resolving this extension REWRITES days/Cargo.lock. There is no supported
+# way to stop it: `skip_cargo_lockfile_overwrite = True` makes crate_universe
+# run `cargo metadata --locked` against a spliced temp workspace it is no
+# longer allowed to write, which fails outright.
+#
+# What can be stopped is *contamination*. Resolved through one shared
+# lockfile, the cbindgen tool tree below (clap, anstream, toml_edit,
+# tempfile) plus a synthetic `direct-cargo-bazel-deps` package land in days'
+# lockfile — measured at +181 lines. Giving from_specs its own lockfile
+# keeps days' resolution to days' own dependencies.
+#
+# The residue still matters: days/Cargo.toml calls the committed lockfile
+# the thing that stops a bonus dependency from raising the rustc floor, and
+# rust.yml's `msrv` job tests that exact committed resolution under 1.85.
+# Anything that rewrites it behind cargo's back is a hazard to that claim.
+# docs/bazel-evaluation.md measures what is left.
+crate.from_cargo(
+    name = "days_crates",
+    cargo_lockfile = "//days:Cargo.lock",
+    # One entry, not one per day. crate_universe reads days/Cargo.toml and
+    # resolves `members = ["*"]` through cargo itself — it says so if you
+    # list the members: "Only the workspace's Cargo.toml is required in the
+    # `manifests` attribute". So the glob survives: a new `just days new`
+    # day needs no edit here, exactly as it needs no edit in Cargo.toml.
+    manifests = ["//days:Cargo.toml"],
+)
+use_repo(crate, "days_crates")
+
+# cbindgen as a *built target*, not a tool attendees install. This is the
+# one unambiguous win in the whole overlay: scripts/self-check.sh exists
+# largely to police cbindgen's presence and version, and under Bazel that
+# check is structurally impossible to fail.
+# A SEPARATE extension instance, not just a separate lockfile.
+#
+# Measured, in this order: with only the from_cargo tag above, a build
+# leaves days/Cargo.lock byte-identical. Add a from_specs tag to the same
+# extension instance and days/Cargo.lock gains 181 lines — cbindgen, clap,
+# anstream, toml_edit, tempfile and a synthetic `direct-cargo-bazel-deps` —
+# even when that tag is given its own cargo_lockfile. One extension
+# instance splices one root workspace, and the tool tree lands in it.
+#
+# `isolate = True` gives the tool its own instance, so the two resolutions
+# never share a splice. That is what keeps `cargo test --workspace --locked`
+# green after a Bazel build.
+tool_crate = use_extension(
+    "@rules_rust//crate_universe:extensions.bzl",
+    "crate",
+    isolate = True,
+)
+tool_crate.from_specs(
+    name = "tools_crates",
+    cargo_lockfile = "//tools:Cargo.lock",
+)
+tool_crate.spec(
+    package = "cbindgen",
+    version = "0.29.0",
+)
+
+# crate_universe exposes libraries by default; the binary needs asking for.
+tool_crate.annotation(
+    repositories = ["tools_crates"],
+    crate = "cbindgen",
+    gen_binaries = ["cbindgen"],
+)
+use_repo(tool_crate, "tools_crates")

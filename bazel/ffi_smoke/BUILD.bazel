@@ -1,0 +1,11 @@
+load("@rules_cc//cc:defs.bzl", "cc_test")
+
+# The entire linking story, as Bazel sees it. Compare days/justfile's
+# swift-demo recipe: two -L pairs, two -rpath pairs, a computed library name
+# and twenty lines of comment explaining why -L does not imply -rpath.
+cc_test(
+    name = "day_2015_12_06",
+    size = "small",
+    srcs = ["day_2015_12_06.c"],
+    deps = ["//days/2015-12-06:c_api"],
+)

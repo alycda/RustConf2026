@@ -1,0 +1,14 @@
+# Bazel 8+ defaults; stated explicitly so a stale client behaves.
+common --enable_bzlmod
+common --incompatible_disallow_empty_glob=false
+
+# Required by MODULE.bazel's isolated cbindgen extension. This is the
+# uncomfortable part of the lockfile fix: keeping days/Cargo.lock clean
+# depends on a flag Bazel still calls experimental. See
+# docs/bazel-evaluation.md.
+common --experimental_isolated_extension_usages
+
+# The days link C and load cdylibs by path; keep the layout predictable.
+build --experimental_convenience_symlinks=normal
+
+test --test_output=errors
