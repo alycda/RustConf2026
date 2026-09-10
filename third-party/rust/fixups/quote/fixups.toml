@@ -1,0 +1,5 @@
+# Reindeer refuses to guess what a third-party build script is for, so every
+# crate that has one needs this file before it will buckify. crate_universe
+# made the same decision automatically for all 18 of these.
+buildscript.run = true
+cargo_env = true

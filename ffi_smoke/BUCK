@@ -1,0 +1,15 @@
+# The Buck2 twin of BUILD.bazel in this directory: same C source, same
+# claim. The difference is the third attribute.
+#
+# Bazel needs `deps = ["//days/2015-12-06:c_api"]` and nothing else — its
+# runfiles tree puts the shared object where the test binary looks. Buck2
+# links the same library successfully and then cannot load it at runtime,
+# so the harness has to be told where to search. That extra line is the
+# whole -L-versus-rpath lesson from days/justfile, relocated into a build
+# file.
+cxx_test(
+    name = "day_2015_12_06",
+    srcs = ["day_2015_12_06.c"],
+    env = {"LD_LIBRARY_PATH": "$(location //days/2015-12-06:cdylib_dir)"},
+    deps = ["//days/2015-12-06:c_api"],
+)

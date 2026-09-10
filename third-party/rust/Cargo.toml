@@ -1,0 +1,52 @@
+# Reindeer's pseudo-package. Buck2's dependency story needs this.
+#
+# This file is the single biggest structural difference from the Bazel
+# overlay, and it is a regression for this repo specifically. crate_universe
+# points `from_cargo` at days/Cargo.toml and days/Cargo.lock and reads the
+# real manifests — one source of truth, `[workspace.dependencies]` still
+# authoritative. Reindeer instead wants its own pseudo-package listing every
+# dependency again, with its own version constraints and its own Cargo.lock.
+#
+# days/Cargo.toml's comment on [workspace.dependencies] says why that
+# matters here: "Nine manifests inheriting one table means a version bump is
+# a single edit — the alternative is nine, with CI green-lighting whichever
+# ones you missed." This file makes it two edits, and nothing checks that
+# the two agree.
+#
+# The upside is the mirror image: because reindeer never touches
+# days/Cargo.lock, the +181-line pollution documented for crate_universe in
+# docs/bazel-evaluation.md cannot happen. Duplication instead of mutation.
+#
+# Versions below are copied from days/Cargo.toml [workspace.dependencies].
+# tools/check_thirdparty_sync.py is what stops them drifting.
+[workspace]
+
+[package]
+name = "rust-third-party"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "top"
+path = "top/main.rs"
+
+[dependencies]
+aoc-ornaments = "0.1.10"
+ahash = "0.8"
+cc = "1"
+criterion = { version = "0.7", default-features = false, features = [
+    "cargo_bench_support",
+] }
+derive_more = { version = "1", features = ["deref"] }
+itertools = "0.14"
+miette = { version = "7.4", features = ["fancy"] }
+nom = "7.1.3"
+nom_locate = "4.2"
+rstest = "0.24"
+
+# The cbindgen tool, built from source the same way the Bazel overlay builds
+# it. Under Bazel this needed an isolated module extension to keep its
+# dependency tree out of days/Cargo.lock; here it is simply another entry,
+# because the third-party lockfile was already separate.
+cbindgen = { version = "0.29", artifact = "bin" }

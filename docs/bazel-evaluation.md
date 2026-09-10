@@ -1,5 +1,9 @@
 # Would Bazel improve this repo?
 
+> **See also** [`buck2-evaluation.md`](./buck2-evaluation.md), which runs the
+> same experiment with Buck2 and revises the recommendation at the end. The
+> measurements and findings below are unchanged.
+
 Short answer, unchanged from the first pass: **not for the repo as it exists**,
 and not for anything an attendee touches. What changed is the second half of
 the question — *"if I solve every Advent of Code day and implement FFI in at
@@ -10,7 +14,7 @@ this document tries to state precisely.
 Everything below was built and measured, not estimated, unless a line says
 otherwise. The overlay is in this branch: `MODULE.bazel`, `.bazelrc`,
 `tools/aoc.bzl`, `tools/gen_day_build.py`, generated `days/*/BUILD.bazel`,
-and `bazel/ffi_smoke/`. `just`, `cargo` and `shell.nix` are untouched.
+and `ffi_smoke/`. `just`, `cargo` and `shell.nix` are untouched.
 
 ## What actually got built
 
@@ -26,7 +30,7 @@ Both FFI directions work.
 **Export — Rust to C, the Exercise 2 chain.** For a day with `src/c_api.rs`
 and `cbindgen.toml`, `aoc_day()` produces `:lib`, `:test`, `:bin`, `:cdylib`,
 `:header` (cbindgen output) and `:c_api` (a `cc_library` carrying the header
-and the shared object). `//bazel/ffi_smoke:day_2015_12_06` is a `cc_test`
+and the shared object). `//ffi_smoke:day_2015_12_06` is a `cc_test`
 that calls `aoc_2015_12_06_part1` and gets 998996 back. Its entire link
 configuration is `deps = ["//days/2015-12-06:c_api"]` — no `-L`, no `-rpath`,
 no `dlopen`, no debug-then-release search.
@@ -85,7 +89,7 @@ verdict for the repo as it stands is still no.
 
 ```
 bazel query 'rdeps(//..., //days/2015-12-06:cdylib)'
-  //bazel/ffi_smoke:day_2015_12_06
+  //ffi_smoke:day_2015_12_06
   //days/2015-12-06:c_api
   //days/2015-12-06:cdylib
 ```

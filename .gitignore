@@ -203,3 +203,9 @@ $RECYCLE.BIN/
 # live in the user's Bazel cache. MODULE.bazel.lock and tools/Cargo.lock are
 # NOT here on purpose — they are lockfiles and belong in the tree.
 /bazel-*
+
+# --- Buck2 overlay (docs/buck2-evaluation.md) ---
+# buck-out is buck2's output tree, the peer of bazel-*. third-party/rust's
+# BUCK, Cargo.lock and fixups/ are NOT ignored: they are generated but
+# committed, and reviewing them in a diff is one of the overlay's arguments.
+/buck-out

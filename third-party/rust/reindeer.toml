@@ -1,0 +1,28 @@
+# Reindeer config. Paths are relative to this file.
+#
+# vendor = false: reindeer's default is to download every crate's source into
+# third-party/rust/vendor/ and commit it. For this repo that would be ~150
+# crates of vendored source (miette and criterion dominate) in a workshop
+# repository whose README sells a 20-minute setup. http_archive mode fetches
+# from crates.io at build time instead, with a sha256 per crate recorded in
+# the generated BUCK file — which is what crate_universe does on the Bazel
+# side, so the two overlays stay comparable.
+vendor = false
+
+[cargo]
+# Binary dependencies, needed only to get cbindgen's *executable* as a target
+# the day genrules can call. Reindeer's manual is explicit that this requires
+# a NIGHTLY cargo at buckify time (artifact dependencies are still unstable
+# in cargo), though not at build time. On the Bazel side the same capability
+# was one annotation — `gen_binaries = ["cbindgen"]` — on stable.
+bindeps = true
+
+[buck]
+file_name = "BUCK"
+buckfile_imports = """
+load("@prelude//rust:cargo_buildscript.bzl", "buildscript_run")
+load("@prelude//rust:cargo_package.bzl", "cargo")
+"""
+rust_library = "cargo.rust_library"
+rust_binary = "cargo.rust_binary"
+buildscript_genrule = "buildscript_run"

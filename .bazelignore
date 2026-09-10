@@ -4,3 +4,5 @@ target
 book/book
 .git
 .devcontainer
+buck-out
+third-party/rust/vendor

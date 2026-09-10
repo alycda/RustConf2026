@@ -1,0 +1,41 @@
+# Buck2 overlay — evaluation, alongside the Bazel one. See
+# docs/build-system-evaluation.md. Neither is the supported path; `just`
+# and cargo are, and neither overlay touches them.
+#
+# Note what is NOT here: no equivalent of MODULE.bazel's bazel_dep list, no
+# registry, no version pins for rulesets. `external_cells.prelude = bundled`
+# means the rules ship inside the buck2 binary itself — nothing is fetched,
+# and the prelude cannot drift out of lockstep with the binary that reads
+# it. Bazel's answer to the same problem is a version string in MODULE.bazel
+# plus a fetch from bcr.bazel.build.
+
+[cells]
+  root = .
+  prelude = prelude
+  toolchains = toolchains
+  none = none
+
+[cell_aliases]
+  config = prelude
+  ovr_config = prelude
+  fbcode = none
+  fbsource = none
+  fbcode_macros = none
+  buck = none
+
+[external_cells]
+  prelude = bundled
+
+[parser]
+  target_platform_detector_spec = target:root//...->prelude//platforms:default \
+    target:prelude//...->prelude//platforms:default \
+    target:toolchains//...->prelude//platforms:default
+
+[build]
+  execution_platforms = prelude//platforms:default
+
+# days/target and exercises/target are cargo's; bazel-* are Bazel's
+# convenience symlinks. None of them are sources, and buck2 walking them
+# is both slow and wrong.
+[project]
+  ignore = .git, bazel-out, bazel-bin, bazel-testlogs, bazel-RustConf2026, days/target, exercises/target, target, third-party/rust/vendor

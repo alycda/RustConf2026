@@ -1,0 +1,22 @@
+# Buck2 toolchains. See docs/build-system-evaluation.md.
+#
+# `system_demo_toolchains()` is what `buck2 init` generates, and the name is
+# honest: every toolchain it defines resolves a tool from PATH. For Rust that
+# means whatever `rustc` happens to be installed — which is exactly the
+# property days/Cargo.toml's `rust-version = "1.85"` and rust.yml's `msrv`
+# job exist to pin down.
+#
+# This is the sharpest difference from the Bazel overlay. rules_rust ships a
+# toolchain that DOWNLOADS a named rustc, so MODULE.bazel says
+# `versions = ["1.85.0"]` and the floor is the build — there is no
+# configuration in which it silently compiles against something newer. The
+# buck2 prelude ships no equivalent; `system_rust_toolchain` takes a
+# `rustc` path, so pinning means either providing the binary yourself
+# (nix-shell already does, which is a real option for this repo) or writing
+# a download-and-extract toolchain rule by hand.
+#
+# Left as the demo toolchains deliberately: an evaluation should show what
+# the tool gives you out of the box, and the gap is the finding.
+load("@prelude//toolchains:demo.bzl", "system_demo_toolchains")
+
+system_demo_toolchains()
