@@ -42,10 +42,33 @@ check_required() { # name, command, fix hint
   fi
 }
 
+# WORKSHOP_TRACK is exported by nix/shells.nix's per-track shells. It is not
+# the same thing as WORKSHOP_SHELL, which is only .envrc's choice of which
+# shell to load — `full` is a shell but not a track.
+#
+# The distinction this buys: inside a track shell the toolchain came from
+# flake.lock, so its floor (JDK 17+, Python 3.10+) holds by construction.
+# Outside one, the track was found on PATH and its version is nobody's
+# guarantee — `command -v java` is equally happy with Java 8. Rust, cbindgen,
+# just and Dart get real floor checks below (check_floor); Java and Python do
+# not, and rather than grow two more parsers the pinned shell is the answer.
+workshop_track="${WORKSHOP_TRACK:-}"
+
+track_note() { # track-key
+  if [ "$workshop_track" = "$1" ]; then
+    printf 'ready %s(pinned by the %s dev shell)%s' "$DIM" "$1" "$NC"
+  else
+    printf 'ready %s(found on PATH — version not checked; pinned: nix develop .#%s)%s' "$DIM" "$1" "$NC"
+  fi
+}
+
 check_optional() { # track, command, install hint
   local track="$1" cmd="$2" hint="$3"
   if command -v "$cmd" >/dev/null 2>&1; then
-    printf ' %s %-12s ready\n' "$PASS" "$track"
+    case "$track" in
+      Dart) printf ' %s %-12s %s\n' "$PASS" "$track" "$(track_note dart)" ;;
+      *)    printf ' %s %-12s ready\n' "$PASS" "$track" ;;
+    esac
     return 0
   else
     printf ' %s %-12s not installed %s(only needed for this track — %s)%s\n' "$SKIP" "$track" "$DIM" "$hint" "$NC"
@@ -87,12 +110,12 @@ check_floor() {
 # runnable only once a real toolchain is installed.
 probe_swift() {
   if command -v swiftc >/dev/null 2>&1 && swiftc --version >/dev/null 2>&1; then
-    printf ' %s %-12s ready\n' "$PASS" "Swift"
+    printf ' %s %-12s %s\n' "$PASS" "Swift" "$(track_note swift)"
     return 0
   elif command -v swiftc >/dev/null 2>&1; then
     printf ' %s %-12s swiftc found, not runnable %s(macOS: install the CLT — run: just setup-swift)%s\n' "$SKIP" "Swift" "$DIM" "$NC"
   else
-    printf ' %s %-12s not installed %s(only needed for this track — run: just setup-swift)%s\n' "$SKIP" "Swift" "$DIM" "$NC"
+    printf ' %s %-12s not installed %s(only needed for this track — nix develop .#swift, or: just setup-swift)%s\n' "$SKIP" "Swift" "$DIM" "$NC"
   fi
   return 1
 }
@@ -102,12 +125,12 @@ probe_swift() {
 # real JDK is linked — the keg-only case setup-kotlin's symlink hint covers.
 probe_kotlin() {
   if command -v kotlinc >/dev/null 2>&1 && java -version >/dev/null 2>&1; then
-    printf ' %s %-12s ready\n' "$PASS" "Kotlin/JNA"
+    printf ' %s %-12s %s\n' "$PASS" "Kotlin/JNA" "$(track_note kotlin)"
     return 0
   elif command -v kotlinc >/dev/null 2>&1; then
     printf ' %s %-12s kotlinc found, java not runnable %s(macOS: link the keg-only JDK — re-run: just setup-kotlin for the command)%s\n' "$SKIP" "Kotlin/JNA" "$DIM" "$NC"
   else
-    printf ' %s %-12s not installed %s(needs JDK 17+ and kotlinc — run: just setup-kotlin)%s\n' "$SKIP" "Kotlin/JNA" "$DIM" "$NC"
+    printf ' %s %-12s not installed %s(needs JDK 17+ and kotlinc — nix develop .#kotlin, or: just setup-kotlin)%s\n' "$SKIP" "Kotlin/JNA" "$DIM" "$NC"
   fi
   return 1
 }
@@ -131,14 +154,18 @@ probe_python() {
           *)           activate=".venv/bin/activate" ;;
         esac
         printf ' %s %-12s ready %s(cffi in .venv — activate: source %s)%s\n' "$PASS" "Python" "$DIM" "$activate" "$NC"
+      elif [ "$workshop_track" = "python" ]; then
+        # The python dev shell ships python3 with cffi already in it, so
+        # there is no venv and `just setup-python` is a no-op here.
+        printf ' %s %-12s %s\n' "$PASS" "Python" "$(track_note python)"
       else
         printf ' %s %-12s ready (cffi installed)\n' "$PASS" "Python"
       fi
       return 0
     fi
-    printf ' %s %-12s python3 found, cffi missing %s(run: just setup-python, then: source .venv/bin/activate)%s\n' "$SKIP" "Python" "$DIM" "$NC"
+    printf ' %s %-12s python3 found, cffi missing %s(nix develop .#python — no venv needed; or: just setup-python, then source .venv/bin/activate)%s\n' "$SKIP" "Python" "$DIM" "$NC"
   else
-    printf ' %s %-12s not installed %s(python.org, 3.10+, then: just setup-python)%s\n' "$SKIP" "Python" "$DIM" "$NC"
+    printf ' %s %-12s not installed %s(nix develop .#python, or python.org 3.10+ then: just setup-python)%s\n' "$SKIP" "Python" "$DIM" "$NC"
   fi
   return 1
 }
@@ -147,7 +174,7 @@ probe_python() {
 # read from there rather than copied here, so the number lives in one place.
 probe_dart() {
   local pubspec floor
-  check_optional "Dart" "dart" "run: just setup-dart" || return 1
+  check_optional "Dart" "dart" "nix develop .#dart, or: just setup-dart" || return 1
   pubspec="$(dirname "$0")/../exercises/ex3-bindings/dart/pubspec.yaml"
   floor=$(sed -nE 's/^[[:space:]]*sdk: \^3\.([0-9]+)\..*/\1/p' "$pubspec" 2>/dev/null)
   [ -n "$floor" ] || return 0
@@ -179,7 +206,7 @@ check_required "cbindgen" "cbindgen" "nix shell provides it: direnv allow (no ni
 # channel's rustc passes the check above and then every cargo command in days/
 # fails at manifest parse. Parse failures here skip silently — a rustc that
 # can't even report a 1.x version was already flagged as broken above.
-check_floor required "rust floor" rustc 's/^rustc 1\.([0-9]+)\..*/\1/p' "1." 85 "edition 2024" "rustup update stable (nix: newer channel)" || true
+check_floor required "rust floor" rustc 's/^rustc 1\.([0-9]+)\..*/\1/p' "1." 85 "edition 2024" "rustup update stable (nix: the pin is flake.lock — nix flake update)" || true
 
 # cbindgen floor: every export in days/*/src/c_api.rs and Exercise 2's
 # lib.rs is spelled #[unsafe(no_mangle)], the edition-2024 form, and cbindgen
@@ -187,12 +214,12 @@ check_floor required "rust floor" rustc 's/^rustc 1\.([0-9]+)\..*/\1/p' "1." 85 
 # identifier, found keyword unsafe"). Ubuntu 24.04 LTS packages 0.26, so a
 # distro cbindgen passes the existence check above and then Exercise 2's
 # build script dies at the header step. Same shape as the rust floor.
-check_floor required "cbindgen floor" cbindgen 's/^cbindgen 0\.([0-9]+)(\..*)?$/\1/p' "0." 28 "#[unsafe(no_mangle)]" "cargo install cbindgen --locked (nix: newer channel)" || true
+check_floor required "cbindgen floor" cbindgen 's/^cbindgen 0\.([0-9]+)(\..*)?$/\1/p' "0." 28 "#[unsafe(no_mangle)]" "cargo install cbindgen --locked (nix: the pin is flake.lock — nix flake update)" || true
 
 # just floor: the root justfile's `mod?` needs just 1.31 (README says so), and
 # an older distro `just` cannot even parse it — the one required tool this
 # script otherwise never looks at, because `just check` is how it is run.
-check_floor required "just floor" just 's/^just 1\.([0-9]+)(\..*)?$/\1/p' "1." 31 "mod? in the justfile" "https://just.systems/man/en/installation.html (nix: newer channel)" || true
+check_floor required "just floor" just 's/^just 1\.([0-9]+)(\..*)?$/\1/p' "1." 31 "mod? in the justfile" "https://just.systems/man/en/installation.html (nix: the pin is flake.lock — nix flake update)" || true
 
 # C compiler: accept cc, clang, or gcc.
 c_compiler=""

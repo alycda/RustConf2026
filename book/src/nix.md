@@ -1,18 +1,24 @@
 # Step -1: Machine Provisioning
 
 Before anything else, your machine has to be able to run the workshop.
-Everything lives in a single file at the repo root: `shell.nix` — but only
-five tools are *required*: `rustc`, `cargo`, `cbindgen`, a C compiler, and
-`just`. The one extra in the box, `cheat`, is cheatsheets for the FFI
+Everything lives in a single file, `nix/shells.nix`, reached through either
+`flake.nix` or `shell.nix` — but only five tools are *required*: `rustc`,
+`cargo`, `cbindgen`, a C compiler, and `just`. The one extra in the box, `cheat`, is cheatsheets for the FFI
 patterns we'll hit — useful, and safe to ignore.
 
-That is all `nix-shell` gives you, on purpose. Some of the sample days link
+That is all `nix develop` gives you, on purpose. Some of the sample days link
 real C libraries — a physics engine, a database, a malware scanner — behind
 cargo features that are off by default, and those libraries are a far bigger
-download than the workshop itself. They live behind a flag,
-`nix-shell --arg full true`, so nobody pays for them just to get to the
-starting line. How the required
-five get onto your machine is your choice; the
+download than the workshop itself. They live in their own shell,
+`nix develop .#full`, so nobody pays for them just to get to the
+starting line.
+
+Those versions are pinned. `flake.lock` names one nixpkgs revision, so this
+path gives the whole room the same tool *versions* and not merely the same
+tools — which is also what makes the language-track floors in step 0 true
+by construction rather than something a script has to go looking for.
+
+How the required five get onto your machine is your choice; the
 [repo README](https://github.com/alycda/RustConf2026#readme) walks each
 path in detail. In brief:
 
@@ -20,9 +26,11 @@ path in detail. In brief:
 
 1. **macOS / Linux — Nix.** Install Nix (the
    [Determinate installer](https://install.determinate.systems) is the least
-   fuss), then `nix-shell` in the repo root. Optionally add
-   [direnv](https://direnv.net) + nix-direnv so the environment loads
-   automatically on `cd` — that's what the repo's `.envrc` is for.
+   fuss), then `nix develop` in the repo root — or `nix-shell`, if your
+   installation doesn't have flakes enabled. Both land on the same pinned
+   toolchain. Optionally add [direnv](https://direnv.net) + nix-direnv so the
+   environment loads automatically on `cd` — that's what the repo's `.envrc`
+   is for, and it picks whichever entry point your Nix supports.
 
 2. **Windows — WSL2.** Nix doesn't run natively on Windows, but WSL2 is
    Linux. `wsl --install`, then follow the Nix path inside your distro.

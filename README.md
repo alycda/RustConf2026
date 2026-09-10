@@ -18,8 +18,13 @@ you spend the workshop writing FFI, not fighting installers on venue Wi-Fi.
 
 Five tools, and that's the whole contract: `rustc`, `cargo`, `cbindgen`, a C
 compiler, and [`just`](https://github.com/casey/just). One file declares them
-— [`shell.nix`](./shell.nix) — and the shortest path is to let Nix read it
-rather than installing five things by hand.
+— [`nix/shells.nix`](./nix/shells.nix), reached through either
+[`flake.nix`](./flake.nix) or [`shell.nix`](./shell.nix) — and the shortest
+path is to let Nix read it rather than installing five things by hand.
+
+Versions are pinned. [`flake.lock`](./flake.lock) names one nixpkgs revision
+and both entry points resolve against it, so the room gets the same tool
+*versions* and not merely the same tool set.
 
 Pick **one** of these:
 
@@ -31,16 +36,24 @@ curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix 
 ```
 
 (The [upstream installer](https://nixos.org/download) works too.) Then open a
-new shell, `cd` into the repo, and run `nix-shell`. The first run downloads
+new shell, `cd` into the repo, and run `nix develop`. The first run downloads
 the toolchain; after that it's instant. That shell is deliberately just the
 five required tools — the C libraries a few days link behind default-off
 cargo features are a separate, much larger download you almost certainly
-don't want on venue Wi-Fi. If you do want them, it's
-`nix-shell --arg full true`. Optional but pleasant: install
-[direnv](https://direnv.net) with
+don't want on venue Wi-Fi. If you do want them, it's `nix develop .#full`.
+
+Flakes need `nix-command flakes` enabled. The Determinate installer above
+turns them on; the upstream one does not, and there
+[`nix-shell`](./shell.nix) is the equivalent — same pin, same tools:
+`nix-shell`, and `nix-shell --arg full true` for the C libraries.
+
+Optional but pleasant: install [direnv](https://direnv.net) with
 [nix-direnv](https://github.com/nix-community/nix-direnv) and run
 `direnv allow` once — that's what [`.envrc`](./.envrc) is for, and the
-environment then loads on its own every time you enter the repo.
+environment then loads on its own every time you enter the repo. It uses the
+flake where flakes are available and falls back to `shell.nix` where they
+are not, so either installer works. `WORKSHOP_SHELL=full` (or a language
+track — see step 0) picks a different shell for it to load.
 
 **Windows — WSL2, then Nix.** Nix doesn't run natively on Windows, but WSL2
 is Linux and Linux is fine. Run `wsl --install` in an **administrator**
@@ -72,9 +85,14 @@ Linux: `sudo apt install build-essential`, or
 `dnf groupinstall "Development Tools"`), and `just` via `cargo install just`,
 brew, or a [release binary](https://github.com/casey/just/releases) — it
 needs **≥ 1.31**, and apt/dnf ship older versions that cannot parse this
-repo's justfile. Versions are on you: `shell.nix` is unpinned, so the Nix
-paths track your channel, but at least they agree with each other. This works;
-it's just the option where drift is your problem.
+repo's justfile. Versions are on you, and that is now the real difference
+between this option and the others: the Nix paths resolve against the single
+revision in [`flake.lock`](./flake.lock), so everyone on them runs the same
+rustc, the same `cbindgen` and the same JDK. Here you get whatever your
+package manager has today. `just check` verifies the floors it can
+(rustc, `cbindgen`, `just`, Dart) and tells you plainly when a track's
+version is one it has not checked. This works; it's just the option where
+drift is your problem.
 
 **Rust experience:** you should be comfortable writing basic Rust (functions,
 structs, error handling). Deep expertise is *not* required, and neither is
@@ -117,11 +135,27 @@ just setup-kotlin   # Kotlin/JNA — JDK 17+ and kotlinc (brew on macOS, sdkman 
 just setup-dart     # Dart SDK — brew tap on macOS, dart.dev on Linux (`just check` verifies the floor)
 ```
 
-After `just setup-python`, activate the venv with `source .venv/bin/activate`
-so the next `just check` sees it. (💀 manual-setup folks: `shell.nix` isn't
-feeding you a `python3`, so bring your own, 3.10+.) The Kotlin and Dart tracks
-also have dedicated devcontainer variants in the "Reopen in Container" picker
-if you'd rather not install a JDK or the Dart SDK locally.
+**On Nix, the track is a shell and entering it is the whole setup** — nothing
+to install, and the floors the tracks state (JDK 17+, Python 3.10+, Dart
+3.0+) hold because the pin says so rather than because a script went looking:
+
+```bash
+nix develop .#python   # python3 with cffi already in it — no venv
+nix develop .#kotlin   # JDK 17 and kotlinc
+nix develop .#swift    # Swift toolchain (Linux; on macOS use the Xcode CLT)
+nix develop .#dart     # Dart SDK
+```
+
+(`nix-shell -A python`, `-A kotlin`, … are the non-flake spellings; with
+direnv, `WORKSHOP_SHELL=kotlin`.)
+
+Off Nix, the `just setup-*` recipes above are the path, and none of them can
+promise a version floor. After `just setup-python`, activate the venv with
+`source .venv/bin/activate` so the next `just check` sees it. (💀 manual-setup
+folks: the Nix shells feed you a `python3`; here bring your own, 3.10+.) The
+Kotlin and Dart tracks also have dedicated devcontainer variants in the
+"Reopen in Container" picker if you'd rather not install a JDK or the Dart
+SDK locally.
 
 "Enough to read simple function calls" is all the fluency the track needs.
 Not sure? Python is the shortest install; Swift is free if you're on a Mac.

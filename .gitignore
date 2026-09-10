@@ -193,3 +193,8 @@ $RECYCLE.BIN/
 # Exercise 2's own generated header is scoped the same way in
 # exercises/.gitignore.
 /days/*/include/*.h
+
+# Per-attendee direnv override, sourced by .envrc — this is where
+# WORKSHOP_SHELL goes, so it must never be committed: which shell you load on
+# `cd` is a personal choice, not a repo one.
+/.envrc.local
