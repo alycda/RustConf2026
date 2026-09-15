@@ -76,6 +76,16 @@ derive_more = { version = "1", features = ["deref"] }
 # starts from. 0.2 is what rand 0.8 pins; a rand 0.9 bump moves this to 0.3.
 getrandom = { version = "0.2", features = ["custom"] }
 
+# The generated wasm lap (2015-12-01's `wasm` feature, src/wasm.rs). An
+# exact pin, unlike everything else in this table: wasm-bindgen's CLI
+# refuses a module built with any other crate version, and 0.2.121 is the
+# wasm-bindgen-cli in the nixpkgs channel shell.nix reads (checked
+# 2026-09-15 with `nix-instantiate --eval -E '(import <nixpkgs>
+# {}).wasm-bindgen-cli.version'`). Bumping is this line plus whatever the
+# channel moved to; `just days wasm-demo` checks the two agree before it
+# runs, so a mismatch names both versions instead of failing mid-build.
+wasm-bindgen = "=0.2.121"
+
 itertools = "0.14"
 miette = { version = "7.4", features = ["fancy"] }
 nom = "7.1.3"

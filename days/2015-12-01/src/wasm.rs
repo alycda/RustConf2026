@@ -32,3 +32,54 @@ fn no_entropy(_buf: &mut [u8]) -> Result<(), getrandom::Error> {
 }
 
 getrandom::register_custom_getrandom!(no_entropy);
+
+/// The generated lap. Everything the raw route does by hand — copying the
+/// string into linear memory, reading the result back, turning a `Result`
+/// into something JavaScript can catch — wasm-bindgen writes into a JS glue
+/// file next to the module. What it cannot do is invent a distinction the
+/// wasm boundary does not carry: an `Err` and a `panic!` both arrive in
+/// JavaScript as "something was thrown", just different somethings, and
+/// the three exports below exist to produce each on demand from one
+/// solver so the consumer in `wasm/` can show them being told apart.
+#[cfg(feature = "wasm")]
+pub mod bindgen {
+    use std::str::FromStr;
+
+    use wasm_bindgen::prelude::*;
+
+    use crate::{Day, basement_position_pure_rust, sum_pure_rust};
+
+    /// The floor Santa ends up on. Cannot fail: every character parses
+    /// (unknown ones count as zero), and an `i32` sum of ±1s cannot
+    /// overflow on any input a browser could hand over.
+    #[wasm_bindgen]
+    pub fn part1(input: &str) -> i32 {
+        // Day::from_str returns Result for the trait's sake and never Err.
+        let day = Day::from_str(input).unwrap_or(Day(Vec::new()));
+        sum_pure_rust(&day)
+    }
+
+    /// The 1-based position of the first instruction that sends Santa into
+    /// the basement. The `Result` path: an input that never goes negative
+    /// is an ordinary, expected failure, and it crosses as a thrown JS
+    /// `Error` whose message is the same one `main.rs` prints natively.
+    #[wasm_bindgen]
+    pub fn part2(input: &str) -> Result<i32, JsError> {
+        let day = Day::from_str(input).unwrap_or(Day(Vec::new()));
+        basement_position_pure_rust(&day)
+            .ok_or_else(|| JsError::new("🦀 Santa never enters the basement"))
+    }
+
+    /// The same question, written the way a Rust-only codebase would have:
+    /// `expect` on the `Option`. On a native target that is a panic with a
+    /// message; here it is a trap — JavaScript sees a
+    /// `WebAssembly.RuntimeError: unreachable`, no message, and the
+    /// instance's Rust state (its allocator included) is undefined from
+    /// that call on. Exported so the consumer can watch that happen, not
+    /// as an API anyone should call.
+    #[wasm_bindgen]
+    pub fn part2_unchecked(input: &str) -> i32 {
+        let day = Day::from_str(input).unwrap_or(Day(Vec::new()));
+        basement_position_pure_rust(&day).expect("Santa never enters the basement")
+    }
+}

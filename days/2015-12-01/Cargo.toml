@@ -19,6 +19,11 @@ crate-type = ["rlib", "cdylib"]
 [features]
 caca = []
 tcc = []
+# The generated wasm lap: #[wasm_bindgen] exports in src/wasm.rs. Off by
+# default like the others, but for a different reason — nothing links here;
+# the gate exists so the raw route (a bare `cargo build --target
+# wasm32-unknown-unknown`) yields a module with no generator's glue in it.
+wasm = ["dep:wasm-bindgen"]
 
 [dependencies]
 aoc-ornaments.workspace = true
@@ -30,6 +35,10 @@ miette.workspace = true
 # a day that never draws a random number has to name a source for one.
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom.workspace = true
+# Optional and target-scoped both: `--all-features` on the host enables the
+# `wasm` feature and still compiles nothing from this crate, because the
+# module that uses it is gated on the target.
+wasm-bindgen = { workspace = true, optional = true }
 
 [dev-dependencies]
 rstest.workspace = true
