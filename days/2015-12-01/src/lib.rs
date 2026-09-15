@@ -7,6 +7,10 @@ use aoc_ornaments::Solution;
 pub mod c_api;
 #[cfg(feature = "caca")]
 pub mod caca;
+// `crate::godot` beside the `godot` dependency it uses — see the note at the
+// top of that file for why every path inside it is spelled `::godot`.
+#[cfg(feature = "godot")]
+pub mod godot;
 #[cfg(feature = "tcc")]
 mod tcc;
 
