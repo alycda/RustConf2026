@@ -8,12 +8,15 @@
     "main": "tsx src/main.ts",
     "demo": "tsx src/demo.ts",
     "raw": "tsx src/raw.ts",
+    "test": "tsx --test test/*.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "effect": "^3.22.2"
+    "effect": "^3.22.2",
+    "figlet": "^1.11.4"
   },
   "devDependencies": {
+    "@types/figlet": "^1.7.0",
     "@types/node": "^22.20.2",
     "tsx": "^4.23.13",
     "typescript": "^5.9.3"
