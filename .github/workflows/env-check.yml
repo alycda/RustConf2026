@@ -40,6 +40,14 @@
 # green everywhere with their provisioning steps; swift/windows was red —
 # the stock image ships no Swift — and is now excluded from the matrix
 # outright, the observation being recorded here.
+#
+# The godot row, added later, is not part of that map and never was: no
+# image ships a Godot on any OS, so there was nothing to observe. Its cell
+# provisions the engine itself from a pinned, checksummed release zip (see
+# the step), which makes it the first row here whose green says "this
+# provisioning recipe works" rather than "this image happens to carry the
+# toolchain". windows is excluded for swift's second reason only — the
+# workshop's Windows answer is WSL2 — not for a finding.
 
 name: Verify
 
@@ -73,7 +81,7 @@ jobs:
         # are not billed for standard runners, and this map of attendee
         # environments across all three OSes is the workflow's whole job.
         os: [ubuntu-latest, macos-latest, windows-latest]
-        track: [rust, c, python, dart, kotlin, swift]
+        track: [rust, c, python, dart, kotlin, swift, godot]
         # swift/windows was the grid's "?" cell and the first full-grid
         # run answered it: no Swift on the stock image, and the workshop's
         # Windows answer is WSL2 regardless. An answered question needs no
@@ -82,8 +90,20 @@ jobs:
         exclude:
           - os: windows-latest
             track: swift
+          # godot/windows is off for the same two reasons swift's is: the
+          # stock image ships no engine, and the workshop's Windows answer is
+          # WSL2. Nothing about the track is Windows-hostile — the
+          # .gdextension names an aoc_2015_12_01.dll row and the recipe
+          # copies one — so this is a runner-cost decision, not a finding.
+          - os: windows-latest
+            track: godot
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 10
+    # Ten minutes for every cell except godot, which builds gdext from
+    # scratch the first time: the crate generates bindings for the whole
+    # engine API from a JSON file it ships, and that is minutes rather than
+    # seconds. An expression rather than raising the number for all six,
+    # because a ten-minute ceiling on the other cells is a useful alarm.
+    timeout-minutes: ${{ matrix.track == 'godot' && 25 || 10 }}
     steps:
       - uses: actions/checkout@v5
       # Prebuilt binary for the same reason the track workflows give:
@@ -147,6 +167,60 @@ jobs:
           python3 -m venv .venv
           py="$(scripts/venv-python.sh)"
           "$py" -m pip install --upgrade pip cffi
+      # The godot cell is the only one that provisions its own runtime from
+      # scratch. No image ships a Godot; the two ways to get one were the
+      # official release zip and the nix shell rust.yml's `ffi` job already
+      # uses. The zip won: `ffi` compiles the crate already (--all-features
+      # inside nix), so all that is missing is the engine, and a nix store
+      # bootstrap plus godot's 332 MiB closure to obtain one binary is a bad
+      # trade in a workflow whose subject is what stock images can do.
+      #
+      # Pinned and checksummed, the rule scripts/fetch-jna.sh states: a
+      # binary downloaded over the network and then executed is a different
+      # kind of thing from a pinned one. The sums are SHA-512 because Godot
+      # publishes SHA512-SUMS.txt beside the release — these two lines are
+      # copied from it, so the pin can be checked against upstream without
+      # re-hashing anything.
+      #
+      # $GODOT is the escape hatch scripts/godot-bin.sh reads, so both the
+      # self-check row below and the demo recipe find this binary without a
+      # PATH entry named after a version.
+      - name: provision godot (pinned release zip)
+        if: matrix.track == 'godot'
+        shell: bash
+        run: |
+          base="https://github.com/godotengine/godot/releases/download/4.7.2-stable"
+          if [ "${RUNNER_OS}" = macOS ]; then
+            file="Godot_v4.7.2-stable_macos.universal.zip"
+            sum="38aa16e5bba2083941fc5b3e54be0089bd4cc35e32415f5b9fd9a8a6a7b9818255d44532ea8ef94b5aef56c4b407c2d634fa4f657e4ebe681ebbf59b7bac69ca"
+          else
+            file="Godot_v4.7.2-stable_linux.x86_64.zip"
+            sum="9aa00f7a605200940bce3027a567b782f49bd8e940dd06ae9e987bd65aee1b1467edd56ed84fcdcbdd44354bf613bdbb4e5d2913e925850368e150c59ed54c65"
+          fi
+          curl -fsSL -o godot.zip "$base/$file"
+          echo "$sum  godot.zip" | shasum -a 512 -c -
+          unzip -q godot.zip -d "${RUNNER_TEMP}/godot"
+          if [ "${RUNNER_OS}" = macOS ]; then
+            # The macOS download is an .app bundle; the executable inside it
+            # is the same binary, and --headless works from there.
+            godot="${RUNNER_TEMP}/godot/Godot.app/Contents/MacOS/Godot"
+          else
+            godot="${RUNNER_TEMP}/godot/Godot_v4.7.2-stable_linux.x86_64"
+          fi
+          chmod +x "$godot"
+          "$godot" --version
+          echo "GODOT=$godot" >> "$GITHUB_ENV"
+      # A pinned stable toolchain and the shared cache, for the godot cell
+      # only. The image's own rustc would do — it is well past the 1.94 the
+      # gdext crate declares — but this cell is the one that pays minutes for
+      # a cold build, so it is the one where rust-cache earns its keep, and
+      # rust-cache wants a toolchain step in front of it.
+      - uses: dtolnay/rust-toolchain@stable
+        if: matrix.track == 'godot'
+      - uses: Swatinem/rust-cache@v2
+        if: matrix.track == 'godot'
+        with:
+          workspaces: days
       # shell: bash so the windows cells run under Git Bash rather than
       # PowerShell — the closest a native-Windows runner gets to running
       # this script at all.
@@ -710,6 +784,79 @@ jobs:
           echo "$out"
           echo "$out" | grep -qF 'Part 1 🕊️(🦀): 161'
           echo "$out" | grep -qF 'Part 2 🕊️(🦀): 48'
+
+      # Beyond the env check: on a branch that carries the Godot track
+      # (2015-12-01), prove it end to end. This is the one track that reads no
+      # header — a GDExtension negotiates everything with the engine at load —
+      # so there is no cbindgen step here, only the cdylib built with the
+      # `godot` feature, copied to where godot/aoc.gdextension says, and a
+      # GDScript file run headless.
+      #
+      # --import first, and its exit code deliberately ignored. The engine
+      # only knows about a .gdextension after a filesystem scan has recorded
+      # it in .godot/extension_list.cfg, which no fresh checkout has; and the
+      # *first* such scan finishes its work and then aborts on the way out
+      # (SIGABRT, exit 134, observed on 4.7.2 headless). So the file is what
+      # gets checked, and the run that follows reports its own status.
+      #
+      # `()())` is the same statement example the python cell writes for this
+      # same day, which is the point: two runtimes, the same input, the same
+      # two numbers — -1 and 5 — and src/lib.rs's rstest table asserts both.
+      # A negative part-1 answer is also the one a naive in-band error
+      # convention would eat.
+      #
+      # test.gd's own exit code already asserts the full statement grid, so
+      # the greps below are for the failure an exit code cannot show: a script
+      # that ran, passed everything it reached, and stopped early. The count
+      # floor catches truncation; the named lines pin the five facts the track
+      # exists to demonstrate. ERR_DOES_NOT_EXIST is matched as the literal 33
+      # because that is what GDScript prints for it — the C API's status code,
+      # landing in a runtime that has its own integer error enum.
+      #
+      # The two `Part N` lines are matched byte for byte, the kotlin cell's
+      # rule: 🎮 is U+1F3AE, a single code point with no variation selector.
+      # If the label in test.gd changes, copy it — do not retype it.
+      - name: godot track end-to-end (2015-12-01)
+        if: matrix.track == 'godot'
+        shell: bash
+        run: |
+          if [ ! -f days/2015-12-01/godot/test.gd ]; then
+            echo "no worked godot track on this branch — skipping"
+            exit 0
+          fi
+          (cd days && cargo build -p aoc-2015-12-01 --lib --features godot --locked)
+          mkdir -p inputs days/2015-12-01/godot/lib
+          printf '()())' > inputs/2015-12-01.txt
+          # Whichever of the three cdylib names cargo produced on this OS;
+          # windows is excluded from this cell, so two are enough here.
+          for name in libaoc_2015_12_01.so libaoc_2015_12_01.dylib; do
+            if [ -f "days/target/debug/$name" ]; then
+              cp "days/target/debug/$name" "days/2015-12-01/godot/lib/$name"
+            fi
+          done
+          cd days/2015-12-01/godot
+          "$GODOT" --headless --import || true
+          if [ ! -f .godot/extension_list.cfg ]; then
+            echo "::error::godot --import produced no extension_list.cfg — the extension will not load" >&2
+            exit 1
+          fi
+          out="$("$GODOT" --headless -s test.gd)"
+          echo "$out"
+          checks="$(printf '%s' "$out" | grep -c '^  ok   ' || true)"
+          if [ "$checks" -lt 27 ]; then
+            echo "::error::test.gd reported only $checks checks (expected at least 27) — it stopped early" >&2
+            exit 1
+          fi
+          echo "$out" | grep -qF 'ok   ()) (got -1, want -1)'
+          echo "$out" | grep -qF 'ok   ()()) (got 5, want 5)'
+          echo "$out" | grep -qF 'and it is 5 (got 5, want 5)'
+          echo "$out" | grep -qF 'status for ((( is ERR_DOES_NOT_EXIST (got 33, want 33)'
+          echo "$out" | grep -qF 'Rust: (🦀) is 6 UTF-8 bytes (got 6, want 6)'
+          if ! echo "$out" | grep -qF 'Part 1 🎮(🦀): -1' \
+            || ! echo "$out" | grep -qF 'Part 2 🎮(🦀): 5'; then
+            echo "::error::answers are correct but the label drifted — re-sync this step with days/2015-12-01/godot/test.gd" >&2
+            exit 1
+          fi
 
       # ---- Exercises: the attendee scaffold, solved once, end to end -------
       # exercises/ ships with todo!() and TODOs, so nothing on main can run
