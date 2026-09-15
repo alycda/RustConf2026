@@ -107,6 +107,22 @@ r-demo day:
     cd "{{day}}" && cargo build --lib
     Rscript r/solve.R
 
+# The R track's generated lap (extendr): same day, same cdylib, the other R
+# interface. Separate recipe rather than a flag on r-demo because the build
+# is genuinely different — `--features extendr` links against libR and reads
+# R's headers, so this one cannot even compile without R installed, while
+# r-demo only needs R to *run*. That asymmetry is the lap's whole cost and it
+# belongs in the recipe list where someone will meet it.
+r-extendr-demo day:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -f "{{day}}/r/extendr.R" ]; then
+        echo "days/{{day}} has no r/extendr.R — not every day carries one" >&2
+        exit 1
+    fi
+    cd "{{day}}" && cargo build --lib --features extendr
+    Rscript r/extendr.R
+
 
 # Exercise 3 (Dart/dart:ffi track): call a day's cbindgen C API from Dart.
 # `just setup-dart` once first. Depends on `bindgen` rather than
