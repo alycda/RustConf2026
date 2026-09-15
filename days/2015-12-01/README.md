@@ -100,7 +100,7 @@ version-coupled to its CLI, and `days/Cargo.toml` says how the pin is kept.
 
 ```sh
 cd days/2015-12-01 && cargo run           # pure Rust parse, libtcc-JIT solve, libcaca banner
-cargo test -p aoc-2015-12-01              # the five C-shaped variants share these test cases; wasm/ has its own (npm test)
+cargo test -p aoc-2015-12-01              # the five C-shaped variants share these test cases (src/wasm.rs is target-gated: not here)
 
 just days bench 2015-12-01                # criterion: parse + both parts, see days/README.md
 cargo bench -p aoc-2015-12-01 --bench sum # pure Rust vs libtcc JIT, head to head
@@ -110,7 +110,8 @@ just days python-demo 2015-12-01          # build + generate header + run python
 
 just days wasm-demo 2015-12-01            # wasm32 build + wasm-bindgen glue + every consumer in wasm/
 just days wasm-pack-demo 2015-12-01       # the same, with wasm-pack fetching the generator itself
-cd wasm && npm run main | raw | demo | test   # the consumers, once the module and pkg/ exist
+cd wasm && npm run main | raw | demo       # the consumers, once the module, pkg/ and node_modules exist (one wasm-demo does all three)
+cd wasm && npm test                       # the banner test only — the boundary is exercised by raw and demo above
 ```
 
 ## Benchmarks

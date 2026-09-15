@@ -26,3 +26,10 @@ ex3-bindings/dart/pubspec.lock
 # Not listed here on purpose: the Kotlin track's JNA jar lives in
 # $XDG_CACHE_HOME (scripts/fetch-jna.sh), outside the repo; .dart_tool/ and
 # __pycache__/ are covered by their own root rules.
+
+# Also not listed, and deliberately the opposite of the Dart rule above:
+# ex4-wasm/wasm/package-lock.json is committed. `npm ci` refuses to run
+# without a lockfile and refuses to change one, so the attendee never
+# resolves anything — the committed lock is what makes "npm ci runs once"
+# true on every machine the same way, where `dart pub get` resolves on the
+# attendee's machine by design. node_modules/ is a root rule.
