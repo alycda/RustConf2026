@@ -42,8 +42,18 @@ fn no_entropy(_buf: &mut [u8]) -> Result<(), getrandom::Error> {
 
 getrandom::register_custom_getrandom!(no_entropy);
 
-/// Lends the caller `size` bytes of this module's linear memory, or returns
-/// null when `size` is zero or the allocator has nothing left.
+/// The alignment every borrowed block carries: enough for the `int32_t`
+/// out-parameter, see [`aoc_2015_12_01_alloc`].
+const ALIGN: usize = 4;
+
+/// Lends the caller `size` bytes of this module's linear memory, aligned to
+/// four, or returns null when `size` is zero or the allocator has nothing
+/// left.
+///
+/// Four, because the C API writes its answer through an `int *` and the
+/// caller borrows that pointer from here too: a one-byte-aligned block would
+/// be a promise the C side cannot rely on, even where the allocator happens
+/// to hand out more. The strings do not care.
 ///
 /// The raw route's precondition. The C API in `c_api.rs` reads a string
 /// the caller made and writes through a pointer the caller owns; a
@@ -58,7 +68,7 @@ getrandom::register_custom_getrandom!(no_entropy);
 /// lap hides inside its glue.
 #[unsafe(no_mangle)]
 pub extern "C" fn aoc_2015_12_01_alloc(size: usize) -> *mut u8 {
-    let Ok(layout) = Layout::from_size_align(size, 1) else {
+    let Ok(layout) = Layout::from_size_align(size, ALIGN) else {
         return core::ptr::null_mut();
     };
     if layout.size() == 0 {
@@ -86,7 +96,7 @@ pub unsafe extern "C" fn aoc_2015_12_01_free(ptr: *mut u8, size: usize) {
     }
     // SAFETY: the caller upholds the contract above, so this is the layout
     // `alloc` was called with.
-    unsafe { alloc::dealloc(ptr, Layout::from_size_align_unchecked(size, 1)) }
+    unsafe { alloc::dealloc(ptr, Layout::from_size_align_unchecked(size, ALIGN)) }
 }
 
 /// The generated lap. Everything the raw route does by hand — copying the
