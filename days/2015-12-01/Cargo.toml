@@ -20,10 +20,23 @@ crate-type = ["rlib", "cdylib"]
 caca = []
 tcc = []
 
+# The R track's generated lap (src/extendr.rs). Unlike caca/tcc this one
+# needs no pkg-config and no C library — it needs R: extendr-api links
+# against libR and reads R's headers at build time, so `cargo build
+# --features extendr` only works where `just setup-r` has been run (or
+# inside `nix shell nixpkgs#R`). Optional for exactly the reason the wasm
+# pin is explained the way it is: the msrv job and every stock CI runner
+# build this workspace with default features, and neither has R.
+extendr = ["dep:extendr-api"]
+
 [dependencies]
 aoc-ornaments.workspace = true
 derive_more.workspace = true
 miette.workspace = true
+
+# Not a workspace dependency: one day uses it, behind a feature that only
+# builds where R is installed. 0.9 is the current series.
+extendr-api = { version = "0.9", optional = true }
 
 [dev-dependencies]
 rstest.workspace = true
