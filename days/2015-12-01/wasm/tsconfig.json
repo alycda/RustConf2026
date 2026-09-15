@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    // DOM for one name: `WebAssembly` is declared in lib.dom, not in
+    // @types/node, even though Node has had it since v8. Without it the
+    // `instanceof WebAssembly.RuntimeError` check in boundary.ts — the
+    // line the whole directory is about — does not typecheck.
+    "lib": ["ES2022", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "types": ["node"],
+
+    // Effect's error channel is a type. Without `strict` it silently
+    // degrades to `any` in places, and the whole point of this consumer
+    // is that the compiler knows which failures are worth handling.
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+
+    "skipLibCheck": true,
+    "noEmit": true,
+    "verbatimModuleSyntax": true
+  },
+  "include": ["src/**/*.ts"]
+}
