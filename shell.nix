@@ -50,7 +50,28 @@
 # and what anyone reaching for `cargo test --all-features` wants. direnv
 # takes it too, if you'd rather have the full set load on `cd`: change
 # .envrc's `use nix` to `use nix --arg full true`.
-{ nixpkgs ? import <nixpkgs> {}, full ? false }:
+# The nixpkgs everything below resolves against is the one flake.lock
+# names. `nix develop` reads the lock natively; this file reads it too, so
+# plain `nix-shell`, direnv's `use nix`, the devcontainers and CI's ffi job
+# all get the same revision without flakes being enabled anywhere (the
+# devcontainer's nix has nix-command off, and nothing here needs it on).
+# Bump with `nix flake update` — or `nix flake lock --override-input nixpkgs
+# github:NixOS/nixpkgs/<rev>` for a specific revision — and every path
+# moves together. `--arg nixpkgs` still overrides it, which is how to try a
+# bump before locking it.
+#
+# The let sits outside the function on purpose: a default argument is
+# evaluated in the scope around the function, not inside it, so the same
+# binding in the body would be `undefined variable` at every call site.
+let
+  lock = builtins.fromJSON (builtins.readFile ./flake.lock);
+  pin = lock.nodes.nixpkgs.locked;
+  pinnedNixpkgs = builtins.fetchTarball {
+    url = "https://github.com/${pin.owner}/${pin.repo}/archive/${pin.rev}.tar.gz";
+    sha256 = pin.narHash;
+  };
+in
+{ nixpkgs ? import pinnedNixpkgs {}, full ? false }:
 
 let
   # Two nixpkgs packages are broken on darwin (details at each override). The
@@ -60,10 +81,11 @@ let
   # anywhere in this file would silently reach the unfixed one, and on darwin
   # that is issue #1 again with the fix sitting thirty lines above it.
   #
-  # Each override carries a tripwire. The channel is unpinned, so the day
-  # nixpkgs fixes the package the override keeps forcing a source build for
-  # no reason; the warnIf fires on that day, instead of the comments quietly
-  # describing a nixpkgs that no longer exists.
+  # Each override carries a tripwire. The pin moves with `nix flake update`,
+  # and the bump that brings the fixed package would leave the override
+  # forcing a source build for no reason; the warnIf fires on that bump,
+  # instead of the comments quietly describing a nixpkgs that no longer
+  # exists.
   pkgs = nixpkgs.extend (final: prev: let inherit (prev) lib; in {
     chipmunk =
       lib.warnIf
