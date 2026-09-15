@@ -7,8 +7,16 @@ use aoc_ornaments::Solution;
 pub mod c_api;
 #[cfg(feature = "caca")]
 pub mod caca;
+// `crate::godot` beside the `godot` dependency it uses — see the note at the
+// top of that file for why every path inside it is spelled `::godot`.
+#[cfg(feature = "godot")]
+pub mod godot;
 #[cfg(feature = "tcc")]
 mod tcc;
+// The R track's generated lap. Needs R's headers and libR at build time,
+// hence a feature and not a default — see the module's own header.
+#[cfg(feature = "extendr")]
+mod extendr;
 
 /// A collection of instructions to move between floors.
 #[derive(Debug, derive_more::Deref)]

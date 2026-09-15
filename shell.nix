@@ -25,6 +25,27 @@
 # at ~73 MiB; every other library here is under 20 MiB. If the full shell
 # ever needs to get cheaper, an audio-less espeak-ng is the whole game.
 #
+# What is in neither shell: the language tracks' own runtimes. Swift, the
+# Dart SDK, a JDK and kotlinc have never been here — an attendee picks ONE
+# track (README step 3) and nobody should pay for the other three on venue
+# Wi-Fi. R makes that rule impossible to argue with: 646 MiB to download and
+# about 2.0 GiB on disk (nixpkgs unstable, R 4.6.1, measured 2026-09-15 with
+# `nix path-info -S`), which is the whole default shell over again for a
+# track most of the room will not take. `just setup-r` owns that install, and
+# `nix-shell -p R --run '<cmd>'` borrows it for a single command
+# without putting it in anyone's shell — which is how days/2015-12-01/r was
+# built and verified.
+#
+# R is the one runtime that IS in the `full` shell, and only there. It is
+# not for running the R track; it is because 2015-12-01's `extendr` feature
+# links libR at build time, and `full` is defined as "everything the
+# default-off features need to build" — the ffi job runs `cargo test
+# --workspace --all-features` inside it and had no way to build that one
+# feature without R (run 35003544822: extendr-api's build.rs panics, both
+# OSes). Cached for every runner (aarch64-darwin, x86_64-linux,
+# aarch64-linux all answer 200 from cache.nixos.org), so it is a download,
+# never a compile.
+#
 # `--arg full true` is what .github/workflows/rust.yml's `ffi` job passes,
 # and what anyone reaching for `cargo test --all-features` wants. direnv
 # takes it too, if you'd rather have the full set load on `cd`: change
@@ -260,6 +281,12 @@ let
     # of download all in: 13.9 for liblapack, 6.9 for openblas (nixpkgs' LAPACK
     # provider) and 3.4 for the gfortran runtime it links against.
     lapack
+    # R for days/2015-12-01's extendr lap (cargo feature `extendr`, off by
+    # default). Not a C library, but it plays one here: extendr-api's build
+    # script runs `R CMD config` and links libR, and nothing else in the
+    # full shell provides them. See the header for why this is the only
+    # runtime in either shell.
+    R
   ];
 in
 pkgs.mkShell {

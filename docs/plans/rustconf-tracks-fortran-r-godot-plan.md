@@ -174,10 +174,16 @@ matches on the symbol name and trusts the vector modes. Kotlin at least keeps an
 part1(input: &str) -> i32`, `extendr_module!`, and a `Result<i32, String>` becomes an R
 error condition — so `tryCatch` is the typed channel, and the status code the raw route
 lost comes back as an R condition. What extendr does with a Rust panic is the same
-question the wasm demo asked — `[verify: extendr catches panics at the boundary and
-raises an R error; confirm the version's behaviour before it goes in a README]`. Cost of
-the lap: the crate links against R's headers and library at build time, which means the
-`R` package in the shell that builds it.
+question the wasm demo asked — **verified on 2026-09-15 against extendr-api 0.9.0 and R
+4.6.1**: the generated wrapper catches the unwind and raises an ordinary `simpleError`,
+`tryCatch` takes it, and the session carries on (`boundary_panic` in
+`days/2015-12-01/src/extendr.rs` is the exhibit; `r/extendr.R` calls it and keeps
+running). One thing the marker did not ask about and the build answered anyway: the
+`Err` arm is *also* implemented by panicking, so a plain domain error prints a Rust
+panic trace from extendr's own `into_robj.rs` before the clean R condition arrives.
+Cost of the lap, confirmed: the crate links against R's headers and library at build
+time, so `cargo build --features extendr` needs R on the machine — which is why the lap
+is a second recipe (`just days r-extendr-demo`) rather than a flag on the first.
 
 ### The cross-link nobody else can offer
 
@@ -189,13 +195,18 @@ puzzle, and every argument by reference the whole way. A stretch, not a delivera
 ### Files and plumbing
 
 - `days/2015-12-01/r/solve.R`; `just days r-demo <day>` (build, `Rscript`).
-- Label emoji: 📊 `[confirm]`.
+- Label emoji: 📊 (confirmed, and shipped: `Part 1 📊(🦀): <n>`, byte-matched in the
+  Verify cell — spelled as literal UTF-8 in `solve.R`, because R renders a `\U` escape
+  by locale and prints `<U+0001F4CA>` under `C`).
 - self-check `probe_r`: `Rscript --version`; `just setup-r` (brew `r` on macOS; CRAN
   pointer on Linux; the devcontainer variant carries it).
 - Verify cell `r`: `r-lib/actions/setup-r` on all three stock images.
 - nix: `R` 4.5.3, **646 MiB** download — the heaviest toolchain in this plan by a wide
   margin, and the strongest argument for the devcontainer-variant pattern over anything in
-  `shell.nix`. extendr adds nothing beyond it.
+  `shell.nix`. extendr adds nothing beyond it. (Built against nixpkgs-unstable'"'"'s R 4.6.1 on
+  2026-09-15: ~2.0 GiB realised, and `nix shell nixpkgs#R --command <cmd>` turned out to be
+  a good enough answer for the build that no devcontainer variant was written. `shell.nix`
+  now says out loud why no track runtime is in either shell.)
 - README: row nine, learnings for the three consequences above.
 
 ### Cost, risk, open questions

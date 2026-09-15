@@ -110,6 +110,39 @@ setup-fortran:
     @echo "Debian/Ubuntu: sudo apt install gfortran · Fedora: sudo dnf install gcc-gfortran"
     @echo "Or install nothing system-wide: nix-shell -p gfortran (then run just from inside it)"
     @echo "then re-run: just check"
+# R track: `Rscript` is the whole toolchain — no package manager step, no
+# dependency to fetch. .C() is in base R.
+
+# R track: R via brew (the formula is lowercase `r`, the command is `R`)
+[macos]
+setup-r:
+    brew install r
+
+# R track: CRAN publishes per-distro repositories — points at them
+[linux]
+setup-r:
+    @echo "R from CRAN (distro repos, newer than what apt/dnf ship):"
+    @echo "  https://cran.r-project.org/bin/linux/"
+    @echo "Or borrow it for one command without installing anything:"
+    @echo "  nix-shell -p R --run 'just days r-demo 2015-12-01'"
+
+# Godot/GDExtension track: the editor binary, which is also the headless one
+[macos]
+setup-godot:
+    brew install --cask godot
+    @echo "Then re-run: just check (it verifies the 4.6 floor the .gdextension declares)"
+
+# Godot track: distros disagree on the package name AND on which major it is
+# — `godot` is 3.x on Debian and Fedora, where 4.x is `godot4` — so this
+# points at the download rather than guessing. Nothing here needs the editor
+# UI: the same binary runs the track headless.
+[linux]
+setup-godot:
+    @echo "Install Godot 4.6+ from https://godotengine.org/download (the standard build, not .NET)"
+    @echo "Your distro may package it as 'godot4'; scripts/godot-bin.sh finds either."
+    @echo "Renamed it, or unzipped it somewhere off PATH? Point at it: export GODOT=/path/to/Godot_v4.7-stable_linux.x86_64"
+    @echo "Or install nothing: reopen in the Godot devcontainer variant (.devcontainer/godot), which carries the engine."
+    @echo "then: just check — it verifies the 4.6 floor the .gdextension declares."
 
 # devcontainer only: rebuild the home-manager profile (WORKSHOP_HOME_NIX is
 # set by the variant devcontainers so their extra packages survive a rebuild)

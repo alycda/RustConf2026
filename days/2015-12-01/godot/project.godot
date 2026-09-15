@@ -1,0 +1,26 @@
+; Engine configuration file.
+;
+; Deliberately almost empty. A GDExtension registering a RefCounted class
+; needs no scene, no main loop and no autoload — `godot --headless -s test.gd`
+; runs the script as its own SceneTree — so the only things here are what the
+; engine needs to recognise a directory as a project at all.
+;
+; Written by hand rather than by the editor, which would add a dozen more
+; keys and a uid:// line for every file it touched. If you open this in the
+; editor it will rewrite the file; that is fine, but keep the diff honest.
+;
+; config_version=5 is Godot 4.x. The engine bumps it, not us.
+
+config_version=5
+
+[application]
+
+config/name="AoC 2015-12-01 — GDExtension"
+config/description="Day 1 solved in Rust, called from GDScript across a GDExtension."
+
+[debug]
+
+; Print the Rust panic the gdext boundary catches (see part2_unwrapped) with
+; its engine-side stack, instead of one line with no context. The panic
+; exhibit is only interesting if you can see what the engine did with it.
+settings/stdout/verbose_stdout=true

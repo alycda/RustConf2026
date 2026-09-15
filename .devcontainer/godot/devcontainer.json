@@ -1,8 +1,16 @@
-// Base variant. The sibling variants (jj, kotlin, flutter, swift, godot) are copies of this
-// file plus a name and a WORKSHOP_HOME_NIX override — devcontainer.json has no
-// "extends", so edits here need mirroring there.
+// Copy of ../git/devcontainer.json plus a name and the WORKSHOP_HOME_NIX
+// override pointing at ./home.nix (which imports the shared ../home.nix and
+// adds the Godot engine). devcontainer.json has no "extends" — keep in sync
+// by hand.
+//
+// No GDScript extension here, on purpose: geequlim.godot-tools validates an
+// editor path on activation and then polls a language server on :6008 that
+// only a running Godot *editor* provides, so in a headless container it
+// raises two errors on every open and helps with nothing. The editor-side
+// recommendation for this track lives in ../../.vscode/extensions.json with
+// the others, where an attendee can decline it.
 {
-    "name": "FFI playground (git)",
+    "name": "FFI playground (Godot track)",
     "image": "debian:bookworm-slim",
     "mounts": [
         "source=claude-auth,target=/root/.claude,type=volume"
@@ -16,6 +24,9 @@
         "ANTHROPIC_API_KEY": {
             "description": "Claude session key from Claude Console (for Claude Code CLI)"
         }
+    },
+    "containerEnv": {
+        "WORKSHOP_HOME_NIX": "${containerWorkspaceFolder}/.devcontainer/godot/home.nix"
     },
     "remoteEnv": {
         // home-manager installs direnv (and hx, just, claude) into the USER

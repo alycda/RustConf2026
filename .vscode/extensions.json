@@ -5,6 +5,7 @@
         "mkhl.direnv",
         "rust-lang.rust-analyzer",
         "fortran-lang.linter-gfortran",
+        "dsobotta.godot-rust-vscode"
     ],
     "unwantedRecommendations": [
         "donjayamanne.python-extension-pack"

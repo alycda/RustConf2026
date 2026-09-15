@@ -20,10 +20,59 @@ crate-type = ["rlib", "cdylib"]
 caca = []
 tcc = []
 
+# The R track's generated lap (src/extendr.rs). Unlike caca/tcc this one
+# needs no pkg-config and no C library — it needs R: extendr-api links
+# against libR and reads R's headers at build time, so `cargo build
+# --features extendr` only works where `just setup-r` has been run (or
+# inside `nix-shell -p R`). Optional for exactly the reason the wasm
+# pin is explained the way it is: the msrv job and every stock CI runner
+# build this workspace with default features, and neither has R.
+extendr = ["dep:extendr-api"]
+
+# The Godot track (src/godot.rs) — off by default for the usual reason plus
+# one this repo has not had to state before.
+#
+# The usual reason: like caca/tcc, it is a variant nobody needs to build the
+# day. The new one is MSRV. The `godot` crate declares rust-version = "1.94";
+# days/Cargo.toml declares 1.85 (the edition-2024 floor), and
+# .github/workflows/rust.yml has an `msrv` job that checks this workspace on
+# exactly 1.85 so that floor is a tested claim rather than a hopeful one. An
+# optional dependency is resolved into days/Cargo.lock but never compiled
+# until a feature turns it on, so the floor job — which takes default
+# features — never sees 1.94.
+#
+# Target-scoped (`[target.'cfg(...)'.dependencies]`, the way a wasm-only pin
+# would be) is not available here: a GDExtension is a host cdylib, built for
+# the same target as everything else. The gate has to be a feature.
+#
+# The compile-side gate is the `ffi` job, which runs --all-features inside
+# the nix shell — nixpkgs' rustc is well past 1.94, so that job type-checks
+# this module and the floor job still proves the floor.
+godot = ["dep:godot"]
+
 [dependencies]
 aoc-ornaments.workspace = true
 derive_more.workspace = true
 miette.workspace = true
+
+# Not a workspace dependency: one day uses it, behind a feature that only
+# builds where R is installed. 0.9 is the current series.
+extendr-api = { version = "0.9", optional = true }
+
+# gdext, the Rust GDExtension bindings. Not in the workspace table: it is
+# this day's alone, and pinning it next to the feature that switches it on
+# keeps the MSRV note above within reading distance of the version it is
+# about.
+#
+# `api-4-6` is the *minimum* engine this extension declares, not the engine
+# it was tested against — GDExtension is forward compatible within 4.x, and
+# the same .so loads in the 4.7.2 nixpkgs currently ships (which is what
+# `just days godot-demo 2015-12-01` runs it under). Asking for 4.6 rather
+# than 4.7 costs nothing here and keeps an attendee on last year's editor in
+# the room. `aoc.gdextension` repeats the number as
+# `compatibility_minimum`; the two have to agree, and the engine enforces it
+# at load rather than at build.
+godot = { version = "0.5.5", features = ["api-4-6"], optional = true }
 
 [dev-dependencies]
 rstest.workspace = true
