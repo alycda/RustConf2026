@@ -92,6 +92,23 @@ setup-dart:
     @echo "Install the Dart SDK: https://dart.dev/get-dart (then: just check — it verifies the version floor)"
     @echo "Or skip that: reopen the repo in the 'Flutter/Dart track' devcontainer."
 
+# Godot/GDExtension track: the editor binary, which is also the headless one
+[macos]
+setup-godot:
+    brew install --cask godot
+    @echo "Then re-run: just check (it verifies the 4.6 floor the .gdextension declares)"
+
+# Godot track: distros disagree on the package name AND on which major it is
+# — `godot` is 3.x on Debian and Fedora, where 4.x is `godot4` — so this
+# points at the download rather than guessing. Nothing here needs the editor
+# UI: the same binary runs the track headless.
+[linux]
+setup-godot:
+    @echo "Install Godot 4.6+ from https://godotengine.org/download (the standard build, not .NET)"
+    @echo "Your distro may package it as 'godot4'; scripts/godot-bin.sh finds either."
+    @echo "Renamed it, or unzipped it somewhere off PATH? Point at it: export GODOT=/path/to/Godot_v4.7-stable_linux.x86_64"
+    @echo "then: just check — it verifies the 4.6 floor the .gdextension declares."
+
 # devcontainer only: rebuild the home-manager profile (WORKSHOP_HOME_NIX is
 # set by the variant devcontainers so their extra packages survive a rebuild)
 # Goes through setup.sh rather than calling `home-manager switch` directly,

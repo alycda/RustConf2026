@@ -2,12 +2,12 @@
 # Workshop environment self-check.
 #
 # Verifies the REQUIRED toolchain (Rust + C + cbindgen) and reports on
-# OPTIONAL language tracks (Swift, Kotlin/JNA, Python/cffi, Dart).
+# OPTIONAL language tracks (Swift, Kotlin/JNA, Python/cffi, Dart, Godot).
 # Exit code is non-zero only when a REQUIRED tool is missing or broken —
 # pick ONE optional track; you do not need them all.
 #
 # Usage: ./scripts/self-check.sh            (or: just check)
-#        ./scripts/self-check.sh --track <swift|kotlin|python|dart>
+#        ./scripts/self-check.sh --track <swift|kotlin|python|dart|godot>
 #
 # --track probes ONE optional track and says nothing else: exit 0 ready,
 # exit 1 not. It exists for CI (.github/workflows/env-check.yml), which
@@ -154,6 +154,40 @@ probe_dart() {
   check_floor optional "Dart floor" dart 's/^Dart SDK version: 3\.([0-9]+)\..*/\1/p' "3." "$floor" "exercises/ex3-bindings/dart/pubspec.yaml" "https://dart.dev/get-dart"
 }
 
+# Godot has no fixed binary name (scripts/godot-bin.sh owns that rule), and
+# the wrong *major* is the failure worth catching: `godot` on Debian is 3.x,
+# reports its version cheerfully, and cannot load a GDExtension at all. So
+# this checks the major by hand rather than through check_floor, whose silent
+# skip on an unparsed version would turn that into a green "ready".
+#
+# The 4.6 floor is also written in days/2015-12-01/Cargo.toml (the `api-4-6`
+# feature) and in days/2015-12-01/godot/aoc.gdextension
+# (compatibility_minimum). Nothing here can derive it from either.
+probe_godot() {
+  local godot version major minor
+  if ! godot="$("$(dirname "$0")/godot-bin.sh")"; then
+    printf ' %s %-12s not installed %s(only needed for this track — run: just setup-godot)%s\n' "$SKIP" "Godot" "$DIM" "$NC"
+    return 1
+  fi
+  version=$("$godot" --version 2>/dev/null | head -1)
+  major=$(printf '%s' "$version" | sed -nE 's/^([0-9]+)\..*/\1/p')
+  minor=$(printf '%s' "$version" | sed -nE 's/^[0-9]+\.([0-9]+).*/\1/p')
+  if [ -z "$major" ]; then
+    printf ' %s %-12s %s ran but reported no version %s(expected e.g. 4.6.3.stable)%s\n' "$SKIP" "Godot" "$godot" "$DIM" "$NC"
+    return 1
+  fi
+  if [ "$major" -ne 4 ]; then
+    printf ' %s %-12s %s is Godot %s %s(GDExtension needs 4.6+ — run: just setup-godot)%s\n' "$SKIP" "Godot" "$godot" "$version" "$DIM" "$NC"
+    return 1
+  fi
+  if [ "${minor:-0}" -lt 6 ]; then
+    printf ' %s %-12s %s is %s, older than the 4.6 this track declares %s(days/2015-12-01/godot/aoc.gdextension)%s\n' "$SKIP" "Godot" "$godot" "$version" "$DIM" "$NC"
+    return 1
+  fi
+  printf ' %s %-12s ready %s(%s %s)%s\n' "$PASS" "Godot" "$DIM" "$godot" "$version" "$NC"
+  return 0
+}
+
 # --track <name>: probe one optional track, exit with its status. Handled
 # before any required checks so CI track cells cost one probe, not a full run.
 if [ "${1:-}" = "--track" ]; then
@@ -162,7 +196,8 @@ if [ "${1:-}" = "--track" ]; then
     kotlin) probe_kotlin; exit $? ;;
     python) probe_python; exit $? ;;
     dart)   probe_dart;   exit $? ;;
-    *) echo "unknown track '${2:-}' — one of: swift kotlin python dart" >&2; exit 2 ;;
+    godot)  probe_godot;  exit $? ;;
+    *) echo "unknown track '${2:-}' — one of: swift kotlin python dart godot" >&2; exit 2 ;;
   esac
 fi
 
@@ -238,6 +273,7 @@ if probe_swift;  then tracks_ready=$((tracks_ready + 1)); fi
 if probe_kotlin; then tracks_ready=$((tracks_ready + 1)); fi
 if probe_python; then tracks_ready=$((tracks_ready + 1)); fi
 if probe_dart;   then tracks_ready=$((tracks_ready + 1)); fi
+if probe_godot;  then tracks_ready=$((tracks_ready + 1)); fi
 
 # Track readiness shapes the banner only, never the exit code: one ready
 # track is plenty, and an attendee with one track must never be blocked.
