@@ -67,7 +67,7 @@ harness = false
 [[bench]]
 name = "sort"
 harness = false
-required-features = ["qsort", "cpp"]
+required-features = ["qsort", "cpp", "lapack"]
 
 [[bench]]
 name = "lookup"
