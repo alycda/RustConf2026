@@ -6,7 +6,7 @@ an AoC puzzle gets — which is exactly why this is the day carrying every
 FFI variation: the puzzle logic is trivial enough that nothing about it
 competes for attention with the boundary being demonstrated.
 
-Five solves of the same puzzle live in this one branch (each was built and verified independently):
+Six solves of the same puzzle live in this one branch (each was built and verified independently):
 
 | Variant | Direction | Files |
 |---|---|---|
@@ -15,6 +15,7 @@ Five solves of the same puzzle live in this one branch (each was built and verif
 | libcaca banner | Rust → C | `src/caca.rs`, `fonts/standard.flf` |
 | cbindgen C API | Rust → C (exported) | `src/c_api.rs`, `cbindgen.toml` |
 | Python via cffi | C → Python | `python/solve.py` |
+| R via `.C()` | C → R | `r/solve.R` |
 
 ## The variants
 
@@ -56,6 +57,20 @@ lines cffi's restricted parser can't handle. `just days python-demo
 2015-12-01` builds everything and runs it (needs `just setup-python`
 once).
 
+**R via `.C()` (`r/solve.R`, Exercise 3).** The same library, the same two
+functions, and the one consumer in this repo that reads nothing at all —
+no header, no transcribed signature, no declared types. `.C()` is R's
+oldest FFI: it matches on the symbol name, converts each argument by its
+R *vector mode* (Writing R Extensions §5.2 — `integer` → `int *`, `raw` →
+`unsigned char *`, `character` → `char **`), and then throws the C
+function's return value away, because the interface was designed for C
+functions of type `void`. Our C API is not `void`, so its `0`/`-1`/`-2`
+never reaches R and the out-parameter is the only channel there is. The
+consumer initialises it to `NA_integer_` — `INT_MIN` once it crosses, a
+value no floor and no 1-based position can be — and treats "unchanged"
+as failure. `just days r-demo 2015-12-01` builds the cdylib and runs it
+(needs `just setup-r` once, or `nix shell nixpkgs#R --command` around it).
+
 ## Running things
 
 ```sh
@@ -67,6 +82,7 @@ cargo bench -p aoc-2015-12-01 --bench sum # pure Rust vs libtcc JIT, head to hea
 
 just days bindgen 2015-12-01              # regenerate include/aoc_2015_12_01.h
 just days python-demo 2015-12-01          # build + generate header + run python/solve.py
+just days r-demo 2015-12-01               # build + run r/solve.R (no header — R reads none)
 ```
 
 ## Benchmarks
@@ -124,6 +140,35 @@ dwarfs the work on both sides of it, in both directions.
   block comments), and hands the rest to `cdef()`. If the Rust signature
   changes, regenerating the header is the only step; nothing in Python
   needs editing to match.
+- **A runtime can discard the contract the API was designed around.**
+  `.C()` "should not return anything except through its arguments", so
+  the status code `c_api.rs` routes every failure through is unobservable
+  from R — not because the library chose badly, but because the *caller's*
+  runtime decided. "Errors: integers cross" has a footnote now: only if
+  the other side looks. What is left is in-band signalling — a sentinel in
+  the out-parameter (`NA_integer_`, which is `INT_MIN` at the boundary) and
+  "it did not change" as the only detectable failure, with no way to tell
+  `-1` (bad input) from `-2` (Santa never reached the basement).
+- **The string cannot be passed as a string.** An R `character` vector
+  arrives in C as `char **`, a pointer to pointers, and this API takes
+  `const char *` — hand it one and Rust reads a pointer as text. The
+  honest crossing is a `raw` vector, which arrives as `unsigned char *`,
+  byte for byte: `c(charToRaw(text), as.raw(0))`. The NUL is appended by
+  hand, because R's strings do not carry one — the same terminator Python,
+  Dart and Swift each had to think about, in a language that does not look
+  like it is doing FFI at all.
+- **Arguments are copied, so the variable you passed is not the one that
+  was written.** `.C()` duplicates every argument before the call; the
+  pointer the Rust side writes through points at R's copy, and the answer
+  comes back in the returned list (`r$out`), not in `out`. `r/solve.R`
+  asserts that with a `stopifnot` rather than only saying it. Who
+  allocates is, once again, not the library.
+- **A label made of `\U` escapes is not a stable label.** R renders
+  `"\U0001F4CA"` according to the locale — the emoji under a UTF-8 one,
+  the literal text `<U+0001F4CA>` under `C` — so the same script prints
+  different bytes on different machines. Written as literal UTF-8 bytes in
+  the source it passes through either locale unchanged, which is what the
+  byte-exact label assertions in CI need.
 - **Independent experiments stayed independent until they didn't.** Each
   variant was built and verified (`cargo test`, `fmt`, `clippy`, and a
   real run) on its own jj commit, as a sibling of the others rather than
