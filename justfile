@@ -123,7 +123,11 @@ setup-wasm: _setup-wasm-target
     #!/usr/bin/env bash
     set -euo pipefail
     floor="$(sed -nE 's/^[[:space:]]*"node":[[:space:]]*">=([0-9]+)".*/\1/p' exercises/ex4-wasm/wasm/package.json)"
-    major="$(node --version 2>/dev/null | sed -nE 's/^v([0-9]+)\..*/\1/p')"
+    # `|| true` inside the substitution: with `set -eo pipefail` a missing
+    # node exits the pipeline 127, an assignment takes the substitution's
+    # status, and the recipe died here — on the one machine it is for —
+    # before reaching the branch that says where to get Node.
+    major="$({ node --version 2>/dev/null || true; } | sed -nE 's/^v([0-9]+)\..*/\1/p')"
     if [ -n "$major" ] && [ "$major" -ge "${floor:-22}" ]; then
         echo "node $(node --version) meets the ${floor:-22} floor (exercises/ex4-wasm/wasm/package.json)"
     else
@@ -142,7 +146,11 @@ setup-wasm: _setup-wasm-target
     #!/usr/bin/env bash
     set -euo pipefail
     floor="$(sed -nE 's/^[[:space:]]*"node":[[:space:]]*">=([0-9]+)".*/\1/p' exercises/ex4-wasm/wasm/package.json)"
-    major="$(node --version 2>/dev/null | sed -nE 's/^v([0-9]+)\..*/\1/p')"
+    # `|| true` inside the substitution: with `set -eo pipefail` a missing
+    # node exits the pipeline 127, an assignment takes the substitution's
+    # status, and the recipe died here — on the one machine it is for —
+    # before reaching the branch that says where to get Node.
+    major="$({ node --version 2>/dev/null || true; } | sed -nE 's/^v([0-9]+)\..*/\1/p')"
     if [ -n "$major" ] && [ "$major" -ge "${floor:-22}" ]; then
         echo "node $(node --version) meets the ${floor:-22} floor (exercises/ex4-wasm/wasm/package.json)"
     else
