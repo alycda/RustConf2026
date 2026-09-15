@@ -6,7 +6,7 @@ an AoC puzzle gets — which is exactly why this is the day carrying every
 FFI variation: the puzzle logic is trivial enough that nothing about it
 competes for attention with the boundary being demonstrated.
 
-Six solves of the same puzzle live in this one branch (each was built and verified independently):
+Seven solves of the same puzzle live in this one branch (each was built and verified independently):
 
 | Variant | Direction | Files |
 |---|---|---|
@@ -16,6 +16,7 @@ Six solves of the same puzzle live in this one branch (each was built and verifi
 | cbindgen C API | Rust → C (exported) | `src/c_api.rs`, `cbindgen.toml` |
 | Python via cffi | C → Python | `python/solve.py` |
 | R via `.C()` | C → R | `r/solve.R` |
+| R via extendr (`.Call()`) | Rust → R (generated) | `src/extendr.rs`, `r/extendr.R` (feature `extendr`) |
 
 ## The variants
 
@@ -71,6 +72,17 @@ value no floor and no 1-based position can be — and treats "unchanged"
 as failure. `just days r-demo 2015-12-01` builds the cdylib and runs it
 (needs `just setup-r` once, or `nix shell nixpkgs#R --command` around it).
 
+**R via extendr (`src/extendr.rs`, `r/extendr.R`, feature `extendr`).** The
+generated lap, and the direct answer to what `.C()` cost. `#[extendr]` on
+an ordinary Rust function emits R's *other* interface — `.Call()`, which
+passes `SEXP`s both ways — so the string crosses as the string it already
+is (no `raw` vector, no hand-appended NUL) and a `Result<i32, String>`
+arrives as an R error condition that `tryCatch` can name. The status code
+the raw route lost comes back. Unlike every other feature in this crate it
+links no C library and probes no `pkg-config`: it needs **R itself** at
+build time, which is why `just days r-extendr-demo 2015-12-01` is a
+separate recipe — `r-demo` needs R to run, this one needs R to compile.
+
 ## Running things
 
 ```sh
@@ -83,6 +95,7 @@ cargo bench -p aoc-2015-12-01 --bench sum # pure Rust vs libtcc JIT, head to hea
 just days bindgen 2015-12-01              # regenerate include/aoc_2015_12_01.h
 just days python-demo 2015-12-01          # build + generate header + run python/solve.py
 just days r-demo 2015-12-01               # build + run r/solve.R (no header — R reads none)
+just days r-extendr-demo 2015-12-01       # the generated lap; needs R installed to *build*
 ```
 
 ## Benchmarks
@@ -163,6 +176,20 @@ dwarfs the work on both sides of it, in both directions.
   comes back in the returned list (`r$out`), not in `out`. `r/solve.R`
   asserts that with a `stopifnot` rather than only saying it. Who
   allocates is, once again, not the library.
+- **Three boundaries, three answers to "what does a panic do?"** Exercise
+  2's C API cannot let one out at all — unwinding across `extern "C"` is
+  UB, so `c_api.rs` is written so nothing in it can panic. wasm traps and
+  takes the instance with it. extendr catches the unwind in its generated
+  wrapper and raises an ordinary R error: `tryCatch` sees a `simpleError`,
+  and the session carries on. `boundary_panic` in `src/extendr.rs` exists
+  to be called, and `r/extendr.R` calls it and then keeps going.
+- **The generated boundary has a seam, and the raw route is how you know
+  where to look.** extendr 0.9.0 implements the `Err` arm by *panicking*
+  with the message and converting that into the R condition — so an
+  ordinary domain error (part 2 on an input where Santa never reaches the
+  basement) prints a Rust panic trace from extendr's own `into_robj.rs` to
+  stderr on its way to a perfectly clean R error. The condition R receives
+  is right; the route is not what the signature suggests.
 - **A label made of `\U` escapes is not a stable label.** R renders
   `"\U0001F4CA"` according to the locale — the emoji under a UTF-8 one,
   the literal text `<U+0001F4CA>` under `C` — so the same script prints
