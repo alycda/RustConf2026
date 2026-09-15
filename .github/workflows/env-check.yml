@@ -27,6 +27,7 @@
 #   dart   |   .   |   .   |    .    |
 #   kotlin |   .   |   .   |    .    |
 #   swift  |   .   |   .   |    ?    |
+#   r      |   .   |   .   |   off   |
 #
 # Expected from the bare mapping run: rust/c green on all three OSes once
 # cbindgen lands; kotlin green everywhere (kotlinc + JDK ship on every
@@ -40,6 +41,13 @@
 # green everywhere with their provisioning steps; swift/windows was red —
 # the stock image ships no Swift — and is now excluded from the matrix
 # outright, the observation being recorded here.
+#
+# The r row (2026-09-15) never had the grid's question to answer: no stock
+# image ships R on any OS, so that cell provisions the toolchain outright
+# with r-lib/actions/setup-r instead of reporting what the image happened to
+# carry. Its windows column is off for the reason the swift exclude gives —
+# the workshop's Windows answer is WSL2, and the R track has never been run
+# there by anyone here, so a cell for it would be a red X, not a map.
 
 name: Verify
 
@@ -73,7 +81,7 @@ jobs:
         # are not billed for standard runners, and this map of attendee
         # environments across all three OSes is the workflow's whole job.
         os: [ubuntu-latest, macos-latest, windows-latest]
-        track: [rust, c, python, dart, kotlin, swift]
+        track: [rust, c, python, dart, kotlin, swift, r]
         # swift/windows was the grid's "?" cell and the first full-grid
         # run answered it: no Swift on the stock image, and the workshop's
         # Windows answer is WSL2 regardless. An answered question needs no
@@ -82,6 +90,9 @@ jobs:
         exclude:
           - os: windows-latest
             track: swift
+          # Untried rather than answered: see the r note in the header.
+          - os: windows-latest
+            track: r
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     steps:
@@ -133,6 +144,17 @@ jobs:
         if: matrix.track == 'dart'
         with:
           sdk: stable
+      # Same reasoning as the dart cell, one step further: `just setup-r` is
+      # brew-and-CRAN guidance for humans, and no stock image ships R at all,
+      # so the toolchain has to come from somewhere. r-lib/actions/setup-r is
+      # the R project's own action and handles all three OSes; `release` is
+      # the current R, which is what CRAN's distro repositories install too.
+      # Nothing else is provisioned for this track — no package, no jar, no
+      # venv, and (see the end-to-end step) not even a header.
+      - uses: r-lib/actions/setup-r@v2
+        if: matrix.track == 'r'
+        with:
+          r-version: release
       # The python cell provisions its track the way `just setup-python`
       # does — a repo-local .venv — because that is the path self-check
       # probes first (it prefers the venv python even when the venv is
@@ -201,6 +223,71 @@ jobs:
           echo "$out"
           echo "$out" | grep -F 'Part 1 🐍(🦀): -1'
           echo "$out" | grep -F 'Part 2 🐍(🦀): 5'
+
+      # The same day, the same cdylib and the same statement example as the
+      # python cell above — deliberately, because R is that cell's raw-route
+      # sibling and the only interesting difference should be the runtime.
+      # `()())` answers -1 and 5, both pinned in Rust by the rstest grids in
+      # days/2015-12-01/src/lib.rs. Real inputs stay out of CI by the rule
+      # that keeps them out of the repo (.gitignore); statement examples are
+      # published in the puzzle text and fair game.
+      #
+      # No cbindgen step here, unlike every other track's cell. R reads no
+      # header: `.C()` matches on the symbol name and trusts the vector modes
+      # it is handed, so generating one would prove nothing about this track.
+      # That is also why the second run below exists — see it.
+      #
+      # `just` is not on a stock runner, so the r-demo recipe's steps are
+      # spelled out here rather than invoked, same as the python cell.
+      # Branches without the worked track skip cleanly.
+      - name: r track end-to-end (2015-12-01)
+        if: matrix.track == 'r'
+        shell: bash
+        run: |
+          if [ ! -f days/2015-12-01/r/solve.R ]; then
+            echo "no worked r track on this branch — skipping"
+            exit 0
+          fi
+          (cd days && cargo build -p aoc-2015-12-01 --lib)
+          mkdir -p inputs
+          printf '()())' > inputs/2015-12-01.txt
+          out="$(Rscript days/2015-12-01/r/solve.R)"
+          echo "$out"
+          # The answers first, matched loosely: this is the thing that must be
+          # true, and it stays true however the line is labelled.
+          echo "$out" | grep -qE '^Part 1 .*: -1$'
+          echo "$out" | grep -qE '^Part 2 .*: 5$'
+          # Then the label, byte for byte, because `Part N <emoji>(🦀)` is a
+          # repo-wide convention and silent drift in it is worth a red cell.
+          # Kept separate so this failure can say which one it was. This label
+          # has no variation-selector trap (📊 is U+1F4CA alone, and 🦀 is
+          # U+1F980) — unlike the kotlin and swift cells — but it does have
+          # R's own: solve.R spells both emoji as literal UTF-8 bytes rather
+          # than \U escapes, because R renders a \U escape by locale and a
+          # runner without a UTF-8 locale would print `<U+0001F4CA>` here.
+          if ! echo "$out" | grep -qF 'Part 1 📊(🦀): -1' \
+            || ! echo "$out" | grep -qF 'Part 2 📊(🦀): 5'; then
+            echo "::error::answers are correct but the label drifted — re-sync this step with days/2015-12-01/r/solve.R" >&2
+            exit 1
+          fi
+          # Second run, and the reason this cell is not just the python cell
+          # with a different interpreter: the track's whole lesson is that
+          # `.C()` discards the C function's return value, so the -2 that
+          # part 2 answers with when Santa never reaches the basement cannot
+          # reach R. `(((` is exactly that input (part 1 answers 3, pinned by
+          # the same rstest grid; part 2 has no answer). What must happen is
+          # that solve.R notices the out-parameter never changed and fails —
+          # if it ever starts printing a number here, the sentinel has stopped
+          # working and the track is quietly reporting a phantom answer.
+          printf '(((' > inputs/2015-12-01.txt
+          if out="$(Rscript days/2015-12-01/r/solve.R 2>&1)"; then
+            echo "$out"
+            echo "::error::part 2 should have failed on an input with no basement — the NA sentinel is not catching the status .C() threw away" >&2
+            exit 1
+          fi
+          echo "$out"
+          echo "$out" | grep -qE '^Part 1 .*: 3$'
+          echo "$out" | grep -qF 'no answer arrived'
 
       # Beyond the env check: on a branch that carries a worked Exercise 3
       # (Dart/dart:ffi on 2015-12-05), prove the track end to end — cdylib
