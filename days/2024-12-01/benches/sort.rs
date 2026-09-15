@@ -1,11 +1,13 @@
-//! The three sort backends head to head — pure Rust, libc's `qsort`, and
-//! C++'s `std::sort` through the C shim — on one fixed input.
+//! The four sort backends head to head — pure Rust, libc's `qsort`, C++'s
+//! `std::sort` through the C shim, and LAPACK's Fortran `DLASRT` — on one
+//! fixed input.
 //!
-//! Needs both boundary features (`required-features` in Cargo.toml keeps a
-//! bare `--all-targets` skipping this file rather than failing it):
+//! Needs all three boundary features (`required-features` in Cargo.toml keeps
+//! a bare `--all-targets` skipping this file rather than failing it), and
+//! `lapack` means a liblapack to link, so `nix-shell --arg full true`:
 //!
 //! ```sh
-//! cd days/2024-12-01 && cargo bench --bench sort --features qsort,cpp
+//! cd days/2024-12-01 && cargo bench --bench sort --features qsort,cpp,lapack
 //! ```
 //!
 //! Each backend sorts a fresh unsorted clone every iteration
@@ -15,7 +17,7 @@
 
 use std::hint::black_box;
 
-use aoc_2024_12_01::{sort_pure_rust, sort_via_cpp, sort_via_qsort};
+use aoc_2024_12_01::{sort_pure_rust, sort_via_cpp, sort_via_lapack, sort_via_qsort};
 use criterion::{BatchSize, BenchmarkId, Criterion, criterion_group, criterion_main};
 
 /// One column at real scale — a Day 1 input is a thousand lines.
@@ -37,18 +39,23 @@ fn column(len: usize) -> Vec<i32> {
         .collect()
 }
 
-/// The shared shape all three backends already have — what makes them
-/// raceable from one loop.
+/// The shared shape all four backends already have — what makes them
+/// raceable from one loop. `sort_via_lapack` fits it too, which is not
+/// free: it is the one backend whose signature hides a conversion, because
+/// DLASRT sorts `double precision` and the column is `i32`. The allocation
+/// and the two passes over it are inside the timed region on purpose —
+/// that cost is what calling this particular library actually costs.
 type SortBackend = fn(&mut [i32]);
 
 fn bench_sorts(c: &mut Criterion) {
     let unsorted = column(COLUMN_LEN);
     let mut group = c.benchmark_group("2024-12-01/sort");
 
-    let backends: [(&str, SortBackend); 3] = [
+    let backends: [(&str, SortBackend); 4] = [
         ("pure_rust", sort_pure_rust),
         ("qsort", sort_via_qsort),
         ("cpp_std_sort", sort_via_cpp),
+        ("lapack_dlasrt", sort_via_lapack),
     ];
 
     for (name, sort) in backends {

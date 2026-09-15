@@ -2,12 +2,12 @@
 # Workshop environment self-check.
 #
 # Verifies the REQUIRED toolchain (Rust + C + cbindgen) and reports on
-# OPTIONAL language tracks (Swift, Kotlin/JNA, Python/cffi, Dart).
+# OPTIONAL language tracks (Swift, Kotlin/JNA, Python/cffi, Dart, Fortran).
 # Exit code is non-zero only when a REQUIRED tool is missing or broken —
 # pick ONE optional track; you do not need them all.
 #
 # Usage: ./scripts/self-check.sh            (or: just check)
-#        ./scripts/self-check.sh --track <swift|kotlin|python|dart>
+#        ./scripts/self-check.sh --track <swift|kotlin|python|dart|fortran>
 #
 # --track probes ONE optional track and says nothing else: exit 0 ready,
 # exit 1 not. It exists for CI (.github/workflows/env-check.yml), which
@@ -154,6 +154,17 @@ probe_dart() {
   check_floor optional "Dart floor" dart 's/^Dart SDK version: 3\.([0-9]+)\..*/\1/p' "3." "$floor" "exercises/ex3-bindings/dart/pubspec.yaml" "https://dart.dev/get-dart"
 }
 
+# The plainest probe here, and that is the track's point: C interop is in
+# the Fortran standard (ISO_C_BINDING, Fortran 2003), so there is no
+# runtime, no package manager and no version floor to check — every
+# gfortran anyone can still install has it. `gfortran` rather than a
+# generic name because there is no `fortran` binary; LLVM's `flang` would
+# serve as well, and gfortran is what nixpkgs and the runner images ship,
+# so it is the one this repo's recipes name.
+probe_fortran() {
+  check_optional "Fortran" "gfortran" "run: just setup-fortran"
+}
+
 # --track <name>: probe one optional track, exit with its status. Handled
 # before any required checks so CI track cells cost one probe, not a full run.
 if [ "${1:-}" = "--track" ]; then
@@ -162,7 +173,8 @@ if [ "${1:-}" = "--track" ]; then
     kotlin) probe_kotlin; exit $? ;;
     python) probe_python; exit $? ;;
     dart)   probe_dart;   exit $? ;;
-    *) echo "unknown track '${2:-}' — one of: swift kotlin python dart" >&2; exit 2 ;;
+    fortran) probe_fortran; exit $? ;;
+    *) echo "unknown track '${2:-}' — one of: swift kotlin python dart fortran" >&2; exit 2 ;;
   esac
 fi
 
@@ -238,6 +250,7 @@ if probe_swift;  then tracks_ready=$((tracks_ready + 1)); fi
 if probe_kotlin; then tracks_ready=$((tracks_ready + 1)); fi
 if probe_python; then tracks_ready=$((tracks_ready + 1)); fi
 if probe_dart;   then tracks_ready=$((tracks_ready + 1)); fi
+if probe_fortran; then tracks_ready=$((tracks_ready + 1)); fi
 
 # Track readiness shapes the banner only, never the exit code: one ready
 # track is plenty, and an attendee with one track must never be blocked.

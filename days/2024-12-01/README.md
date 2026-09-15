@@ -5,9 +5,11 @@ rank, and sums the distances; part 2 weights each left-hand ID by how often
 it appears on the right. This is the golden day — the day the original
 "(ab)Using Advent of Code as an FFI Playground" talk was built on — and the
 variants in this tree are the talk's own, imported from `alycda/aoc-ffi`
-and adapted to this repo's conventions rather than re-invented.
+and adapted to this repo's conventions rather than re-invented. All but the
+last row below: the LAPACK sort is this repo's own, added by the Fortran
+track for a lesson only a Fortran callee can teach.
 
-Four solves of the same puzzle share this branch with a compile-time
+Five solves of the same puzzle share this branch with a compile-time
 abstraction over them (each was built and verified independently):
 
 | Variant | Direction | Files |
@@ -16,7 +18,8 @@ abstraction over them (each was built and verified independently):
 | libc `qsort` | Rust → C | `src/qsort.rs`, `sort_via_qsort` in `src/lib.rs` |
 | C++ `std::sort` | Rust → C++ behind a C shim | `src/cpp.rs`, `src/cpp_sort.cpp` |
 | uthash hash table (part 2) | Rust → C | `src/uthash.rs`, `src/uthash_wrapper.{c,h}` |
-| `Sorter` trait | — (compile time) | `Sorter`/`NativeSort`/`CSort`/`CppSort` in `src/lib.rs` |
+| LAPACK `DLASRT` | Rust → **Fortran** | `src/lapack.rs`, `sort_via_lapack` in `src/lib.rs` |
+| `Sorter` trait | — (compile time) | `Sorter`/`NativeSort`/`CSort`/`CppSort`/`LapackSort` in `src/lib.rs` |
 
 ## The variants
 
@@ -53,6 +56,21 @@ macros behind three ordinary functions. The header comes from nixpkgs (no
 `.pc` file — the nix cc wrapper's include injection does the finding), not
 vendored.
 
+**LAPACK `DLASRT` (`src/lapack.rs`, `--features lapack`).** The one crossing
+in this repo whose callee is Fortran. `DLASRT` is LAPACK's auxiliary
+`double precision` quicksort, so the column widens to `f64` on the way in and
+narrows back on the way out — lossless in both directions, because f64's
+53-bit significand covers every `i32`. Nothing about the call is discoverable
+from a header, because there is no header: the symbol is `dlasrt_` (gfortran
+lowercases and appends an underscore), every argument crosses by pointer
+including the scalar `n` (Fortran passes by reference and `DLASRT` declares no
+`value`), and gfortran's ABI appends a hidden `size_t` length for the one
+`character` argument, after all the visible ones. This is
+[2015-12-01's Fortran track](../2015-12-01/fortran/solve.f90) read from the
+other side: there, `const char *` binds to `dimension(*)` specifically so
+gfortran does *not* append a length the C side never declared; here, the
+callee is the gfortran-compiled one and the length is ours to supply.
+
 **`Sorter` trait.** The talk's zero-cost-abstraction branch: zero-sized
 marker types (`NativeSort`, `CSort`, `CppSort`) select the sort backend at
 compile time through `Day1::parse_with::<S>`. Monomorphization emits a
@@ -70,21 +88,44 @@ cargo test -p aoc-2024-12-01                        # baseline
 cargo test -p aoc-2024-12-01 --features qsort,cpp,uthash   # + agreement tests
 
 just days bench 2024-12-01                                 # parse + parts, see days/README.md
-cargo bench -p aoc-2024-12-01 --bench sort --features qsort,cpp     # sort backends head to head
 cargo bench -p aoc-2024-12-01 --bench lookup --features uthash      # part-2 structures head to head
 ```
+
+The `lapack` feature is the one that links a real system library, so it wants
+the full nix shell (`shell.nix` carries `lapack`; any distro's liblapack works
+too, and build.rs falls back to a plain `-llapack` when pkg-config has nothing
+to say):
+
+```sh
+nix-shell ../../shell.nix --arg full true --run \
+  'cargo test -p aoc-2024-12-01 --features qsort,cpp,uthash,lapack'
+nix-shell ../../shell.nix --arg full true --run \
+  'cargo bench -p aoc-2024-12-01 --bench sort --features qsort,cpp,lapack'   # all four backends
+```
+
+`cargo run` is unaffected by it on purpose: `LapackSort` is reachable by name
+but is not in `FromStr`'s backend precedence chain, because it is the one
+backend that does not merely reorder the caller's integers.
 
 ## Benchmarks
 
 `benches/sort.rs` races the sort backends on one fixed 1000-element
 column, each iteration sorting a fresh unsorted clone (bench profile,
-aarch64):
+aarch64; all four rows re-measured together in one run when the LAPACK lane
+landed, so the ratios are comparable to each other and shifted a few percent
+from the three-row table this replaced):
 
 | backend | time | vs pure Rust |
 |---|---|---|
-| pure Rust `sort` | ~4.1 µs | — |
-| C++ `std::sort` | ~5.0 µs | ~1.2× |
-| libc `qsort` | ~15.7 µs | ~3.8× |
+| pure Rust `sort` | ~4.3 µs | — |
+| C++ `std::sort` | ~5.2 µs | ~1.2× |
+| LAPACK `DLASRT` | ~6.8 µs | ~1.6× |
+| libc `qsort` | ~16.8 µs | ~3.9× |
+
+The LAPACK row does strictly more work than the qsort row — it allocates a
+`Vec<f64>`, widens a thousand integers into it, sorts, and narrows them back,
+all inside the timed region — and still finishes 2.5× sooner, because it
+crosses the boundary once and `qsort` crosses it per comparison.
 
 `benches/lookup.rs` races part 2's counting structures, whole job per
 iteration (build the map, query it, tear it down), on 1000-entry columns
@@ -128,6 +169,34 @@ sort lives, so it is the number that moves with a backend feature on
   The feature flags choose a default, but the type parameter is what
   makes every backend independently nameable — which is also what the
   benches are built on.
+- **A Fortran signature does not tell you the calling convention.** Three
+  things in `dlasrt_`'s Rust declaration appear nowhere in `SUBROUTINE
+  DLASRT( ID, N, D, INFO )`: the trailing underscore (gfortran's name
+  mangling), every argument by pointer *including* `n` (Fortran is
+  by-reference by default, and there is no `value` attribute in sight), and a
+  hidden trailing `size_t` carrying the length of the one `character`
+  argument. None of it is in the Fortran standard — the standard says nothing
+  about argument passing, which is exactly why ISO_C_BINDING exists. It is
+  gfortran's convention, shared by flang and f2c, and other compilers have
+  historically put character lengths somewhere else entirely.
+- **The hidden argument's punishment for getting it wrong is: nothing.**
+  Measured, not assumed. Drop `id_len` from the declaration and the call and
+  it still links and still sorts correctly; pass 0, 9999 or `usize::MAX` and
+  it still sorts correctly. `DLASRT` declares `CHARACTER ID` — fixed length
+  1 — so it never reads the length it was handed. A wrong treaty that passes
+  every test you would think to write is worse than one that crashes: the
+  routine one frame further in (`XERBLA`, whose dummy is `CHARACTER*(*)`) is
+  where the same omission finally becomes a garbage length over a real
+  string. The correct argument is in the binding because the ABI says so, not
+  because a test caught its absence.
+- **The out-parameter looks different from each end.**
+  [2015-12-01's Fortran consumer](../2015-12-01/fortran/solve.f90) gets the C
+  API's `int *` for free — `integer(c_int), intent(out)` *is* the pointer, and
+  that track's README counts it as the concession to C that costs Fortran
+  nothing. Calling the other way, the same convention is what makes `n` a
+  `*const c_int` for a scalar that is only ever read, and what makes `info` —
+  a `SUBROUTINE` has no return value — the only status channel there is. Same
+  rule, opposite bill.
 - **Not every discovery mechanism is pkg-config.** The tcc/caca days
   probe `.pc` files; nixpkgs' uthash ships none, and the working pattern
   is one step simpler — put the package in `shell.nix`'s `buildInputs`

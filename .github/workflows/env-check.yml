@@ -13,7 +13,7 @@
 #   - rust, c   → the script's exit code (its required-toolchain contract:
 #                 rustc + cargo + cbindgen + a C compiler that links).
 #                 Both tracks share one verdict because the script does.
-#   - python, dart, kotlin, swift
+#   - python, dart, kotlin, swift, fortran
 #               → green only if the script's own line for that track says
 #                 "ready". The script's exit code is ignored for these:
 #                 an optional track can be ready on a runner whose
@@ -27,6 +27,7 @@
 #   dart   |   .   |   .   |    .    |
 #   kotlin |   .   |   .   |    .    |
 #   swift  |   .   |   .   |    ?    |
+#   fortran|   .   |   .   |   off   |
 #
 # Expected from the bare mapping run: rust/c green on all three OSes once
 # cbindgen lands; kotlin green everywhere (kotlinc + JDK ship on every
@@ -40,6 +41,13 @@
 # green everywhere with their provisioning steps; swift/windows was red —
 # the stock image ships no Swift — and is now excluded from the matrix
 # outright, the observation being recorded here.
+#
+# fortran (2026-09-15) is added with its windows cell excluded by decision
+# rather than by observation (see the matrix), and UNVERIFIED on macos: the
+# image ships Homebrew's gcc, whose gfortran may only exist version-suffixed,
+# so the cell symlinks a bare `gfortran` onto PATH when it has to. If that
+# step reports no gfortran at all, the image dropped gcc and the ON ICE
+# fortran-lang/setup-fortran block next to it is the fix.
 
 name: Verify
 
@@ -73,7 +81,7 @@ jobs:
         # are not billed for standard runners, and this map of attendee
         # environments across all three OSes is the workflow's whole job.
         os: [ubuntu-latest, macos-latest, windows-latest]
-        track: [rust, c, python, dart, kotlin, swift]
+        track: [rust, c, python, dart, kotlin, swift, fortran]
         # swift/windows was the grid's "?" cell and the first full-grid
         # run answered it: no Swift on the stock image, and the workshop's
         # Windows answer is WSL2 regardless. An answered question needs no
@@ -82,6 +90,14 @@ jobs:
         exclude:
           - os: windows-latest
             track: swift
+          # fortran/windows is off for the same reason, decided rather than
+          # observed: the stock image's only Fortran is the MinGW gfortran
+          # that arrives with Strawberry Perl, and linking a MinGW consumer
+          # against an MSVC-ABI aoc_2015_12_01.dll is a second experiment
+          # wearing this track's name. The workshop's Windows answer is WSL2.
+          # Delete this exclude to start watching the cell.
+          - os: windows-latest
+            track: fortran
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     steps:
@@ -147,6 +163,37 @@ jobs:
           python3 -m venv .venv
           py="$(scripts/venv-python.sh)"
           "$py" -m pip install --upgrade pip cffi
+      # The fortran cell installs nothing — ubuntu's image ships an
+      # unsuffixed gfortran and this step is inert there. macOS ships the
+      # same compiler under Homebrew's gcc, which names its binaries
+      # gfortran-14 and friends and may leave no bare `gfortran` on PATH;
+      # a symlink is the whole difference between "the image has a Fortran
+      # compiler" and "self-check can find one", and the compiler is still
+      # the image's. UNVERIFIED by us — if this step reports no gfortran at
+      # all, an image update dropped gcc and the fix is the ON ICE block
+      # below, not archaeology.
+      #
+      # - uses: fortran-lang/setup-fortran@v1
+      #   if: matrix.track == 'fortran'
+      #   with:
+      #     compiler: gcc
+      - name: put gfortran on PATH (macOS names it gfortran-NN)
+        if: matrix.track == 'fortran' && runner.os == 'macOS'
+        shell: bash
+        run: |
+          if command -v gfortran >/dev/null 2>&1; then
+            echo "gfortran is already unsuffixed on this image — nothing to do"
+            exit 0
+          fi
+          latest="$(ls "$(brew --prefix)"/bin/gfortran-* 2>/dev/null | sort -V | tail -1 || true)"
+          if [ -z "$latest" ]; then
+            echo "::error::no gfortran on this macOS image — uncomment the setup-fortran block above" >&2
+            exit 1
+          fi
+          echo "using $latest"
+          mkdir -p "${RUNNER_TEMP}/fortran-bin"
+          ln -sf "$latest" "${RUNNER_TEMP}/fortran-bin/gfortran"
+          echo "${RUNNER_TEMP}/fortran-bin" >> "$GITHUB_PATH"
       # shell: bash so the windows cells run under Git Bash rather than
       # PowerShell — the closest a native-Windows runner gets to running
       # this script at all.
@@ -201,6 +248,69 @@ jobs:
           echo "$out"
           echo "$out" | grep -F 'Part 1 🐍(🦀): -1'
           echo "$out" | grep -F 'Part 2 🐍(🦀): 5'
+
+      # Beyond the env check: on a branch that carries a worked Exercise 3
+      # (Fortran on 2015-12-01), prove the track end to end — cdylib with
+      # default features (no C libraries needed), header from the cbindgen
+      # this job already installs, then solve.f90 compiled against that
+      # cdylib and run over the same statement example the python cell
+      # above uses. Real inputs stay out of CI by the same rule that keeps
+      # them out of the repo (.gitignore).
+      #
+      # Same input and same two numbers as the python cell, deliberately:
+      # what this cell proves is that a second consumer of the same C API
+      # agrees with Rust, and a track-specific input would be one more
+      # thing to keep in sync for no extra assertion. `()())` answers part
+      # 1 with -1 — a negative through the out-parameter, which is the
+      # argument-passing convention this track exists to demonstrate — and
+      # part 2 with 5, a case in days/2015-12-01/src/lib.rs's
+      # test_day1_part2.
+      #
+      # `just` is not on a stock runner, so the fortran-demo recipe's steps
+      # are spelled out here rather than invoked — same as every other
+      # track cell. Branches without the worked track skip cleanly.
+      #
+      # This track fetches nothing: no pip, no pub, no pinned jar. C
+      # interop is in the Fortran standard, so the only inputs are gfortran
+      # and what this repo built.
+      #
+      # The label is checked byte for byte, like the Kotlin and Swift
+      # cells, and this one is the easy case: 🧮 is U+1F9EE, a single
+      # codepoint with no variation selector hiding behind it. Copy it out
+      # of days/2015-12-01/fortran/solve.f90 anyway rather than retyping.
+      - name: fortran track end-to-end (2015-12-01)
+        if: matrix.track == 'fortran'
+        shell: bash
+        run: |
+          if [ ! -f days/2015-12-01/fortran/solve.f90 ]; then
+            echo "no worked fortran track on this branch — skipping"
+            exit 0
+          fi
+          (cd days && cargo build -p aoc-2015-12-01 --lib)
+          (cd days/2015-12-01 && mkdir -p include && \
+            cbindgen --config cbindgen.toml --output include/aoc_2015_12_01.h src/c_api.rs)
+          mkdir -p inputs
+          printf '()())' > inputs/2015-12-01.txt
+          target="$(cd days/target && pwd)"
+          cd days/2015-12-01/fortran
+          # Mirrors the fortran-demo recipe, down to passing both -L/-rpath
+          # pairs unconditionally: release/ does not exist in this job and a
+          # directory that is not there costs nothing but a linker warning.
+          gfortran solve.f90 -o solve \
+            -L "$target/debug" -L "$target/release" \
+            -laoc_2015_12_01 \
+            -Wl,-rpath,"$target/debug" -Wl,-rpath,"$target/release"
+          out="$(./solve)"
+          echo "$out"
+          # The answers, matched loosely: true however the lines are labelled.
+          echo "$out" | grep -qE '^Part 1 .*: -1$'
+          echo "$out" | grep -qE '^Part 2 .*: 5$'
+          # Then the labels, byte for byte (see above).
+          if ! echo "$out" | grep -qF 'Part 1 🧮(🦀): -1' \
+            || ! echo "$out" | grep -qF 'Part 2 🧮(🦀): 5'; then
+            echo "::error::answers are correct but the label drifted — re-sync this step with days/2015-12-01/fortran/solve.f90" >&2
+            exit 1
+          fi
 
       # Beyond the env check: on a branch that carries a worked Exercise 3
       # (Dart/dart:ffi on 2015-12-05), prove the track end to end — cdylib

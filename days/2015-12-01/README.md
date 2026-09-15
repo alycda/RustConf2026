@@ -6,7 +6,7 @@ an AoC puzzle gets — which is exactly why this is the day carrying every
 FFI variation: the puzzle logic is trivial enough that nothing about it
 competes for attention with the boundary being demonstrated.
 
-Five solves of the same puzzle live in this one branch (each was built and verified independently):
+Six solves of the same puzzle live in this one branch (each was built and verified independently):
 
 | Variant | Direction | Files |
 |---|---|---|
@@ -15,6 +15,7 @@ Five solves of the same puzzle live in this one branch (each was built and verif
 | libcaca banner | Rust → C | `src/caca.rs`, `fonts/standard.flf` |
 | cbindgen C API | Rust → C (exported) | `src/c_api.rs`, `cbindgen.toml` |
 | Python via cffi | C → Python | `python/solve.py` |
+| Fortran via ISO_C_BINDING | C → Fortran | `fortran/solve.f90` |
 
 ## The variants
 
@@ -56,6 +57,20 @@ lines cffi's restricted parser can't handle. `just days python-demo
 2015-12-01` builds everything and runs it (needs `just setup-python`
 once).
 
+**Fortran via ISO_C_BINDING (`fortran/solve.f90`, Exercise 3).** The same
+header, read by a person rather than a parser: there is no generator that
+emits Fortran interfaces from C, so the two signatures are transcribed by
+hand into an `interface` block — and then enforced, because gfortran
+type-checks every call against that block. Transcribed like Dart's
+typedefs, checked like Swift's module import; checked against what we
+wrote down, though, not against what Rust exports, so a transcription
+that is wrong *and self-consistent* still compiles and still corrupts.
+What this track alone shows is that the C API's out-parameter costs this
+language nothing: `integer(c_int), intent(out) :: answer` *is* the
+`int *`, and the call site is the puzzle's own variable. `just days
+fortran-demo 2015-12-01` builds everything and runs it (needs `just
+setup-fortran` once).
+
 ## Running things
 
 ```sh
@@ -67,6 +82,7 @@ cargo bench -p aoc-2015-12-01 --bench sum # pure Rust vs libtcc JIT, head to hea
 
 just days bindgen 2015-12-01              # regenerate include/aoc_2015_12_01.h
 just days python-demo 2015-12-01          # build + generate header + run python/solve.py
+just days fortran-demo 2015-12-01         # build + generate header + compile and run fortran/solve.f90
 ```
 
 ## Benchmarks
@@ -124,6 +140,38 @@ dwarfs the work on both sides of it, in both directions.
   block comments), and hands the rest to `cdef()`. If the Rust signature
   changes, regenerating the header is the only step; nothing in Python
   needs editing to match.
+- **By reference is somebody's native convention.** Every consumer of
+  this C API so far paid something to hand it a place to write: Python
+  allocates `ffi.new("int *")`, Dart `calloc`s and frees, Swift takes
+  `&slot`. Fortran passes everything by reference by default, so the
+  out-parameter is a declaration and nothing else — `integer(c_int),
+  intent(out) :: answer`, and the call site is the ordinary variable.
+  The design decision that looks most like a concession to C turns out
+  to be free in the oldest language here.
+- **A Fortran string has a length, not a terminator** — so `//
+  c_null_char` is the NUL written by hand, and `trim` is what keeps the
+  padding out. Fortran characters are fixed-length and blank-padded: a
+  `character(len=4096)` buffer holding five characters holds 4091 spaces
+  after them, and they are part of the string. `fortran/solve.f90` reads
+  with `access='stream'` into an allocatable sized from `INQUIRE`, so
+  there is nothing to trim and the `trim` is defensive rather than
+  load-bearing — which is the honest version, and why the trap is in a
+  comment instead of in the code. Note what `trim` does *not* remove: a
+  newline is not a blank.
+- **The ABI carries arguments the signature never shows.** `const char
+  *` binds to `character(kind=c_char), dimension(*)`, not to
+  `character(len=*)`. The second compiles and is wrong: gfortran's ABI
+  appends the length of every `character` argument as a hidden trailing
+  `size_t`, after all the visible ones, and C never declared a parameter
+  to receive it. The call still works — C ignores an argument it was not
+  told about — which is exactly what makes it worth knowing before
+  meeting it from the other direction, where the hidden length is one
+  *you* have to supply and leaving it off links clean and reads garbage.
+- **This treaty is in the language standard, not in a library.**
+  `ISO_C_BINDING`, `bind(C)`, `c_int`, `c_null_char` are Fortran 2003 —
+  no cffi to pip-install, no JNA jar to pin, no `dart:ffi` package, no
+  modulemap. It is the only track here whose C interop was specified by
+  the language committee, and the only one that fetches nothing at all.
 - **Independent experiments stayed independent until they didn't.** Each
   variant was built and verified (`cargo test`, `fmt`, `clippy`, and a
   real run) on its own jj commit, as a sibling of the others rather than

@@ -92,6 +92,25 @@ setup-dart:
     @echo "Install the Dart SDK: https://dart.dev/get-dart (then: just check — it verifies the version floor)"
     @echo "Or skip that: reopen the repo in the 'Flutter/Dart track' devcontainer."
 
+# gfortran is deliberately not in shell.nix: ~102 MiB for one optional
+# track, the same rule that keeps the C libraries behind `--arg full true`.
+# Nor does any C toolchain an attendee already has bring it along — the
+# Xcode CLT ships clang and no Fortran front end whatsoever, which is why
+# the macOS recipe installs a compiler rather than pointing at one.
+
+# Fortran track: gfortran, which arrives with brew's gcc (the CLT has none)
+[macos]
+setup-fortran:
+    brew install gcc
+    @echo "brew's gcc is what provides gfortran; then re-run: just check"
+
+# Fortran track: distro package, or nix for a no-install shell
+[linux]
+setup-fortran:
+    @echo "Debian/Ubuntu: sudo apt install gfortran · Fedora: sudo dnf install gcc-gfortran"
+    @echo "Or install nothing system-wide: nix-shell -p gfortran (then run just from inside it)"
+    @echo "then re-run: just check"
+
 # devcontainer only: rebuild the home-manager profile (WORKSHOP_HOME_NIX is
 # set by the variant devcontainers so their extra packages survive a rebuild)
 # Goes through setup.sh rather than calling `home-manager switch` directly,
