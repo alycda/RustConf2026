@@ -198,6 +198,17 @@ let
     # and .github/workflows/rust.yml gates on both. A CI check an attendee
     # cannot run before pushing is a check they only ever meet as a red X.
     clippy rustfmt
+    # The linker for the wasm32 targets. nixpkgs' rustc is built with
+    # wasm32-unknown-unknown in its std, which is why `cargo build --target
+    # wasm32-unknown-unknown` compiles in this shell with no extra install —
+    # but not with a bundled rust-lld the way rustup's toolchains are, so the
+    # target spec falls back to a bare `lld` on PATH and, without one, every
+    # wasm build compiles and then fails at the link step. 13.2 MiB download,
+    # 40.0 MiB unpacked (nix-build --dry-run, 2026-09-15): a linker the
+    # compiler cannot link without belongs with the compiler, not behind a
+    # track's opt-in. Node and the wasm-bindgen tooling are that opt-in
+    # (`just setup-wasm`, the wasm devcontainer) and stay out of this list.
+    lld
     # recommended: cheatsheets for the FFI patterns (`just cheats`)
     cheat
     # safety net: python3 for the Python track; git so pure/minimal shells
