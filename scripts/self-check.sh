@@ -2,12 +2,13 @@
 # Workshop environment self-check.
 #
 # Verifies the REQUIRED toolchain (Rust + C + cbindgen) and reports on
-# OPTIONAL language tracks (Swift, Kotlin/JNA, Python/cffi, Dart).
+# OPTIONAL language tracks (Swift, Kotlin/JNA, Python/cffi, Dart, and
+# wasm — Exercise 4's, node plus the wasm32 target).
 # Exit code is non-zero only when a REQUIRED tool is missing or broken —
 # pick ONE optional track; you do not need them all.
 #
 # Usage: ./scripts/self-check.sh            (or: just check)
-#        ./scripts/self-check.sh --track <swift|kotlin|python|dart>
+#        ./scripts/self-check.sh --track <swift|kotlin|python|dart|wasm>
 #
 # --track probes ONE optional track and says nothing else: exit 0 ready,
 # exit 1 not. It exists for CI (.github/workflows/env-check.yml), which
@@ -154,6 +155,39 @@ probe_dart() {
   check_floor optional "Dart floor" dart 's/^Dart SDK version: 3\.([0-9]+)\..*/\1/p' "3." "$floor" "exercises/ex3-bindings/dart/pubspec.yaml" "https://dart.dev/get-dart"
 }
 
+# The wasm track needs two things and neither is a tool merely existing:
+# node (the caller is a script; 22 is the floor because that is what CI and
+# the wasm devcontainer run), and the wasm32-unknown-unknown std, which is
+# what `cargo build --target wasm32-unknown-unknown` actually needs. The
+# probe asks the sysroot for the second — `rustc --print sysroot`, then the
+# target's lib directory — so a rustup toolchain (`rustup target add`, which
+# `just setup-wasm` runs) and the nix shell's rustc (target built in) answer
+# the same question the same way. The linker is not probed: the nix shell
+# carries lld and rustup bundles rust-lld, and a missing one fails at the
+# first link with a message that names itself.
+probe_wasm() {
+  local sysroot
+  if ! command -v node >/dev/null 2>&1; then
+    printf ' %s %-12s not installed %s(needs node 22+ — run: just setup-wasm)%s\n' "$SKIP" "wasm" "$DIM" "$NC"
+    return 1
+  fi
+  if ! check_floor optional "node floor" node 's/^v([0-9]+)\..*/\1/p' "" 22 "what CI and the wasm devcontainer run" "https://nodejs.org (22 LTS)"; then
+    return 1
+  fi
+  if ! command -v rustc >/dev/null 2>&1; then
+    # Already reported as a required failure above; nothing to add here.
+    printf ' %s %-12s no rustc to ask for the wasm32 target\n' "$SKIP" "wasm"
+    return 1
+  fi
+  sysroot="$(rustc --print sysroot 2>/dev/null)"
+  if [ -d "$sysroot/lib/rustlib/wasm32-unknown-unknown/lib" ]; then
+    printf ' %s %-12s ready (node + the wasm32-unknown-unknown std)\n' "$PASS" "wasm"
+    return 0
+  fi
+  printf ' %s %-12s node found, no wasm32-unknown-unknown std in the sysroot %s(rustup: just setup-wasm · nix: a channel whose rustc has it)%s\n' "$SKIP" "wasm" "$DIM" "$NC"
+  return 1
+}
+
 # --track <name>: probe one optional track, exit with its status. Handled
 # before any required checks so CI track cells cost one probe, not a full run.
 if [ "${1:-}" = "--track" ]; then
@@ -162,7 +196,8 @@ if [ "${1:-}" = "--track" ]; then
     kotlin) probe_kotlin; exit $? ;;
     python) probe_python; exit $? ;;
     dart)   probe_dart;   exit $? ;;
-    *) echo "unknown track '${2:-}' — one of: swift kotlin python dart" >&2; exit 2 ;;
+    wasm)   probe_wasm;   exit $? ;;
+    *) echo "unknown track '${2:-}' — one of: swift kotlin python dart wasm" >&2; exit 2 ;;
   esac
 fi
 
@@ -233,11 +268,12 @@ fi
 tracks_ready=0
 
 echo
-echo "Optional language tracks (pick ONE for Exercise 3):"
+echo "Optional language tracks (pick ONE for Exercise 3; wasm is Exercise 4's):"
 if probe_swift;  then tracks_ready=$((tracks_ready + 1)); fi
 if probe_kotlin; then tracks_ready=$((tracks_ready + 1)); fi
 if probe_python; then tracks_ready=$((tracks_ready + 1)); fi
 if probe_dart;   then tracks_ready=$((tracks_ready + 1)); fi
+if probe_wasm;   then tracks_ready=$((tracks_ready + 1)); fi
 
 # Track readiness shapes the banner only, never the exit code: one ready
 # track is plenty, and an attendee with one track must never be blocked.

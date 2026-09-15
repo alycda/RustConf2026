@@ -92,6 +92,46 @@ setup-dart:
     @echo "Install the Dart SDK: https://dart.dev/get-dart (then: just check — it verifies the version floor)"
     @echo "Or skip that: reopen the repo in the 'Flutter/Dart track' devcontainer."
 
+# wasm track (Exercise 4): the wasm32 target for a rustup toolchain, and Node.
+# Two halves because they come from two places. The target's std is rustc's
+# to install — `rustup target add` on the manual path; the nix shell's rustc
+# has it built in, so under nix this half is a no-op and says so. Node is the
+# track's own install, kept out of shell.nix on purpose (45 MiB nobody on
+# another track needs); the wasm devcontainer carries it, and so does brew.
+# wasm-bindgen-cli is only for the generated lap (days/2015-12-01) and the
+# recipe there names the exact version to install if you want it.
+
+# wasm track: rustup's wasm32 target (no-op under nix) + Node 22 via brew
+[macos]
+setup-wasm:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if command -v rustup >/dev/null 2>&1; then
+        rustup target add wasm32-unknown-unknown
+    else
+        echo "no rustup — assuming the nix shell's rustc, which has wasm32-unknown-unknown built in"
+    fi
+    command -v node >/dev/null 2>&1 && node --version || brew install node@22
+    echo "then re-run: just check"
+
+# wasm track: rustup's wasm32 target (no-op under nix) + a Node 22 pointer
+[linux]
+setup-wasm:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if command -v rustup >/dev/null 2>&1; then
+        rustup target add wasm32-unknown-unknown
+    else
+        echo "no rustup — assuming the nix shell's rustc, which has wasm32-unknown-unknown built in"
+    fi
+    if command -v node >/dev/null 2>&1; then
+        node --version
+    else
+        echo "Install Node 22 LTS: https://nodejs.org (or your distro's nodejs package, if it is 22+)"
+        echo "Or skip that: reopen the repo in the 'wasm track' devcontainer."
+    fi
+    echo "then re-run: just check"
+
 # devcontainer only: rebuild the home-manager profile (WORKSHOP_HOME_NIX is
 # set by the variant devcontainers so their extra packages survive a rebuild)
 # Goes through setup.sh rather than calling `home-manager switch` directly,
