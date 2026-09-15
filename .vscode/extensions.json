@@ -3,7 +3,8 @@
         "editorconfig.editorconfig",
         "tamasfe.even-better-toml",
         "mkhl.direnv",
-        "rust-lang.rust-analyzer"
+        "rust-lang.rust-analyzer",
+        "dsobotta.godot-rust-vscode"
     ],
     "unwantedRecommendations": [
         "donjayamanne.python-extension-pack"

@@ -1,7 +1,14 @@
-// Copy of ../git/devcontainer.json plus a name, the WORKSHOP_HOME_NIX
+// Copy of ../git/devcontainer.json plus a name and the WORKSHOP_HOME_NIX
 // override pointing at ./home.nix (which imports the shared ../home.nix and
-// adds the Godot engine), and the GDScript extension. devcontainer.json has
-// no "extends" — keep in sync by hand.
+// adds the Godot engine). devcontainer.json has no "extends" — keep in sync
+// by hand.
+//
+// No GDScript extension here, on purpose: geequlim.godot-tools validates an
+// editor path on activation and then polls a language server on :6008 that
+// only a running Godot *editor* provides, so in a headless container it
+// raises two errors on every open and helps with nothing. The editor-side
+// recommendation for this track lives in ../../.vscode/extensions.json with
+// the others, where an attendee can decline it.
 {
     "name": "FFI playground (Godot track)",
     "image": "debian:bookworm-slim",
@@ -36,7 +43,6 @@
                 "alefragnani.bookmarks",
                 "anthropic.claude-code",
                 "editorconfig.editorconfig",
-                "geequlim.godot-tools",
                 "jnoortheen.nix-ide",
                 "mk12.better-git-line-blame",
                 "mkhl.direnv",
