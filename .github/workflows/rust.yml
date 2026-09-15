@@ -324,11 +324,14 @@ jobs:
         run: |
           mkdir -p ../inputs
           printf '()())' > ../inputs/2015-12-01.txt
-          out="$(just wasm-demo 2015-12-01)"
-          echo "$out"
-          echo "$out" | grep -qF 'Part 1 🧩(🦀): -1'
-          echo "$out" | grep -qF 'Part 2 🧩(🦀): 5'
-          echo "$out" | grep -qF 'contract: part1(NULL) -> status -1; part1(0xff 0xfe) -> status -1'
+          # tee, not `out="$(…)"`: under `set -e` a failing recipe ends the
+          # step before the echo, and the consumers' output — the only place
+          # a Windows-only failure explains itself — dies with the variable.
+          # This step's first red run on windows-latest logged one line.
+          just wasm-demo 2015-12-01 2>&1 | tee wasm-demo.out
+          grep -qF 'Part 1 🧩(🦀): -1' wasm-demo.out
+          grep -qF 'Part 2 🧩(🦀): 5' wasm-demo.out
+          grep -qF 'contract: part1(NULL) -> status -1; part1(0xff 0xfe) -> status -1' wasm-demo.out
       # Not in the recipe, because an attendee running the day does not
       # need them: the typecheck (strict; the E channel is a type) and the
       # three-channel demo, which exits nonzero if Ok, Err or a trap lands
