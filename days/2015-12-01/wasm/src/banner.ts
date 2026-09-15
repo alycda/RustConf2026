@@ -34,15 +34,24 @@ export class FontError extends Data.TaggedError("FontError")<{
   readonly detail: string
 }> {}
 
-/** Parse the vendored font into figlet.js's registry. Idempotent. */
-export const loadStandardFont: Effect.Effect<void, FontError> = Effect.tryPromise({
-  try: async () => {
-    const data = await readFile(STANDARD_FLF, "utf8")
-    figlet.parseFont(FONT_NAME, data)
-  },
-  catch: (e) =>
-    new FontError({ path: STANDARD_FLF, detail: e instanceof Error ? e.message : String(e) }),
-})
+/**
+ * Parse the vendored font into figlet.js's registry — once. `Effect.cached`
+ * memoises the first run for every later `banner()` in the process, so the
+ * file is read and parsed a single time rather than per call; `runSync` is
+ * safe here because building the cache runs nothing, it only wraps.
+ */
+export const loadStandardFont: Effect.Effect<void, FontError> = Effect.runSync(
+  Effect.cached(
+    Effect.tryPromise({
+      try: async () => {
+        const data = await readFile(STANDARD_FLF, "utf8")
+        figlet.parseFont(FONT_NAME, data)
+      },
+      catch: (e) =>
+        new FontError({ path: STANDARD_FLF, detail: e instanceof Error ? e.message : String(e) }),
+    }),
+  ),
+)
 
 /**
  * Render `text` as block letters, one string of `\n`-joined rows — the
