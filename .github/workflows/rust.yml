@@ -53,13 +53,6 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
-      # `just` on every runner, so any recipe can be invoked from a job as an
-      # attendee would run it (the wasm job below does; the others still
-      # spell their commands out because their recipes bundle three gates
-      # into one and the jobs want them separate).
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: just
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: days
@@ -86,10 +79,6 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-      # `just`, as in the test job above.
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: just
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: days
@@ -119,10 +108,6 @@ jobs:
       # check, not test: this asks "does the floor still compile", and a
       # second full test run on an old toolchain buys nothing for the minutes.
       - uses: dtolnay/rust-toolchain@1.85
-      # `just`, as in the test job above.
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: just
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: days
@@ -164,10 +149,6 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
-      # `just`, as in the test job above.
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: just
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: days
@@ -285,9 +266,13 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
+      # Both workspaces: this job builds exercises/ for the target too, and a
+      # cache scoped to days/ leaves that build cold on every run.
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: days
+          workspaces: |
+            days
+            exercises
       - run: cargo build -p aoc-2015-12-01 --lib --target wasm32-unknown-unknown --locked
       # The attendee scaffold, as shipped: the Ex 2 wrapper's `*const c_char`
       # and `CStr` compile for this target unchanged, which is Exercise 4's
@@ -296,34 +281,50 @@ jobs:
         working-directory: exercises
       # The track, end to end, on 2015-12-01, through the recipe itself.
       # `just` is one more prebuilt binary from install-action (the Verify
-      # workflow already takes it that way), and with it on the runner the
-      # job runs `just days wasm-demo` rather than a copy of its steps —
-      # so the recipe, its version guard, the bare rebuild and the three
-      # consumers are tested as attendees run them, and a step added to the
-      # recipe is a step added here. Node 22 to match the wasm devcontainer;
-      # wasm-bindgen at the exact version days/Cargo.toml pins, which is
-      # the guard's whole subject. Three OSes, deliberately: every consumer
-      # computes its own paths and prints UTF-8 through node, so this is
-      # the first track in the repo with nothing Windows-shaped to work
-      # around.
+      # workflow already takes it that way), installed here and only here
+      # because this is the one job that calls a recipe. With it the job
+      # runs `just wasm-demo` rather than a copy of its steps — so the
+      # recipe, its version guard, the bare rebuild and the three consumers
+      # are tested as attendees run them, and a step added to the recipe is
+      # a step added here. Node 22 to match the wasm devcontainer, with npm's
+      # cache keyed on the committed lockfile: a fresh runner never has
+      # node_modules, so the recipe's own guard never helps here. Three
+      # OSes, deliberately: every consumer computes its own paths and
+      # prints UTF-8 through node, so this is the first track in the repo
+      # with nothing Windows-shaped to work around.
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: days/2015-12-01/wasm/package-lock.json
+      # wasm-bindgen at the exact version the lockfile pins — read from the
+      # lockfile with the same line the recipe's guard uses, so the pin
+      # lives in days/Cargo.toml and nowhere else. Written into the
+      # workflow as a literal, this job would trip the guard it exists to
+      # exercise the day the crate is bumped.
+      - id: pin
+        shell: bash
+        run: echo "wasm_bindgen=$(cargo pkgid wasm-bindgen | sed 's/.*@//')" >> "$GITHUB_OUTPUT"
       - uses: taiki-e/install-action@v2
         with:
-          tool: just,wasm-bindgen@0.2.121
+          tool: just,wasm-bindgen@${{ steps.pin.outputs.wasm_bindgen }}
       # The recipe runs main (the generated lap), raw (linear memory, and
       # the hostile-input contract from the outside) and the banner test.
       # It needs a puzzle input: the statement example "()())", answers -1
       # and 5 — the same numbers the python cell in Verify asserts through
       # cffi. The recipe's own exit code is the gate; the greps after it
       # pin the two labels byte for byte, the way the kotlin cell does.
-      - name: just days wasm-demo 2015-12-01
+      # `just wasm-demo`, not `just days wasm-demo`: this step runs in days/
+      # (the workflow default), where the nearest justfile is days/justfile
+      # and the recipe is a top-level one. The `days` module prefix only
+      # exists from the repo root. Found by review; the first version of
+      # this step failed before any build on every trigger.
+      - name: just wasm-demo 2015-12-01
         shell: bash
         run: |
           mkdir -p ../inputs
           printf '()())' > ../inputs/2015-12-01.txt
-          out="$(just days wasm-demo 2015-12-01)"
+          out="$(just wasm-demo 2015-12-01)"
           echo "$out"
           echo "$out" | grep -qF 'Part 1 🧩(🦀): -1'
           echo "$out" | grep -qF 'Part 2 🧩(🦀): 5'

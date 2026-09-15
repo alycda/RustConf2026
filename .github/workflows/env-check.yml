@@ -158,6 +158,8 @@ jobs:
         if: matrix.track == 'wasm'
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: exercises/ex4-wasm/wasm/package-lock.json
       - name: provision the wasm32 target (the setup-wasm recipe)
         if: matrix.track == 'wasm'
         shell: bash
