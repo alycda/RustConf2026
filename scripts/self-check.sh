@@ -2,12 +2,12 @@
 # Workshop environment self-check.
 #
 # Verifies the REQUIRED toolchain (Rust + C + cbindgen) and reports on
-# OPTIONAL language tracks (Swift, Kotlin/JNA, Python/cffi, Dart).
+# OPTIONAL language tracks (Swift, Kotlin/JNA, Python/cffi, Dart, R).
 # Exit code is non-zero only when a REQUIRED tool is missing or broken —
 # pick ONE optional track; you do not need them all.
 #
 # Usage: ./scripts/self-check.sh            (or: just check)
-#        ./scripts/self-check.sh --track <swift|kotlin|python|dart>
+#        ./scripts/self-check.sh --track <swift|kotlin|python|dart|r>
 #
 # --track probes ONE optional track and says nothing else: exit 0 ready,
 # exit 1 not. It exists for CI (.github/workflows/env-check.yml), which
@@ -154,6 +154,18 @@ probe_dart() {
   check_floor optional "Dart floor" dart 's/^Dart SDK version: 3\.([0-9]+)\..*/\1/p' "3." "$floor" "exercises/ex3-bindings/dart/pubspec.yaml" "https://dart.dev/get-dart"
 }
 
+# The shortest probe here, and for once that is the whole story rather than a
+# shortcut: `.C()` is in base R and has been for its entire life, the track
+# fetches no package, and `Rscript` is the only binary it runs. So there is no
+# floor to check (unlike Dart), no second tool that has to be runnable (unlike
+# Kotlin's java), and no stub on any image to catch out an existence test
+# (unlike Swift's /usr/bin/swiftc). `Rscript`, not `R`: it is what the recipe
+# and the Verify cell invoke, and a broken install can ship one without the
+# other.
+probe_r() {
+  check_optional "R" "Rscript" "run: just setup-r"
+}
+
 # --track <name>: probe one optional track, exit with its status. Handled
 # before any required checks so CI track cells cost one probe, not a full run.
 if [ "${1:-}" = "--track" ]; then
@@ -162,7 +174,8 @@ if [ "${1:-}" = "--track" ]; then
     kotlin) probe_kotlin; exit $? ;;
     python) probe_python; exit $? ;;
     dart)   probe_dart;   exit $? ;;
-    *) echo "unknown track '${2:-}' — one of: swift kotlin python dart" >&2; exit 2 ;;
+    r)      probe_r;      exit $? ;;
+    *) echo "unknown track '${2:-}' — one of: swift kotlin python dart r" >&2; exit 2 ;;
   esac
 fi
 
@@ -238,6 +251,7 @@ if probe_swift;  then tracks_ready=$((tracks_ready + 1)); fi
 if probe_kotlin; then tracks_ready=$((tracks_ready + 1)); fi
 if probe_python; then tracks_ready=$((tracks_ready + 1)); fi
 if probe_dart;   then tracks_ready=$((tracks_ready + 1)); fi
+if probe_r;      then tracks_ready=$((tracks_ready + 1)); fi
 
 # Track readiness shapes the banner only, never the exit code: one ready
 # track is plenty, and an attendee with one track must never be blocked.
