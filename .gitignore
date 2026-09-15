@@ -110,6 +110,22 @@ node_modules/
 *.Rcheck/
 # Not listed: `R CMD SHLIB` writes .o and .so, covered by the C block above.
 
+# Godot
+# Source: https://github.com/github/gitignore/blob/main/Godot.gitignore (trimmed —
+# no Mono, no translations, no *.tmp; and ~*.dll is already under *.dll above)
+# Pulled: 2026-09-15
+# The editor's import cache, written the first time a project is opened —
+# headless included: `godot --headless -s test.gd` creates .godot/ too.
+.godot/
+.import/
+# Export settings and credentials — credentials are secrets, and there is no
+# export in this repo; the rule is here so an accidental one stays out.
+export.cfg
+export_credentials.cfg
+# Not listed: the cdylib the .gdextension descriptor points at is *.so, *.dylib
+# or *.dll wherever the demo copies it, and those rules are above. The
+# descriptor itself and project.godot are source and stay tracked.
+
 # --- OS-specific (global) ---
 # Source: https://github.com/github/gitignore/blob/main/Global/macOS.gitignore
 # Pulled: 2026-08-08
