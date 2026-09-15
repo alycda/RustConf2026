@@ -3,7 +3,9 @@
 `exercises/` in this directory mirrors the attendee scaffold at the repo
 root, with every TODO filled in once: Ex 1 solved (Advent of Code 2025
 day 3, ported from `alycda/learning-in-public`), Ex 2's wrapper and
-harness, and all four Ex 3 tracks. The Verify workflow copies it over
+harness, all four Ex 3 tracks, and Ex 4's crate and caller (the Ex 2
+wrapper again, on wasm32, plus the allocator pair and the TypeScript
+that writes the string by hand). The Verify workflow copies it over
 `exercises/` at test time —
 
     cp -R .github/ci/exercises/. exercises/

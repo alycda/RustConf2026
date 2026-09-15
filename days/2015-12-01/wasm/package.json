@@ -1,0 +1,27 @@
+{
+  "name": "aoc-2015-12-01-wasm",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "description": "2015-12-01 through WebAssembly: the generated lap (wasm-bindgen) consumed with Effect, so Err and panic stay different things",
+  "scripts": {
+    "main": "tsx src/main.ts",
+    "demo": "tsx src/demo.ts",
+    "raw": "tsx src/raw.ts",
+    "test": "tsx --test test/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "effect": "^3.22.2",
+    "figlet": "^1.11.4"
+  },
+  "devDependencies": {
+    "@types/figlet": "^1.7.0",
+    "@types/node": "^22.20.2",
+    "tsx": "^4.23.13",
+    "typescript": "^5.9.3"
+  }
+}

@@ -17,6 +17,11 @@ mod tcc;
 // hence a feature and not a default — see the module's own header.
 #[cfg(feature = "extendr")]
 mod extendr;
+// Gated on the target, not a feature: a bare `cargo build --target
+// wasm32-unknown-unknown` has to produce a module, and this is what that
+// target needs that no other does.
+#[cfg(target_arch = "wasm32")]
+pub mod wasm;
 
 /// A collection of instructions to move between floors.
 #[derive(Debug, derive_more::Deref)]
