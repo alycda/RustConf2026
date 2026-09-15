@@ -7,10 +7,12 @@
   # R 4.5.3 here and 4.6.1 on the flake registry, Godot 4.6.3 and 4.7.2,
   # gfortran 15.2 and 15.3, all "current nixpkgs" on the same afternoon.
   # flake.lock names one revision, and shell.nix reads that lock, so the
-  # non-flake entry points (`nix-shell`, direnv's `use nix`, the
-  # devcontainers, CI's ffi job) resolve against the same revision without
-  # enabling flakes anywhere. `nix develop` is the flake-native door onto
-  # the same two shells.
+  # non-flake entry points (`nix-shell`, direnv's `use nix`, shell.nix
+  # inside a devcontainer, CI's ffi job) resolve against the same revision
+  # without enabling flakes anywhere. `nix develop` is the flake-native door
+  # onto the same two shells. Not reached: the devcontainers' home-manager
+  # profiles, which build from the container's channel — shell.nix's header
+  # says why that is a second nixpkgs and what the wasm variant does about it.
   #
   # A release branch, not unstable: bumps happen when someone runs
   # `nix flake update` and reads the diff, and a stable branch keeps those

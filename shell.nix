@@ -52,9 +52,14 @@
 # .envrc's `use nix` to `use nix --arg full true`.
 # The nixpkgs everything below resolves against is the one flake.lock
 # names. `nix develop` reads the lock natively; this file reads it too, so
-# plain `nix-shell`, direnv's `use nix`, the devcontainers and CI's ffi job
-# all get the same revision without flakes being enabled anywhere (the
-# devcontainer's nix has nix-command off, and nothing here needs it on).
+# plain `nix-shell`, direnv's `use nix`, this shell inside a devcontainer,
+# and CI's ffi job all get the same revision without flakes being enabled
+# anywhere (the devcontainer's nix has nix-command off, and nothing here
+# needs it on). What the pin does NOT reach: the devcontainers' home-manager
+# profiles. .devcontainer/*/home.nix takes `pkgs` from the container's own
+# channel, which the nix feature sets and setup.sh leaves alone — a second
+# nixpkgs, and the reason the wasm variant reads its CLI version from
+# days/Cargo.lock rather than trusting either.
 # Bump with `nix flake update` — or `nix flake lock --override-input nixpkgs
 # github:NixOS/nixpkgs/<rev>` for a specific revision — and every path
 # moves together. `--arg nixpkgs` still overrides it, which is how to try a
