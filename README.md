@@ -115,6 +115,7 @@ just setup-python   # Python 3.10+ and cffi, in a repo-local .venv
 just setup-swift    # swiftc — Xcode CLT on macOS, swift.org on Linux
 just setup-kotlin   # Kotlin/JNA — JDK 17+ and kotlinc (brew on macOS, sdkman on Linux)
 just setup-dart     # Dart SDK — brew tap on macOS, dart.dev on Linux (`just check` verifies the floor)
+just setup-godot    # Godot 4.6+ — brew cask on macOS, godotengine.org on Linux (runs headless; no editor needed)
 ```
 
 After `just setup-python`, activate the venv with `source .venv/bin/activate`
@@ -125,6 +126,9 @@ if you'd rather not install a JDK or the Dart SDK locally.
 
 "Enough to read simple function calls" is all the fluency the track needs.
 Not sure? Python is the shortest install; Swift is free if you're on a Mac.
+Godot is the outlier — one download, no package manager, and the only track
+where the boundary is a class rather than a function; it is also the largest
+download, and its first build is minutes rather than seconds.
 `just check` reports track readiness in its second section.
 
 ## 4. Advent of Code account + your inputs

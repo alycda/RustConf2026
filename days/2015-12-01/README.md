@@ -6,7 +6,7 @@ an AoC puzzle gets — which is exactly why this is the day carrying every
 FFI variation: the puzzle logic is trivial enough that nothing about it
 competes for attention with the boundary being demonstrated.
 
-Five solves of the same puzzle live in this one branch (each was built and verified independently):
+Six solves of the same puzzle live in this one branch (each was built and verified independently):
 
 | Variant | Direction | Files |
 |---|---|---|
@@ -15,6 +15,7 @@ Five solves of the same puzzle live in this one branch (each was built and verif
 | libcaca banner | Rust → C | `src/caca.rs`, `fonts/standard.flf` |
 | cbindgen C API | Rust → C (exported) | `src/c_api.rs`, `cbindgen.toml` |
 | Python via cffi | C → Python | `python/solve.py` |
+| GDExtension via gdext | Rust ↔ engine (no header) | `src/godot.rs`, `godot/` |
 
 ## The variants
 
@@ -56,6 +57,28 @@ lines cffi's restricted parser can't handle. `just days python-demo
 2015-12-01` builds everything and runs it (needs `just setup-python`
 once).
 
+**Godot via GDExtension (`src/godot.rs`, `godot/`).** The only variant here
+that touches no C at all. A GDExtension is a shared library the engine
+`dlopen`s and hands a `get_proc_address` to; the library then asks for every
+engine function it will use, by name, at load, and hands back its classes the
+same way. Neither side reads a header, so there is nothing for cbindgen to
+generate and nothing for the consumer to transcribe — and there is no
+function to export either, which is why this variant registers a *class*
+(`Aoc20151201`, a `RefCounted`) rather than two `extern "C"` symbols. It is
+the same `cdylib` `c_api.rs` already produces: one shared object, two
+treaties.
+
+The class exposes the day three ways on purpose, because the three are this
+repo's error conventions side by side. `part1` returns an `int`. `part2`
+returns a `Variant`, so "Santa never goes under" is `nil` — `Option`, in
+GDScript's spelling. `part2_status` writes the answer into an `Array` and
+returns `@GlobalScope.Error`, which is `c_api.rs`'s own out-parameter-plus-
+status-code design landing in a runtime that already speaks it: the first
+consumer in the workshop that did not have to translate it into something
+else. `just days godot-demo 2015-12-01` builds it, copies the cdylib where
+`godot/aoc.gdextension` says, and runs `godot/test.gd` headless (needs `just
+setup-godot` once).
+
 ## Running things
 
 ```sh
@@ -67,6 +90,7 @@ cargo bench -p aoc-2015-12-01 --bench sum # pure Rust vs libtcc JIT, head to hea
 
 just days bindgen 2015-12-01              # regenerate include/aoc_2015_12_01.h
 just days python-demo 2015-12-01          # build + generate header + run python/solve.py
+just days godot-demo 2015-12-01           # build --features godot + run godot/test.gd headless
 ```
 
 ## Benchmarks
@@ -124,6 +148,47 @@ dwarfs the work on both sides of it, in both directions.
   block comments), and hands the rest to `cdef()`. If the Rust signature
   changes, regenerating the header is the only step; nothing in Python
   needs editing to match.
+- **The `.gdextension` descriptor is the entire static contract, and
+  nothing validates it.** Entry symbol, minimum engine version, one library
+  path per platform — an INI file no tool generates and no build step
+  checks. Every other track has something that would catch a mistake: a
+  header the compiler reads, a `pubspec`, a `module.modulemap` clang has to
+  open. Here a wrong row is not an error. The engine finds no match, loads
+  nothing, and the failure arrives as `Identifier "Aoc20151201" not
+  declared` — a message about the script, several layers from the file that
+  was actually wrong. Worse, the engine only *looks* for the descriptor
+  during a filesystem scan, so a fresh checkout fails that way until
+  `godot --headless --import` has run once.
+- **Godot's string is UTF-32, which is a memory trade nobody else here
+  made.** One code point per 32-bit unit: no surrogate pairs, no variable
+  width, indexing is O(1) and four times the bytes. Every `GString` ↔
+  `String` crossing transcodes. `godot/test.gd` asserts the consequence
+  rather than asserting the claim — `(🦀)` is 3 code points to GDScript and
+  6 bytes to Rust, `(é)` is 3 and 4 — so this is a measurement, and ASCII
+  hides it completely.
+- **A third panic semantics, and the docs were optimistic about it.**
+  Exercise 2's C API cannot panic at all (unwinding across `extern "C"` is
+  UB, so every failure is a status code); wasm turns a panic into a trap
+  that kills the instance. gdext catches the unwind, prints the Rust message
+  as an engine error with a GDScript backtrace, and carries on — which reads
+  like the friendliest of the three until you ask what the caller got back.
+  "The call returns the type's default" is the received wisdom and it is not
+  what happens: gdext 0.5.5 does not write the return slot at all.
+  `part2_unwrapped("(((")` reads `0` from a fresh slot and `5` from one the
+  caller just used for a successful call. Nothing on the GDScript side can
+  tell that from an answer. The trap that takes your instance and says so is
+  the *more* forgiving design.
+- **Where this boundary stops, in production.**
+  [backstitch](https://github.com/inkandswitch/backstitch) — real-time
+  version control for Godot — is the grown-up version of this variant: a
+  Rust core built on gdext 0.5, carrying an Automerge CRDT and a
+  tree-sitter grammar for `.tscn` files into the editor, with the macOS
+  build shipped as a `.framework` (the per-platform clause of the descriptor
+  above, made visible). Nobody rewrote Automerge in GDScript, which is the
+  "when is FFI the right call" answer for game tooling. And it is a
+  GDExtension *plus* a C++ editor module compiled into a custom Godot build,
+  because the extension API does not expose the editor-UI hooks they needed.
+  The generated lap gets you the runtime; the last mile cost them a fork.
 - **Independent experiments stayed independent until they didn't.** Each
   variant was built and verified (`cargo test`, `fmt`, `clippy`, and a
   real run) on its own jj commit, as a sibling of the others rather than
