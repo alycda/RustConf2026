@@ -26,6 +26,8 @@ use nom::{
 pub mod c_api;
 #[cfg(feature = "cpp")]
 mod cpp;
+#[cfg(feature = "lapack")]
+pub mod lapack;
 #[cfg(feature = "qsort")]
 mod qsort;
 #[cfg(feature = "uthash")]
@@ -52,6 +54,13 @@ pub fn sort_via_qsort(column: &mut [i32]) {
 #[cfg(feature = "cpp")]
 pub fn sort_via_cpp(column: &mut [i32]) {
     cpp::sort(column);
+}
+
+/// Sorts one column with LAPACK's `DLASRT` — a Fortran subroutine, reached
+/// through gfortran's ABI. See [`lapack`] and [`sort_pure_rust`].
+#[cfg(feature = "lapack")]
+pub fn sort_via_lapack(column: &mut [i32]) {
+    lapack::sort(column);
 }
 
 /// Part 2's similarity score as the baseline computes it — the naive scan,
@@ -114,6 +123,17 @@ impl Sorter for CppSort {
     }
 }
 
+/// Marker type for LAPACK's `DLASRT`.
+#[cfg(feature = "lapack")]
+pub struct LapackSort;
+
+#[cfg(feature = "lapack")]
+impl Sorter for LapackSort {
+    fn sort(column: &mut [i32]) {
+        sort_via_lapack(column);
+    }
+}
+
 /// Solution for comparing and matching numbers between two lists
 ///
 /// This implementation solves a puzzle where:
@@ -144,6 +164,12 @@ impl FromStr for Day1 {
         // several features are on: qsort (the talk's headline crossing),
         // then the C++ shim, then plain Rust — every backend stays
         // reachable by name via parse_with either way.
+        //
+        // `LapackSort` is deliberately not in this chain. It widens to f64
+        // and narrows back, so it is the one backend that does not merely
+        // reorder the caller's integers, and making it the day's default
+        // answer-producing sort would bury that behind a feature flag. It is
+        // reachable by name, and the benches and tests below name it.
         #[cfg(feature = "qsort")]
         {
             Self::parse_with::<CSort>(input)
