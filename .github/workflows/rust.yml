@@ -128,14 +128,24 @@ jobs:
   # nothing type-checks against the headers they were transcribed from. So
   # the gates get tested from both sides, and this is the cheap side.
   #
-  # Only 2024-12-01, deliberately: its three variants need nothing a stock
-  # runner lacks. qsort is libc; cpp is one .cpp file the cc crate compiles
-  # with the runner's C++ compiler; uthash is a header-only library — one
-  # distro package on linux, one brew formula on macos, and CFLAGS carries
-  # the brew include path because the cc crate does not look under
-  # /opt/homebrew on its own. Both OSes, because the workshop's subject is
-  # linking and macos is where the attendees are. The days that link real
-  # libraries through pkg-config need the nix shell — that is the next job.
+  # Only 2024-12-01, deliberately, and only three of its four variants: those
+  # three need nothing a stock runner lacks. qsort is libc; cpp is one .cpp
+  # file the cc crate compiles with the runner's C++ compiler; uthash is a
+  # header-only library — one distro package on linux, one brew formula on
+  # macos, and CFLAGS carries the brew include path because the cc crate does
+  # not look under /opt/homebrew on its own. Both OSes, because the workshop's
+  # subject is linking and macos is where the attendees are. The days that
+  # link real libraries through pkg-config need the nix shell — that is the
+  # next job.
+  #
+  # The fourth variant, `lapack`, is why the steps below name their features
+  # instead of saying --all-features. It links liblapack, which is exactly the
+  # thing this job is defined by not needing, and it is covered in the nix
+  # shell below like every other real library. Spelling the three out is a
+  # list that has to be edited when a stock-runner variant is added — which is
+  # the right kind of maintenance, because --all-features here would silently
+  # pull in the next library-linking feature too and fail at link time with no
+  # hint about why this job was ever green.
   c-features:
     name: C features (2024-12-01) / ${{ matrix.os }}
     strategy:
@@ -162,12 +172,15 @@ jobs:
       # C-backed answer equals the pure-Rust one — the actual claim every
       # variant makes. --all-targets on clippy so the bindings and the
       # feature-gated benches are linted, not just compiled.
-      - run: cargo test -p aoc-2024-12-01 --all-features --locked
-      - run: cargo clippy -p aoc-2024-12-01 --all-features --all-targets --locked -- -D warnings
+      - run: cargo test -p aoc-2024-12-01 --features qsort,cpp,uthash --locked
+      - run: |
+          cargo clippy -p aoc-2024-12-01 --features qsort,cpp,uthash \
+            --all-targets --locked -- -D warnings
 
   # The other side of the feature gates, for the days that link real
   # libraries: caca and tcc (2015-12-01), hyperscan and icu (2015-12-05),
-  # chipmunk and duckdb (2021-12-02), yara and espeak (2023-12-01). Every
+  # chipmunk and duckdb (2021-12-02), yara and espeak (2023-12-01), lapack
+  # (2024-12-01). Every
   # one of those build scripts finds its library through pkg-config and,
   # when it can't, panics with "run inside the project's nix shell" — the
   # shell is the supported way to get the C libraries, for attendees and
@@ -217,7 +230,7 @@ jobs:
       # panic buried under a compile.
       - run: |
           nix-shell ../shell.nix --arg full true --run \
-            'pkg-config --modversion caca libtcc libhs icu-i18n icu-uc chipmunk duckdb yara espeak-ng'
+            'pkg-config --modversion caca libtcc libhs icu-i18n icu-uc chipmunk duckdb yara espeak-ng lapack'
       # --all-features across the workspace: every feature-gated test runs,
       # including the ones asserting the C answer equals the pure-Rust one.
       # rustc, cargo and clippy are the shell's, not rustup's — that is the
