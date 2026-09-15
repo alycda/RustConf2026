@@ -88,6 +88,26 @@ python-demo day: (bindgen day)
     "$py" "{{day}}/python/solve.py"
 
 
+# Exercise 3 (R track): call a day's cbindgen C API from R through .C().
+# `just setup-r` once first (or borrow one: nix shell nixpkgs#R).
+#
+# The one demo recipe with no `(bindgen day)` dependency, and that absence is
+# the track. Dart and Kotlin regenerate the header they do not parse so it is
+# there to eyeball; R does not even transcribe it — `.C()` matches on the
+# symbol name and trusts the vector modes it was handed, so nothing in
+# r/solve.R would be any different if the header did not exist. Generating
+# one here would be theatre. The cdylib is the whole dependency.
+r-demo day:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -f "{{day}}/r/solve.R" ]; then
+        echo "days/{{day}} has no r/solve.R — not every day carries one" >&2
+        exit 1
+    fi
+    cd "{{day}}" && cargo build --lib
+    Rscript r/solve.R
+
+
 # Exercise 3 (Dart/dart:ffi track): call a day's cbindgen C API from Dart.
 # `just setup-dart` once first. Depends on `bindgen` rather than
 # duplicating its cbindgen invocation — the header isn't actually parsed
