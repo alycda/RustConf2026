@@ -226,3 +226,52 @@ jobs:
       - run: |
           nix-shell ../shell.nix --arg full true --run \
             'cargo clippy --workspace --all-features --all-targets --locked -- -D warnings'
+      # The wasm track's claim, in the shell attendees actually get: the
+      # DEFAULT shell (no --arg full true) carries a rustc whose std includes
+      # wasm32-unknown-unknown, because nixpkgs builds every rustc with that
+      # target in its list. No C library is involved — a wasm build enables
+      # neither caca nor tcc, so build.rs never runs pkg-config — which is
+      # the whole practical argument for the track: it is the one real
+      # boundary that runs in the shell attendees download on venue Wi-Fi.
+      # The `wasm` job below is the same build on rustup's stable.
+      - run: |
+          nix-shell ../shell.nix --run \
+            'cargo build -p aoc-2015-12-01 --lib --target wasm32-unknown-unknown --locked'
+
+  # A cdylib built for wasm32-unknown-unknown exports its `extern "C"`
+  # functions as-is, and Node's built-in WebAssembly API can call them with
+  # no generator, no npm package and no CLI — the raw route the wasm track
+  # (Exercise 4) is built on. What has to be true first is that the target's
+  # std exists on the toolchains attendees have, and that the day and the
+  # exercise crates compile for it at all: the days pull in miette's `fancy`
+  # feature through the workspace table, and a terminal-colour dependency
+  # that assumes a libc is exactly the kind of thing this target lacks. Both
+  # questions have one honest answer, and it is this job going green.
+  #
+  # Three OSes, unlike the other jobs: the target is what is under test, and
+  # native Windows is where a manual-setup attendee running `rustup target
+  # add` would be. Only 2015-12-01 for the days, deliberately — it is the
+  # day the track lands on; `--workspace` would also ask every C-linking
+  # day to cross-compile, which is not a claim anyone is making.
+  wasm:
+    name: wasm32 / ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: days
+      - run: cargo build -p aoc-2015-12-01 --lib --target wasm32-unknown-unknown --locked
+      # The attendee scaffold, as shipped: the Ex 2 wrapper's `*const c_char`
+      # and `CStr` compile for this target unchanged, which is Exercise 4's
+      # first lesson — the same crate, a different runtime, no edits.
+      - run: cargo build --workspace --target wasm32-unknown-unknown --locked
+        working-directory: exercises
