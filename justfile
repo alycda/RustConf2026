@@ -107,6 +107,7 @@ setup-godot:
     @echo "Install Godot 4.6+ from https://godotengine.org/download (the standard build, not .NET)"
     @echo "Your distro may package it as 'godot4'; scripts/godot-bin.sh finds either."
     @echo "Renamed it, or unzipped it somewhere off PATH? Point at it: export GODOT=/path/to/Godot_v4.7-stable_linux.x86_64"
+    @echo "Or install nothing: reopen in the Godot devcontainer variant (.devcontainer/godot), which carries the engine."
     @echo "then: just check — it verifies the 4.6 floor the .gdextension declares."
 
 # devcontainer only: rebuild the home-manager profile (WORKSHOP_HOME_NIX is

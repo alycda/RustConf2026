@@ -40,7 +40,7 @@ fi
 nix-shell '<home-manager>' -A install
 
 # Apply the configuration from this repo. Variant devcontainers (jj, kotlin,
-# flutter) set WORKSHOP_HOME_NIX via containerEnv to their own home.nix, which
+# flutter, swift, godot) set WORKSHOP_HOME_NIX via containerEnv to their own home.nix, which
 # imports the shared one below and adds packages.
 HOME_NIX="${WORKSHOP_HOME_NIX:-${SCRIPT_DIR}/home.nix}"
 

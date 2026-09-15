@@ -1,8 +1,9 @@
-// Base variant. The sibling variants (jj, kotlin, flutter, swift, godot) are copies of this
-// file plus a name and a WORKSHOP_HOME_NIX override — devcontainer.json has no
-// "extends", so edits here need mirroring there.
+// Copy of ../git/devcontainer.json plus a name, the WORKSHOP_HOME_NIX
+// override pointing at ./home.nix (which imports the shared ../home.nix and
+// adds the Godot engine), and the GDScript extension. devcontainer.json has
+// no "extends" — keep in sync by hand.
 {
-    "name": "FFI playground (git)",
+    "name": "FFI playground (Godot track)",
     "image": "debian:bookworm-slim",
     "mounts": [
         "source=claude-auth,target=/root/.claude,type=volume"
@@ -16,6 +17,9 @@
         "ANTHROPIC_API_KEY": {
             "description": "Claude session key from Claude Console (for Claude Code CLI)"
         }
+    },
+    "containerEnv": {
+        "WORKSHOP_HOME_NIX": "${containerWorkspaceFolder}/.devcontainer/godot/home.nix"
     },
     "remoteEnv": {
         // home-manager installs direnv (and hx, just, claude) into the USER
@@ -32,6 +36,7 @@
                 "alefragnani.bookmarks",
                 "anthropic.claude-code",
                 "editorconfig.editorconfig",
+                "geequlim.godot-tools",
                 "jnoortheen.nix-ide",
                 "mk12.better-git-line-blame",
                 "mkhl.direnv",

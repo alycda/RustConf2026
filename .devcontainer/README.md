@@ -8,6 +8,7 @@ One variant per track. Pick one — they are alternatives, not layers:
 | `jj/` | the base plus jujutsu, and the jj cheatsheets |
 | `kotlin/` | the Kotlin/JNA track — kotlinc, JDK 17, and `JNA_JAR` |
 | `flutter/` | the Dart track — the Dart SDK (`dart`; the name predates dropping the Flutter SDK, which no longer builds on aarch64-linux) |
+| `godot/` | the Godot track — the engine from nixpkgs, headless (`godot`/`godot4` on PATH; ~1.3 GiB from the binary cache) |
 
 The Swift track's container arrives later in the history, with its own README;
 add a row here when it does.
