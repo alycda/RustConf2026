@@ -95,15 +95,19 @@ setup-dart:
 # wasm track (Exercise 4): the wasm32 target for a rustup toolchain, and Node.
 # Two halves because they come from two places. The target's std is rustc's
 # to install — `rustup target add` on the manual path; the nix shell's rustc
-# has it built in, so under nix this half is a no-op and says so. Node is the
+# has it built in, so under nix that half is a no-op and says so. Node is the
 # track's own install, kept out of shell.nix on purpose (45 MiB nobody on
 # another track needs); the wasm devcontainer carries it, and so does brew.
 # wasm-bindgen-cli is only for the generated lap (days/2015-12-01) and the
 # recipe there names the exact version to install if you want it.
+#
+# The target half is one recipe both OS variants depend on; only the Node
+# line differs per OS. The floor is 22 (what CI and the devcontainer run):
+# an older node on PATH is not "done", it is the case the self-check will
+# fail next, so the recipe reads the major version rather than the presence.
 
-# wasm track: rustup's wasm32 target (no-op under nix) + Node 22 via brew
-[macos]
-setup-wasm:
+# the wasm32 target's std: rustup installs it; the nix shell's rustc has it
+_setup-wasm-target:
     #!/usr/bin/env bash
     set -euo pipefail
     if command -v rustup >/dev/null 2>&1; then
@@ -111,21 +115,33 @@ setup-wasm:
     else
         echo "no rustup — assuming the nix shell's rustc, which has wasm32-unknown-unknown built in"
     fi
-    command -v node >/dev/null 2>&1 && node --version || brew install node@22
+
+# wasm track: rustup's wasm32 target (no-op under nix) + Node 22 via brew (keg-only: prints the link step)
+[macos]
+setup-wasm: _setup-wasm-target
+    #!/usr/bin/env bash
+    set -euo pipefail
+    major="$(node --version 2>/dev/null | sed -nE 's/^v([0-9]+)\..*/\1/p')"
+    if [ -n "$major" ] && [ "$major" -ge 22 ]; then
+        echo "node $(node --version) meets the 22 floor"
+    else
+        brew install node@22
+        # A versioned formula: Homebrew installs it unlinked, so `node` is
+        # still the old one (or nothing) until it is put on PATH.
+        echo "brew's node@22 is keg-only; link it so 'node' resolves:"
+        echo "  brew link --overwrite node@22"
+        echo "or put it first on PATH: export PATH=\"$(brew --prefix)/opt/node@22/bin:\$PATH\""
+    fi
     echo "then re-run: just check"
 
 # wasm track: rustup's wasm32 target (no-op under nix) + a Node 22 pointer
 [linux]
-setup-wasm:
+setup-wasm: _setup-wasm-target
     #!/usr/bin/env bash
     set -euo pipefail
-    if command -v rustup >/dev/null 2>&1; then
-        rustup target add wasm32-unknown-unknown
-    else
-        echo "no rustup — assuming the nix shell's rustc, which has wasm32-unknown-unknown built in"
-    fi
-    if command -v node >/dev/null 2>&1; then
-        node --version
+    major="$(node --version 2>/dev/null | sed -nE 's/^v([0-9]+)\..*/\1/p')"
+    if [ -n "$major" ] && [ "$major" -ge 22 ]; then
+        echo "node $(node --version) meets the 22 floor"
     else
         echo "Install Node 22 LTS: https://nodejs.org (or your distro's nodejs package, if it is 22+)"
         echo "Or skip that: reopen the repo in the 'wasm track' devcontainer."
