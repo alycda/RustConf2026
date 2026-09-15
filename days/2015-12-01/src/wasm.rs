@@ -12,6 +12,14 @@
 //! target until told where random bytes come from — it would rather fail
 //! the build than silently hand out zeros.
 //!
+//! Three things live here, all of them wasm's and none of them C's:
+//!
+//! - the getrandom backend, so the crate compiles at all;
+//! - `alloc`/`free`, so a caller with no allocator of its own can hand this
+//!   module a string and a place to write the answer — the raw route;
+//! - behind the `wasm` feature, the wasm-bindgen exports — the generated
+//!   lap, where a tool writes the glue the raw route makes you write.
+//!
 //! This day never draws a random number, so the honest answer is a backend
 //! that says so. `getrandom`'s `custom` feature lets a crate register one;
 //! registering a source that always errors keeps the module free of host
@@ -20,6 +28,7 @@
 //! a runtime `Err` on a path nothing takes.
 
 use core::num::NonZeroU32;
+use std::alloc::{self, Layout};
 
 /// Error code for "this module has no entropy source". `getrandom` reserves
 /// everything from `CUSTOM_START` upwards for backends like this one.
@@ -32,6 +41,53 @@ fn no_entropy(_buf: &mut [u8]) -> Result<(), getrandom::Error> {
 }
 
 getrandom::register_custom_getrandom!(no_entropy);
+
+/// Lends the caller `size` bytes of this module's linear memory, or returns
+/// null when `size` is zero or the allocator has nothing left.
+///
+/// The raw route's precondition. The C API in `c_api.rs` reads a string
+/// the caller made and writes through a pointer the caller owns; a
+/// JavaScript caller can do neither, because the only memory this module
+/// can see is its own and nothing outside it can allocate there. So the
+/// module hands out the space: the caller asks for `len + 1`, writes the
+/// UTF-8 bytes and the NUL, and passes the offset back in as the
+/// `const char *`. Four more bytes the same way for the `int *`.
+///
+/// Every call is one bulk crossing, the same shape as the C API's own —
+/// and one more pair of symbols to bind, which is the cost the generated
+/// lap hides inside its glue.
+#[unsafe(no_mangle)]
+pub extern "C" fn aoc_2015_12_01_alloc(size: usize) -> *mut u8 {
+    let Ok(layout) = Layout::from_size_align(size, 1) else {
+        return core::ptr::null_mut();
+    };
+    if layout.size() == 0 {
+        return core::ptr::null_mut();
+    }
+    // SAFETY: the layout has nonzero size, which is `alloc`'s one precondition.
+    unsafe { alloc::alloc(layout) }
+}
+
+/// Returns memory obtained from [`aoc_2015_12_01_alloc`], with the same
+/// `size`. Null (or a zero size) is a no-op.
+///
+/// The size travels back because the allocator wants the layout it handed
+/// out and a wasm module carries no `malloc` header to recover it from: the
+/// contract is "free what you were given, as you were given it", stated in
+/// the signature rather than trusted to memory.
+///
+/// # Safety
+/// `ptr` must be null or a pointer this module's `alloc` returned for
+/// exactly this `size`, not yet freed.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn aoc_2015_12_01_free(ptr: *mut u8, size: usize) {
+    if ptr.is_null() || size == 0 {
+        return;
+    }
+    // SAFETY: the caller upholds the contract above, so this is the layout
+    // `alloc` was called with.
+    unsafe { alloc::dealloc(ptr, Layout::from_size_align_unchecked(size, 1)) }
+}
 
 /// The generated lap. Everything the raw route does by hand — copying the
 /// string into linear memory, reading the result back, turning a `Result`
