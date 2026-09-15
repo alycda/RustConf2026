@@ -1,8 +1,10 @@
-// Base variant. The sibling variants (jj, kotlin, flutter, swift, godot, wasm) are copies of this
-// file plus a name and a WORKSHOP_HOME_NIX override — devcontainer.json has no
-// "extends", so edits here need mirroring there.
+// Copy of ../git/devcontainer.json plus a name and the WORKSHOP_HOME_NIX
+// override pointing at ./home.nix (which imports the shared ../home.nix and
+// adds Node 22, wasm-bindgen-cli at the lockfile's version, and wasm-pack).
+// devcontainer.json has no
+// "extends" — keep in sync by hand.
 {
-    "name": "FFI playground (git)",
+    "name": "FFI playground (wasm track)",
     "image": "debian:bookworm-slim",
     "mounts": [
         "source=claude-auth,target=/root/.claude,type=volume"
@@ -16,6 +18,9 @@
         "ANTHROPIC_API_KEY": {
             "description": "Claude session key from Claude Console (for Claude Code CLI)"
         }
+    },
+    "containerEnv": {
+        "WORKSHOP_HOME_NIX": "${containerWorkspaceFolder}/.devcontainer/wasm/home.nix"
     },
     "remoteEnv": {
         // home-manager installs direnv (and hx, just, claude) into the USER

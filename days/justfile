@@ -373,6 +373,90 @@ godot-demo day:
     # examples, then prints this day's answers if you have dropped an input
     # at <repo>/inputs/{{day}}.txt.
     "$godot" --headless -s test.gd
+# Exercise 4 (wasm track): a day through WebAssembly, both laps. Builds the
+# crate for wasm32-unknown-unknown with its `wasm` feature, generates the
+# wasm-bindgen glue into <day>/wasm/pkg/ (gitignored, machine output like the
+# cbindgen header), then runs the day's consumers — see _wasm-consumers, the
+# shared tail. `just setup-wasm` once first (node, and on the manual path the
+# target and the CLI).
+#
+# The version check up front is the one thing this recipe does that the
+# others never need. wasm-bindgen's CLI refuses a module built with any other
+# patch version of the crate, and its message names neither the lockfile nor
+# the fix — so the recipe asks cargo for the pinned version and the CLI for
+# its own, and says both, with the fixes, before spending a build. The pin is
+# in Cargo.toml's workspace table; the wasm devcontainer installs the CLI at
+# that version by reading the lockfile, and CI does the same through `cargo
+# pkgid`, but a hand-installed CLI can be anything — so the hint says what
+# is on PATH and what the lockfile wants, and the two ways to make them meet.
+#
+# Nothing is fetched here. Contrast wasm-pack-demo below.
+
+# wasm track: build for wasm32, wasm-bindgen glue (pinned CLI, nothing fetched), then the consumers
+wasm-demo day: && (_wasm-consumers day)
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -f "{{day}}/wasm/package.json" ]; then
+        echo "days/{{day}} has no wasm/ — not every day carries one" >&2
+        exit 1
+    fi
+    command -v wasm-bindgen >/dev/null 2>&1 || { echo "wasm-bindgen not found — cargo install wasm-bindgen-cli --version $(cargo pkgid wasm-bindgen | sed 's/.*@//') --locked, or the wasm devcontainer" >&2; exit 1; }
+    want="$(cargo pkgid wasm-bindgen | sed 's/.*@//')"
+    have="$(wasm-bindgen --version | awk '{print $2}')"
+    if [ "$want" != "$have" ]; then
+        echo "wasm-bindgen-cli $have is on PATH; days/Cargo.lock pins the wasm-bindgen crate at $want, and the CLI refuses any other version." >&2
+        echo "Either install the CLI the lockfile wants:" >&2
+        echo "  cargo install wasm-bindgen-cli --version $want --locked" >&2
+        echo "or move the pin to the CLI you have (days/Cargo.toml, wasm-bindgen = \"=$have\", then cargo update -p wasm-bindgen)." >&2
+        echo "Or let wasm-pack fetch a matching CLI itself: just days wasm-pack-demo {{day}}" >&2
+        exit 1
+    fi
+    ident="$(printf '%s' "{{day}}" | tr - _)"
+    cargo build -p "aoc-{{day}}" --lib --features wasm --target wasm32-unknown-unknown --locked
+    wasm-bindgen --target nodejs --out-dir "{{day}}/wasm/pkg" \
+        "target/wasm32-unknown-unknown/debug/aoc_${ident}.wasm"
+
+# The same generator step, with wasm-pack fetching the generator: it reads
+# the lockfile's wasm-bindgen version and downloads a matching CLI into
+# ~/.cache/.wasm-pack/ on first use — no pin to keep in sync with anything,
+# one network fetch inside a build. `--dev` so the module matches the
+# wasm-demo one and no wasm-opt (a second download) is wanted; `--target
+# nodejs` because the consumer is a script, not a bundle. The tail is the
+# same _wasm-consumers: the consumers do not know which tool wrote pkg/.
+
+# wasm track: the same, with wasm-pack fetching a matching wasm-bindgen itself
+wasm-pack-demo day: && (_wasm-consumers day)
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -f "{{day}}/wasm/package.json" ]; then
+        echo "days/{{day}} has no wasm/ — not every day carries one" >&2
+        exit 1
+    fi
+    command -v wasm-pack >/dev/null 2>&1 || { echo "wasm-pack not found — cargo install wasm-pack, or the wasm devcontainer" >&2; exit 1; }
+    wasm-pack build "{{day}}" --dev --target nodejs --out-dir wasm/pkg --no-pack -- --features wasm --locked
+
+# The shared tail of both wasm recipes, run after the generator (a `&&`
+# post-dependency, not a prerequisite, because the first line depends on
+# the generator having run). The generated lap's module and the raw
+# route's share one path in target/, and the last build wins: the module
+# just generated from has an import section only the glue can satisfy, and
+# raw.ts refuses it by name — so the bare module is built back first. Then
+# the consumers: main (the generated lap), raw (linear memory), and the
+# banner test. `npm ci`, not install: the committed lockfile is what a
+# worked example pins, and ci refuses to drift it. Skipped once node_modules
+# exists — ci deletes and refetches it every time otherwise.
+_wasm-consumers day:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for tool in node npm; do
+        command -v "$tool" >/dev/null 2>&1 || { echo "$tool not found — run: just setup-wasm" >&2; exit 1; }
+    done
+    cargo build -p "aoc-{{day}}" --lib --target wasm32-unknown-unknown --locked
+    cd "{{day}}/wasm"
+    [ -d node_modules ] || npm ci --no-fund --no-audit
+    npm run -s main
+    npm run -s raw
+    npm test
 
 # scaffold a new day from _template, e.g. `just new 2022-12-01`
 new day:

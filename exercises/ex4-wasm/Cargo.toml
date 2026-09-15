@@ -1,0 +1,16 @@
+[package]
+name = "ex4-wasm"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+
+# The same crate type as Ex 2. Built for wasm32-unknown-unknown a cdylib is
+# a .wasm module whose `#[unsafe(no_mangle)] extern "C"` functions are its
+# exports — nothing else has to change for the target to take it, which is
+# TODO 0's whole lesson.
+[lib]
+name = "ex4_wasm"
+crate-type = ["cdylib"]
+
+[dependencies]
+ex1-pure-rust = { path = "../ex1-pure-rust" }

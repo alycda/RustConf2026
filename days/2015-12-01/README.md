@@ -6,7 +6,7 @@ an AoC puzzle gets — which is exactly why this is the day carrying every
 FFI variation: the puzzle logic is trivial enough that nothing about it
 competes for attention with the boundary being demonstrated.
 
-Nine solves of the same puzzle live in this one branch (each was built and verified independently):
+Eleven solves of the same puzzle live in this one branch (each was built and verified independently):
 
 | Variant | Direction | Files |
 |---|---|---|
@@ -19,6 +19,15 @@ Nine solves of the same puzzle live in this one branch (each was built and verif
 | R via `.C()` | C → R | `r/solve.R` |
 | R via extendr (`.Call()`) | Rust → R (generated) | `src/extendr.rs`, `r/extendr.R` (feature `extendr`) |
 | GDExtension via gdext | Rust ↔ engine (no header) | `src/godot.rs`, `godot/` |
+| wasm, raw | Rust → wasm → JS, **not C at all** | `src/wasm.rs` (`alloc`/`free`), `wasm/src/raw.ts` |
+| wasm, generated | Rust → wasm-bindgen → Effect | `src/wasm.rs` (`bindgen`), `wasm/src/{boundary,main,demo,banner}.ts` |
+
+The first five are the C ABI wearing different hats. The last two are the
+first boundary in this day that is not C: a different calling convention
+(wasm value types — `i32`, `i64`, nothing else), a different memory model
+(one linear memory the caller cannot allocate into), and a different failure
+semantics (a trap, not a signal). Same solver, same answers, and the C
+header is no longer the treaty — the module's own export section is.
 
 ## The variants
 
@@ -121,11 +130,42 @@ else. `just days godot-demo 2015-12-01` builds it, copies the cdylib where
 `godot/aoc.gdextension` says, and runs `godot/test.gd` headless (needs `just
 setup-godot` once).
 
+**wasm, the raw route (`wasm/src/raw.ts`, Exercise 4).** The C API again —
+`cargo build --target wasm32-unknown-unknown` exports the same two
+`extern "C"` functions as wasm exports, and Node's built-in `WebAssembly`
+calls them with nothing generated. What the C harness and Python never
+needed, this caller cannot do without: JavaScript has no allocator inside
+the module's linear memory, so `src/wasm.rs` exports `alloc`/`free`, and the
+script borrows `len + 1` bytes for the string (writing the NUL itself —
+`alloc` does not zero), four more for the `int *`, calls, reads the answer
+back through a `DataView`, and returns both. Each borrow is an
+`acquireUseRelease`, Effect's `Drop`, so the free runs on success, failure
+and trap alike. The two status codes become two typed failures; a trap is a
+defect. The hostile-input contract is proved from this side too: NULL is
+the integer `0` here, and invalid UTF-8 is two bytes written straight into
+the buffer. `just days wasm-demo 2015-12-01` runs it after the generated lap.
+
+**wasm, the generated lap (`src/wasm.rs` → `wasm/src/main.ts`).** Behind
+the `wasm` feature, three `#[wasm_bindgen]` exports of the same solver, and
+wasm-bindgen writes the glue the raw route makes you write — the string
+copy, the read-back, `Err` into a thrown `Error`. What no generator can
+do is keep Rust's two failure kinds apart on the way out: `part2`'s `Err`
+and `part2_unchecked`'s `expect` both arrive as "something was thrown".
+`wasm/src/boundary.ts` is the fifteen lines that put them back —
+a thrown `Error` becomes a typed failure the program can match on, a
+`WebAssembly.RuntimeError` becomes a defect `catchAll` cannot see — and
+`wasm/src/demo.ts` asserts all three channels on the statement examples.
+The banner comes along too: libcaca cannot come to this target, but
+`fonts/standard.flf` is data, and `wasm/src/banner.ts` renders the same
+answers with figlet.js reading the same file. `wasm/test/banner.test.ts`
+holds the verdict (see [Learnings](#learnings)). The generator is
+version-coupled to its CLI, and `days/Cargo.toml` says how the pin is kept.
+
 ## Running things
 
 ```sh
 cd days/2015-12-01 && cargo run           # pure Rust parse, libtcc-JIT solve, libcaca banner
-cargo test -p aoc-2015-12-01              # all five variants share these test cases
+cargo test -p aoc-2015-12-01              # the five C-shaped variants share these test cases (src/wasm.rs is target-gated: not here)
 
 just days bench 2015-12-01                # criterion: parse + both parts, see days/README.md
 cargo bench -p aoc-2015-12-01 --bench sum # pure Rust vs libtcc JIT, head to head
@@ -136,6 +176,11 @@ just days fortran-demo 2015-12-01         # build + generate header + compile an
 just days r-demo 2015-12-01               # build + run r/solve.R (no header — R reads none)
 just days r-extendr-demo 2015-12-01       # the generated lap; needs R installed to *build*
 just days godot-demo 2015-12-01           # build --features godot + run godot/test.gd headless
+
+just days wasm-demo 2015-12-01            # wasm32 build + wasm-bindgen glue + every consumer in wasm/
+just days wasm-pack-demo 2015-12-01       # the same, with wasm-pack fetching the generator itself
+cd wasm && npm run main | raw | demo       # the consumers, once the module, pkg/ and node_modules exist (one wasm-demo does all three)
+cd wasm && npm test                       # the banner test only — the boundary is exercised by raw and demo above
 ```
 
 ## Benchmarks
@@ -309,6 +354,52 @@ dwarfs the work on both sides of it, in both directions.
   GDExtension *plus* a C++ editor module compiled into a custom Godot build,
   because the extension API does not expose the editor-UI hooks they needed.
   The generated lap gets you the runtime; the last mile cost them a fork.
+- **A target with no OS refuses the dependencies that assume one.** The
+  first wasm32 build died in `getrandom`, reached through
+  `aoc-ornaments → rand`, on a day that never draws a random number: the
+  crate would rather fail to compile than hand out zeros. `src/wasm.rs`
+  registers a backend that says "no entropy here" — target-gated, so a
+  bare `cargo build --target wasm32-unknown-unknown` needs no flags — and
+  the alternative, getrandom's `js` backend, would have given the raw
+  route a module with imports and a dependency on the generator it exists
+  to do without.
+- **The std for a target and the linker for it are separate deliveries.**
+  nixpkgs' rustc ships `wasm32-unknown-unknown`'s std in its sysroot and no
+  `rust-lld` next to it; the build compiled and died at the link step with
+  ``linker `lld` not found``. `shell.nix` now carries `lld` (13 MiB). rustup's
+  toolchains bundle it and never show this.
+- **When the caller has no allocator, the callee lends one.** Every C
+  consumer of this day allocated on its own side. JavaScript cannot
+  allocate inside a module's linear memory, so `alloc`/`free` are exports —
+  the callee-allocates contract from the reference card, arriving as a
+  precondition of calling at all rather than as a returned string. `free`
+  takes the size back because there is no `malloc` header to recover it
+  from.
+- **The header is inside the module now.** `WebAssembly.Module.exports`
+  and `.imports` are the treaty, readable before anything runs, with wasm
+  types: `i32` where the C header said `const char *` and `int *`. Names
+  cannot drift silently — a missing export is an error at lookup — and the
+  C types did not survive the trip. Both halves matter: the raw consumer
+  refuses a module whose import section is non-empty, because that is the
+  generated lap's module and only its glue can answer it.
+- **One target directory, two modules.** `cargo build --features wasm` and
+  the bare build write the same `aoc_2015_12_01.wasm`, and the last build
+  wins. Found by running the two recipes back to back; the recipes now
+  rebuild the bare module after generating the glue, and `raw.ts` names the
+  situation instead of surfacing `Import #0 "__wbindgen_placeholder__"`.
+- **A trap does not take the instance with it.** `part2_unchecked` panics,
+  the module traps, JavaScript gets `RuntimeError: unreachable` — and the
+  next call to `part1` answers correctly. Nothing unwound, nothing was
+  cleaned up, and a module that keeps answering after a trap is one whose
+  answers you can no longer vouch for. Ex 2's "the process is gone" is the
+  kinder failure.
+- **Two engines, one font, one column.** libcaca and figlet.js render
+  `fonts/standard.flf` to the same glyph rows, and figlet.js puts one extra
+  space in front of every row — on every layout option, and with its own
+  bundled "Standard" font too. The reference `figlet` CLI (2.2.5) matches
+  libcaca byte for byte, so two of three implementations of the FIGfont
+  spec agree and the JavaScript one is off by a column. The test encodes
+  both halves and fails the day figlet.js converges.
 - **Independent experiments stayed independent until they didn't.** Each
   variant was built and verified (`cargo test`, `fmt`, `clippy`, and a
   real run) on its own jj commit, as a sibling of the others rather than

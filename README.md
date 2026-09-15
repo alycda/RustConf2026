@@ -121,14 +121,25 @@ just setup-dart     # Dart SDK — brew tap on macOS, dart.dev on Linux (`just c
 just setup-fortran  # gfortran — apt/dnf on Linux, brew's gcc on macOS (the Xcode CLT ships none)
 just setup-r        # R — brew on macOS, CRAN's distro repos on Linux (`.C()` is in base R; nothing else to install)
 just setup-godot    # Godot 4.6+ — brew cask on macOS, godotengine.org on Linux (runs headless; no editor needed)
+just setup-wasm     # Exercise 4's track — the wasm32 target (rustup; built in under nix) and Node 22
 ```
+
+The wasm row is not a fifth choice for Exercise 3. It is Exercise 4's,
+afternoon material: the same wrapper you build in Exercise 2, compiled for
+`wasm32-unknown-unknown` and called from TypeScript with nothing generated —
+a runtime with no C in it, and the one export it needs that no C caller
+ever did. Nothing in the required toolchain changes for it; the target's
+std comes with `rustc` (rustup installs it on request, the nix shell's has
+it built in) and the linker is in the shell. Node is the track's own
+install, so it stays out of `shell.nix`; the "wasm track" devcontainer
+carries it, and so does the recipe.
 
 After `just setup-python`, activate the venv with `source .venv/bin/activate`
 so the next `just check` sees it. (💀 manual-setup folks: `shell.nix` isn't
-feeding you a `python3`, so bring your own, 3.10+.) The Kotlin, Dart and Godot
-tracks also have dedicated devcontainer variants in the "Reopen in Container"
-picker if you'd rather not install a JDK, the Dart SDK or a game engine
-locally.
+feeding you a `python3`, so bring your own, 3.10+.) The Kotlin, Dart, Godot
+and wasm tracks also have dedicated devcontainer variants in the "Reopen in
+Container" picker if you'd rather not install a JDK, the Dart SDK, a game
+engine or Node locally.
 
 The R track installs nothing beyond R itself — `.C()` is in base R, so there
 is no `pip`, no `pub get`, no jar to fetch — but R is a large download, and

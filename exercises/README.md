@@ -6,6 +6,7 @@
 | Ex 2 | ex2-c-glue | 10:25–10:55 | C ABI wrapper + generated header + C test run |
 | Ex 3 | ex3-bindings | 11:30–12:00 | Bindings in the ONE language track you chose |
 | Next | — | 12:00–12:30 | Debrief: what broke? |
+| Ex 4 | ex4-wasm | afternoon / bonus, untimed | The same wrapper on a runtime with no C in it: wasm, called from TypeScript with nothing generated |
 
 Breaks at 09:55–10:05 and 10:55–11:05. We stop at 12:30.
 

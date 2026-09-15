@@ -1,0 +1,6 @@
+# Same language as Ex 2's config. The header cbindgen produces from this
+# crate is printed by build.sh, never written: it exists so you can put it
+# next to the module's own export section and see what survived the trip
+# — the names did, the C types did not. Nothing on the wasm track reads it.
+language = "C"
+include_guard = "EX4_WASM_H"

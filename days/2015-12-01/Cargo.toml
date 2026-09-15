@@ -19,6 +19,11 @@ crate-type = ["rlib", "cdylib"]
 [features]
 caca = []
 tcc = []
+# The generated wasm lap: #[wasm_bindgen] exports in src/wasm.rs. Off by
+# default like the others, but for a different reason — nothing links here;
+# the gate exists so the raw route (a bare `cargo build --target
+# wasm32-unknown-unknown`) yields a module with no generator's glue in it.
+wasm = ["dep:wasm-bindgen"]
 
 # The R track's generated lap (src/extendr.rs). Unlike caca/tcc this one
 # needs no pkg-config and no C library — it needs R: extendr-api links
@@ -73,6 +78,15 @@ extendr-api = { version = "0.9", optional = true }
 # `compatibility_minimum`; the two have to agree, and the engine enforces it
 # at load rather than at build.
 godot = { version = "0.5.5", features = ["api-4-6"], optional = true }
+# Only when compiling for wasm32: the host build never sees this table, so
+# neither does the 1.85 floor check or any other day. src/wasm.rs says why
+# a day that never draws a random number has to name a source for one.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom.workspace = true
+# Optional and target-scoped both: `--all-features` on the host enables the
+# `wasm` feature and still compiles nothing from this crate, because the
+# module that uses it is gated on the target.
+wasm-bindgen = { workspace = true, optional = true }
 
 [dev-dependencies]
 rstest.workspace = true

@@ -9,6 +9,7 @@ One variant per track. Pick one — they are alternatives, not layers:
 | `kotlin/` | the Kotlin/JNA track — kotlinc, JDK 17, and `JNA_JAR` |
 | `flutter/` | the Dart track — the Dart SDK (`dart`; the name predates dropping the Flutter SDK, which no longer builds on aarch64-linux) |
 | `godot/` | the Godot track — the engine from nixpkgs, headless (`godot`/`godot4` on PATH; ~1.3 GiB from the binary cache) |
+| `wasm/` | the wasm track (Exercise 4) — Node 22, `wasm-bindgen-cli` at the exact version `days/Cargo.lock` pins (read from the lockfile, whichever channel the profile builds from), `wasm-pack`. The wasm32 target and its linker come from `shell.nix`, so every variant has those |
 
 The Swift track's container arrives later in the history, with its own README;
 add a row here when it does.

@@ -13,7 +13,7 @@
 #   - rust, c   → the script's exit code (its required-toolchain contract:
 #                 rustc + cargo + cbindgen + a C compiler that links).
 #                 Both tracks share one verdict because the script does.
-#   - python, dart, kotlin, swift, fortran, r, godot
+#   - python, dart, kotlin, swift, fortran, r, godot, wasm
 #               → green only if the script's own line for that track says
 #                 "ready". The script's exit code is ignored for these:
 #                 an optional track can be ready on a runner whose
@@ -95,7 +95,10 @@ jobs:
         # are not billed for standard runners, and this map of attendee
         # environments across all three OSes is the workflow's whole job.
         os: [ubuntu-latest, macos-latest, windows-latest]
-        track: [rust, c, python, dart, kotlin, swift, fortran, r, godot]
+        # wasm is Exercise 4's track: node plus the wasm32-unknown-unknown
+        # std, which the self-check's probe asks the sysroot for. All three
+        # OSes, because nothing in the track is host-shaped.
+        track: [rust, c, python, dart, kotlin, swift, fortran, r, godot, wasm]
         # swift/windows was the grid's "?" cell and the first full-grid
         # run answered it: no Swift on the stock image, and the workshop's
         # Windows answer is WSL2 regardless. An answered question needs no
@@ -126,7 +129,7 @@ jobs:
     # Ten minutes for every cell except godot, which builds gdext from
     # scratch the first time: the crate generates bindings for the whole
     # engine API from a JSON file it ships, and that is minutes rather than
-    # seconds. An expression rather than raising the number for all nine,
+    # seconds. An expression rather than raising the number for all ten,
     # because a ten-minute ceiling on the other cells is a useful alarm.
     timeout-minutes: ${{ matrix.track == 'godot' && 25 || 10 }}
     steps:
@@ -288,6 +291,20 @@ jobs:
         if: matrix.track == 'godot'
         with:
           workspaces: days
+      # The wasm cell provisions its track the way `just setup-wasm` does on
+      # a rustup machine: the target's std via rustup, Node 22 — the stock
+      # images ship a node, but the floor the probe enforces is what CI
+      # runs, so CI pins it.
+      - uses: actions/setup-node@v4
+        if: matrix.track == 'wasm'
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: exercises/ex4-wasm/wasm/package-lock.json
+      - name: provision the wasm32 target (the setup-wasm recipe)
+        if: matrix.track == 'wasm'
+        shell: bash
+        run: rustup target add wasm32-unknown-unknown
       # shell: bash so the windows cells run under Git Bash rather than
       # PowerShell — the closest a native-Windows runner gets to running
       # this script at all.
@@ -1152,3 +1169,20 @@ jobs:
           out="$(just exercises swift)"
           echo "$out"
           echo "$out" | grep -qF 'Ex 3 (Swift) passed.'
+      # Ex 4 on the overlay: the Ex 2 wrapper pasted into ex4-wasm, the
+      # allocator pair filled, the TypeScript caller writing the string by
+      # hand and reading a BigInt back. `just exercises wasm` is the README's
+      # command; it runs ex4-wasm/build.sh (cargo for the target, cbindgen
+      # for the comparison header, node for the export listing) and then
+      # the caller. Off Windows with the other exercise steps, although
+      # nothing in Ex 4 is Windows-shaped — Ex 2 must be green first and
+      # its script stops there.
+      - name: exercises Ex 4 wasm
+        if: matrix.track == 'wasm' && runner.os != 'Windows' && hashFiles('.github/ci/exercises/**') != ''
+        shell: bash
+        run: |
+          out="$(just exercises wasm)"
+          echo "$out"
+          echo "$out" | grep -qF 'imports: none'
+          echo "$out" | grep -qF 'contract: ex_part1(0) = -1; ex_part1(0xff 0xfe) -> InvalidInput (-1n)'
+          echo "$out" | grep -qF 'Ex 4 (wasm) passed.'

@@ -143,6 +143,72 @@ setup-godot:
     @echo "Renamed it, or unzipped it somewhere off PATH? Point at it: export GODOT=/path/to/Godot_v4.7-stable_linux.x86_64"
     @echo "Or install nothing: reopen in the Godot devcontainer variant (.devcontainer/godot), which carries the engine."
     @echo "then: just check — it verifies the 4.6 floor the .gdextension declares."
+# wasm track (Exercise 4): the wasm32 target for a rustup toolchain, and Node.
+# Two halves because they come from two places. The target's std is rustc's
+# to install — `rustup target add` on the manual path; the nix shell's rustc
+# has it built in, so under nix that half is a no-op and says so. Node is the
+# track's own install, kept out of shell.nix on purpose (45 MiB nobody on
+# another track needs); the wasm devcontainer carries it, and so does brew.
+# wasm-bindgen-cli is only for the generated lap (days/2015-12-01) and the
+# recipe there names the exact version to install if you want it.
+#
+# The target half is one recipe both OS variants depend on; only the Node
+# line differs per OS. The floor is engines.node in the exercise's package.json
+# (22 today, what CI and the devcontainer run):
+# an older node on PATH is not "done", it is the case the self-check will
+# fail next, so the recipe reads the major version rather than the presence.
+
+# the wasm32 target's std: rustup installs it; the nix shell's rustc has it
+_setup-wasm-target:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if command -v rustup >/dev/null 2>&1; then
+        rustup target add wasm32-unknown-unknown
+    else
+        echo "no rustup — assuming the nix shell's rustc, which has wasm32-unknown-unknown built in"
+    fi
+
+# wasm track: rustup's wasm32 target (no-op under nix) + Node 22 via brew (keg-only: prints the link step)
+[macos]
+setup-wasm: _setup-wasm-target
+    #!/usr/bin/env bash
+    set -euo pipefail
+    floor="$(sed -nE 's/^[[:space:]]*"node":[[:space:]]*">=([0-9]+)".*/\1/p' exercises/ex4-wasm/wasm/package.json)"
+    # `|| true` inside the substitution: with `set -eo pipefail` a missing
+    # node exits the pipeline 127, an assignment takes the substitution's
+    # status, and the recipe died here — on the one machine it is for —
+    # before reaching the branch that says where to get Node.
+    major="$({ node --version 2>/dev/null || true; } | sed -nE 's/^v([0-9]+)\..*/\1/p')"
+    if [ -n "$major" ] && [ "$major" -ge "${floor:-22}" ]; then
+        echo "node $(node --version) meets the ${floor:-22} floor (exercises/ex4-wasm/wasm/package.json)"
+    else
+        brew install node@22
+        # A versioned formula: Homebrew installs it unlinked, so `node` is
+        # still the old one (or nothing) until it is put on PATH.
+        echo "brew's node@22 is keg-only; link it so 'node' resolves:"
+        echo "  brew link --overwrite node@22"
+        echo "or put it first on PATH: export PATH=\"$(brew --prefix)/opt/node@22/bin:\$PATH\""
+    fi
+    echo "then re-run: just check"
+
+# wasm track: rustup's wasm32 target (no-op under nix) + a Node 22 pointer
+[linux]
+setup-wasm: _setup-wasm-target
+    #!/usr/bin/env bash
+    set -euo pipefail
+    floor="$(sed -nE 's/^[[:space:]]*"node":[[:space:]]*">=([0-9]+)".*/\1/p' exercises/ex4-wasm/wasm/package.json)"
+    # `|| true` inside the substitution: with `set -eo pipefail` a missing
+    # node exits the pipeline 127, an assignment takes the substitution's
+    # status, and the recipe died here — on the one machine it is for —
+    # before reaching the branch that says where to get Node.
+    major="$({ node --version 2>/dev/null || true; } | sed -nE 's/^v([0-9]+)\..*/\1/p')"
+    if [ -n "$major" ] && [ "$major" -ge "${floor:-22}" ]; then
+        echo "node $(node --version) meets the ${floor:-22} floor (exercises/ex4-wasm/wasm/package.json)"
+    else
+        echo "Install Node 22 LTS: https://nodejs.org (or your distro's nodejs package, if it is 22+)"
+        echo "Or skip that: reopen the repo in the 'wasm track' devcontainer."
+    fi
+    echo "then re-run: just check"
 
 # devcontainer only: rebuild the home-manager profile (WORKSHOP_HOME_NIX is
 # set by the variant devcontainers so their extra packages survive a rebuild)
