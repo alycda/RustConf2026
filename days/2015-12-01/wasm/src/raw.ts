@@ -38,6 +38,11 @@ const INPUT = resolve(DAYS, "../inputs/2015-12-01.txt")
 
 class ModuleNotBuilt extends Data.TaggedError("ModuleNotBuilt")<{ readonly hint: string }> {}
 class BadModule extends Data.TaggedError("BadModule")<{ readonly detail: string }> {}
+/** The module in target/ is the generated lap's, not the raw route's. */
+class GeneratedModule extends Data.TaggedError("GeneratedModule")<{
+  readonly path: string
+  readonly imports: ReadonlyArray<string>
+}> {}
 class NoInput extends Data.TaggedError("NoInput")<{ readonly path: string }> {}
 class OutOfMemory extends Data.TaggedError("OutOfMemory")<{ readonly size: number }> {}
 
@@ -68,7 +73,7 @@ interface Raw {
 // Debug first, then release — the same search the other tracks make. Just
 // one filename to look for, though: a wasm module is `<crate>.wasm` on every
 // host, because no host's loader is involved.
-const loadRaw: Effect.Effect<Raw, ModuleNotBuilt | BadModule> = Effect.gen(function* () {
+const loadRaw: Effect.Effect<Raw, ModuleNotBuilt | BadModule | GeneratedModule> = Effect.gen(function* () {
   const candidates = ["debug", "release"].map((profile) =>
     resolve(DAYS, "target/wasm32-unknown-unknown", profile, "aoc_2015_12_01.wasm"),
   )
@@ -78,11 +83,23 @@ const loadRaw: Effect.Effect<Raw, ModuleNotBuilt | BadModule> = Effect.gen(funct
       hint: "run: cd days && cargo build -p aoc-2015-12-01 --lib --target wasm32-unknown-unknown",
     })
   }
-  // No imports: the module asks nothing of the host (see `wasm.rs` for the
-  // one dependency that would have made it ask). An empty import object is
-  // therefore honest, and a LinkError here means the module changed.
-  const { instance } = yield* Effect.tryPromise({
-    try: () => WebAssembly.instantiate(readFileSync(path), {}),
+  const module = yield* Effect.try({
+    try: () => new WebAssembly.Module(readFileSync(path)),
+    catch: (e) => new BadModule({ detail: e instanceof Error ? e.message : String(e) }),
+  })
+  // The import section is readable before anything runs, and it is the
+  // header's other half: what the module asks of the host. The raw route's
+  // module asks for nothing (see `wasm.rs` for the one dependency that
+  // would have made it ask). A module that does ask is the generated lap's
+  // — `cargo build --features wasm` writes it to the same path — and only
+  // wasm-bindgen's glue knows how to answer it. Better to say so than to
+  // let instantiate fail on "Import #0" with no idea why there is one.
+  const imports = WebAssembly.Module.imports(module)
+  if (imports.length > 0) {
+    return yield* new GeneratedModule({ path, imports: imports.map((i) => `${i.module}.${i.name}`) })
+  }
+  const instance = yield* Effect.try({
+    try: () => new WebAssembly.Instance(module, {}),
     catch: (e) => new BadModule({ detail: e instanceof Error ? e.message : String(e) }),
   })
   return instance.exports as unknown as Raw
@@ -159,9 +176,15 @@ const program = Effect.gen(function* () {
 })
 
 const describe = (
-  e: ModuleNotBuilt | BadModule | NoInput | OutOfMemory | StatusError | RustError,
+  e: ModuleNotBuilt | BadModule | GeneratedModule | NoInput | OutOfMemory | StatusError | RustError,
 ): string => {
   switch (e._tag) {
+    case "GeneratedModule":
+      return (
+        `${e.path} imports ${e.imports.length} thing(s) from the host (${e.imports[0] ?? ""}…) — ` +
+        "that is the wasm feature's module, and only wasm-bindgen's glue can satisfy it. " +
+        "The raw route wants the bare one: cd days && cargo build -p aoc-2015-12-01 --lib --target wasm32-unknown-unknown"
+      )
     // callRust's other channel. The raw exports return integers and never
     // throw an Error of their own, so this is unreachable in practice — but
     // the type says it can happen, and the compiler is right to insist.
