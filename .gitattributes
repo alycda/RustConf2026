@@ -10,3 +10,13 @@
 # With it, `git log -L :<fn>:<file>` walks the history of just that function,
 # and hunk headers name the enclosing item instead of showing `@@ ... @@` bare.
 *.rs diff=rust
+
+# days/2015-12-01/wasm/test/banner.test.ts compares figlet.js's rows against
+# libcaca's, recorded in this fixture, byte for byte. Git for Windows checks
+# text files out with CRLF by default (core.autocrlf=true, which the wasm32
+# CI job's windows-latest runner inherits), and a fixture split on "\n" then
+# carries a trailing "\r" on every row: the first wasm32 run on Windows died
+# in that test with `actual: '🦀:\r', expected: '🦀:'`. eol=lf keeps the
+# recorded bytes on every platform. The .flf font next to it survives CRLF
+# (figlet.js normalises while parsing), so it gets no rule.
+days/2015-12-01/wasm/test/fixtures/* text eol=lf
