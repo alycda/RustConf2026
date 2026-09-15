@@ -14,11 +14,13 @@ cd "$(dirname "$0")"
 #    lib prefix, no .so/.dylib/.dll, because no host loader is involved.
 cargo build --target wasm32-unknown-unknown
 
-# 2. Rust → C header, for comparison only. Put it beside the export list
-#    below: the names survived, the C types (`const char *`, `int64_t`)
+# 2. Rust → C header, for comparison only, printed rather than written:
+#    nothing on this track reads it, so no file. Put it beside the export
+#    list below: the names survived, the C types (`const char *`, `int64_t`)
 #    did not — the module declares i32 and i64, and that is the treaty now.
-mkdir -p include
-cbindgen --output include/ex4_wasm.h
+echo "--- the C header cbindgen would write (nobody on this track reads it):"
+cbindgen
+echo "--- the module's own declaration of itself:"
 
 # 3. The module's own declaration of itself. This is what wasm-bindgen,
 #    cffi, or you read to know what can be called: no header file, no

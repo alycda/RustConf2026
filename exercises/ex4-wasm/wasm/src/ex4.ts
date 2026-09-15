@@ -2,8 +2,8 @@
  * Exercise 4: call your Ex 2 wrapper — built for wasm32-unknown-unknown —
  * from TypeScript, with nothing generated. Fill in the TODOs top to bottom.
  *
- * Needs Node 22+ and `npm ci` once in this directory (`just setup-wasm`
- * covers both). Run from the repo root:
+ * Needs Node 22+ (`just setup-wasm`) and `npm ci` once in this directory
+ * (the recipe below does that for you). Run from the repo root:
  *
  *     just exercises wasm        # ../build.sh, then this file
  *
