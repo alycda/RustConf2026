@@ -251,6 +251,15 @@ let
     # pkg-config: the cc wrapper injects the include path for every
     # buildInputs entry, which is how that day's build.rs finds <uthash.h>.
     uthash
+    # lapack for days/2024-12-01's absurd sort (cargo feature `lapack`, off by
+    # default): LAPACK's DLASRT is a Fortran subroutine, and days/2024-12-01/
+    # src/lapack.rs calls it from Rust — the hidden-length ABI the 2015-12-01
+    # Fortran track meets from the safe side, met here from the other one.
+    # nixpkgs ships lapack.pc (in the dev output), so that day's build.rs
+    # probes it like every other library here and synthesizes nothing. ~24 MiB
+    # of download all in: 13.9 for liblapack, 6.9 for openblas (nixpkgs' LAPACK
+    # provider) and 3.4 for the gfortran runtime it links against.
+    lapack
   ];
 in
 pkgs.mkShell {
