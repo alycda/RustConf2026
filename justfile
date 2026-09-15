@@ -92,6 +92,22 @@ setup-dart:
     @echo "Install the Dart SDK: https://dart.dev/get-dart (then: just check — it verifies the version floor)"
     @echo "Or skip that: reopen the repo in the 'Flutter/Dart track' devcontainer."
 
+# R track: `Rscript` is the whole toolchain — no package manager step, no
+# dependency to fetch. .C() is in base R.
+
+# R track: R via brew (the formula is lowercase `r`, the command is `R`)
+[macos]
+setup-r:
+    brew install r
+
+# R track: CRAN publishes per-distro repositories — points at them
+[linux]
+setup-r:
+    @echo "R from CRAN (distro repos, newer than what apt/dnf ship):"
+    @echo "  https://cran.r-project.org/bin/linux/"
+    @echo "Or borrow it for one command without installing anything:"
+    @echo "  nix shell nixpkgs#R --command just days r-demo 2015-12-01"
+
 # devcontainer only: rebuild the home-manager profile (WORKSHOP_HOME_NIX is
 # set by the variant devcontainers so their extra packages survive a rebuild)
 # Goes through setup.sh rather than calling `home-manager switch` directly,

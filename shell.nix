@@ -25,6 +25,17 @@
 # at ~73 MiB; every other library here is under 20 MiB. If the full shell
 # ever needs to get cheaper, an audio-less espeak-ng is the whole game.
 #
+# What is in neither shell: the language tracks' own runtimes. Swift, the
+# Dart SDK, a JDK and kotlinc have never been here — an attendee picks ONE
+# track (README step 3) and nobody should pay for the other three on venue
+# Wi-Fi. R makes that rule impossible to argue with: 646 MiB to download and
+# about 2.0 GiB on disk (nixpkgs unstable, R 4.6.1, measured 2026-09-15 with
+# `nix path-info -S`), which is the whole default shell over again for a
+# track most of the room will not take. `just setup-r` owns that install, and
+# `nix shell nixpkgs#R --command <cmd>` borrows it for a single command
+# without putting it in anyone's shell — which is how days/2015-12-01/r was
+# built and verified.
+#
 # `--arg full true` is what .github/workflows/rust.yml's `ffi` job passes,
 # and what anyone reaching for `cargo test --all-features` wants. direnv
 # takes it too, if you'd rather have the full set load on `cd`: change
