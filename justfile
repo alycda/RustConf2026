@@ -102,7 +102,8 @@ setup-dart:
 # recipe there names the exact version to install if you want it.
 #
 # The target half is one recipe both OS variants depend on; only the Node
-# line differs per OS. The floor is 22 (what CI and the devcontainer run):
+# line differs per OS. The floor is engines.node in the exercise's package.json
+# (22 today, what CI and the devcontainer run):
 # an older node on PATH is not "done", it is the case the self-check will
 # fail next, so the recipe reads the major version rather than the presence.
 
@@ -121,9 +122,10 @@ _setup-wasm-target:
 setup-wasm: _setup-wasm-target
     #!/usr/bin/env bash
     set -euo pipefail
+    floor="$(sed -nE 's/^[[:space:]]*"node":[[:space:]]*">=([0-9]+)".*/\1/p' exercises/ex4-wasm/wasm/package.json)"
     major="$(node --version 2>/dev/null | sed -nE 's/^v([0-9]+)\..*/\1/p')"
-    if [ -n "$major" ] && [ "$major" -ge 22 ]; then
-        echo "node $(node --version) meets the 22 floor"
+    if [ -n "$major" ] && [ "$major" -ge "${floor:-22}" ]; then
+        echo "node $(node --version) meets the ${floor:-22} floor (exercises/ex4-wasm/wasm/package.json)"
     else
         brew install node@22
         # A versioned formula: Homebrew installs it unlinked, so `node` is
@@ -139,9 +141,10 @@ setup-wasm: _setup-wasm-target
 setup-wasm: _setup-wasm-target
     #!/usr/bin/env bash
     set -euo pipefail
+    floor="$(sed -nE 's/^[[:space:]]*"node":[[:space:]]*">=([0-9]+)".*/\1/p' exercises/ex4-wasm/wasm/package.json)"
     major="$(node --version 2>/dev/null | sed -nE 's/^v([0-9]+)\..*/\1/p')"
-    if [ -n "$major" ] && [ "$major" -ge 22 ]; then
-        echo "node $(node --version) meets the 22 floor"
+    if [ -n "$major" ] && [ "$major" -ge "${floor:-22}" ]; then
+        echo "node $(node --version) meets the ${floor:-22} floor (exercises/ex4-wasm/wasm/package.json)"
     else
         echo "Install Node 22 LTS: https://nodejs.org (or your distro's nodejs package, if it is 22+)"
         echo "Or skip that: reopen the repo in the 'wasm track' devcontainer."

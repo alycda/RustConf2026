@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "description": "Exercise 4: call your Ex 2 wrapper, built for wasm32-unknown-unknown, from TypeScript with nothing generated",
   "scripts": {
     "ex4": "tsx src/ex4.ts",

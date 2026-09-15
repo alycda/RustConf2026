@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "description": "2015-12-01 through WebAssembly: the generated lap (wasm-bindgen) consumed with Effect, so Err and panic stay different things",
   "scripts": {
     "main": "tsx src/main.ts",

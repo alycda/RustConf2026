@@ -166,12 +166,18 @@ probe_dart() {
 # carries lld and rustup bundles rust-lld, and a missing one fails at the
 # first link with a message that names itself.
 probe_wasm() {
-  local sysroot
+  local sysroot pkg floor
+  # The floor is whatever the exercise's package.json declares in
+  # engines.node (`>=22`) — read from there rather than copied here, so the
+  # number lives in one place, the way probe_dart reads its pubspec.
+  pkg="$(dirname "$0")/../exercises/ex4-wasm/wasm/package.json"
+  floor=$(sed -nE 's/^[[:space:]]*"node":[[:space:]]*">=([0-9]+)".*/\1/p' "$pkg" 2>/dev/null)
+  [ -n "$floor" ] || floor=22
   if ! command -v node >/dev/null 2>&1; then
-    printf ' %s %-12s not installed %s(needs node 22+ — run: just setup-wasm)%s\n' "$SKIP" "wasm" "$DIM" "$NC"
+    printf ' %s %-12s not installed %s(needs node %s+ — run: just setup-wasm)%s\n' "$SKIP" "wasm" "$DIM" "$floor" "$NC"
     return 1
   fi
-  if ! check_floor optional "node floor" node 's/^v([0-9]+)\..*/\1/p' "" 22 "what CI and the wasm devcontainer run" "https://nodejs.org (22 LTS)"; then
+  if ! check_floor optional "node floor" node 's/^v([0-9]+)\..*/\1/p' "" "$floor" "exercises/ex4-wasm/wasm/package.json engines.node" "https://nodejs.org (22 LTS)"; then
     return 1
   fi
   if ! command -v rustc >/dev/null 2>&1; then
@@ -180,6 +186,10 @@ probe_wasm() {
     return 1
   fi
   sysroot="$(rustc --print sysroot 2>/dev/null)"
+  # Under Git Bash rustc prints a C:\ path; cygpath is the tell that this
+  # is that bash (scripts/fetch-jna.sh uses the same one), and [ -d ] wants
+  # the POSIX spelling.
+  command -v cygpath >/dev/null 2>&1 && sysroot="$(cygpath -u "$sysroot")"
   if [ -d "$sysroot/lib/rustlib/wasm32-unknown-unknown/lib" ]; then
     printf ' %s %-12s ready (node + the wasm32-unknown-unknown std)\n' "$PASS" "wasm"
     return 0
