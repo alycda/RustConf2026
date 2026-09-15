@@ -12,7 +12,10 @@
 
 [workspace]
 resolver = "3"
-members = ["ex1-pure-rust", "ex2-c-glue"]
+# ex4-wasm is a sibling of ex2-c-glue, not a feature on it: Ex 2 is the
+# morning's contract and stays byte-identical; Ex 4 is the same wrapper on
+# a different target plus the two exports that target needs.
+members = ["ex1-pure-rust", "ex2-c-glue", "ex4-wasm"]
 
 [workspace.package]
 edition = "2024"
