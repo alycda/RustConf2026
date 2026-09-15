@@ -223,6 +223,52 @@ swift-demo day: (bindgen day)
         -Xlinker -rpath -Xlinker "$target/release"
     ./.build/solve
 
+# Exercise 3 (Fortran track): call a day's cbindgen C API from Fortran.
+# `just setup-fortran` once first (gfortran — what `just check` probes).
+# Depends on `bindgen` rather than duplicating its cbindgen invocation —
+# the header isn't actually parsed (Fortran wants the signatures written
+# as an `interface` block, see the day's fortran/solve.f90), but
+# regenerating it keeps it available for eyeballing alongside the
+# hand-transcribed ones. Here that comparison is the exercise: gfortran
+# checks every call against the block, and the header is the only way to
+# find out whether the block itself is right.
+#
+# Compiled and linked like the Swift track, and for the same reason: this
+# is the second compiled consumer, so "debug or release" is a linker flag
+# rather than a runtime search. Both -L/-rpath pairs go on unconditionally
+# — a directory that doesn't exist costs nothing, and debug comes first
+# for the same reason it does in the dlopen-ing tracks. -rpath takes
+# absolute paths on purpose; this is a development recipe, not something
+# being shipped. Spelled -Wl,-rpath,<path> rather than Swift's
+# `-Xlinker -rpath -Xlinker <path>` because gfortran is a gcc driver and
+# that is its spelling; both forms reach ld and ld64 alike.
+#
+# The executable is `solve`, beside the source, where the other compiled
+# track uses .build/: the root .gitignore already names
+# /days/*/fortran/solve, written when the Fortran rules landed. Nothing
+# else is dropped here — solve.f90 declares a `program`, not a `module`,
+# so there is no .mod (the ignore rule covers that too, for the day a
+# track grows one).
+#
+# Nothing fetched, nothing pinned: ISO_C_BINDING is in the Fortran
+# standard, so the inputs here are the cdylib and the header this repo
+# just built. The compiler is this track's only dependency.
+fortran-demo day: (bindgen day)
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -f "{{day}}/fortran/solve.f90" ]; then
+        echo "days/{{day}} has no fortran/solve.f90 — not every day carries one" >&2
+        exit 1
+    fi
+    cd "{{day}}" && cargo build --lib
+    target="$(cd ../target && pwd)"
+    cd fortran
+    gfortran solve.f90 -o solve \
+        -L "$target/debug" -L "$target/release" \
+        -l"aoc_$(printf '%s' "{{day}}" | tr - _)" \
+        -Wl,-rpath,"$target/debug" -Wl,-rpath,"$target/release"
+    ./solve
+
 # scaffold a new day from _template, e.g. `just new 2022-12-01`
 new day:
     #!/usr/bin/env bash
