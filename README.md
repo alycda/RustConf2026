@@ -115,6 +115,7 @@ just setup-python   # Python 3.10+ and cffi, in a repo-local .venv
 just setup-swift    # swiftc — Xcode CLT on macOS, swift.org on Linux
 just setup-kotlin   # Kotlin/JNA — JDK 17+ and kotlinc (brew on macOS, sdkman on Linux)
 just setup-dart     # Dart SDK — brew tap on macOS, dart.dev on Linux (`just check` verifies the floor)
+just setup-r        # R — brew on macOS, CRAN's distro repos on Linux (`.C()` is in base R; nothing else to install)
 ```
 
 After `just setup-python`, activate the venv with `source .venv/bin/activate`
@@ -122,6 +123,12 @@ so the next `just check` sees it. (💀 manual-setup folks: `shell.nix` isn't
 feeding you a `python3`, so bring your own, 3.10+.) The Kotlin and Dart tracks
 also have dedicated devcontainer variants in the "Reopen in Container" picker
 if you'd rather not install a JDK or the Dart SDK locally.
+
+The R track installs nothing beyond R itself — `.C()` is in base R, so there
+is no `pip`, no `pub get`, no jar to fetch — but R is a large download, and it
+is the one track with no devcontainer variant yet. If you have nix, `nix shell
+nixpkgs#R --command just days r-demo 2015-12-01` borrows it for one command
+and leaves nothing behind.
 
 "Enough to read simple function calls" is all the fluency the track needs.
 Not sure? Python is the shortest install; Swift is free if you're on a Mac.
