@@ -197,6 +197,10 @@ $RECYCLE.BIN/
 # directory, which is what lets the .gitkeep negation take effect.
 **/inputs/*
 !/inputs/.gitkeep
+# The Bazel overlay's filegroup lives here too, and is source, not an input.
+# Same negation mechanism as .gitkeep above, and it works for the same
+# reason: the rule excludes the contents, not the directory.
+!/inputs/BUILD.bazel
 
 # cbindgen-generated headers of the day crates — regenerate with
 # `just days bindgen <day>`; cbindgen is required workshop tooling, so this
@@ -212,3 +216,9 @@ $RECYCLE.BIN/
 # WORKSHOP_SHELL goes, so it must never be committed: which shell you load on
 # `cd` is a personal choice, not a repo one.
 /.envrc.local
+
+# --- Bazel overlay (docs/bazel-evaluation.md) ---
+# Convenience symlinks Bazel drops at the workspace root; the real outputs
+# live in the user's Bazel cache. MODULE.bazel.lock and tools/Cargo.lock are
+# NOT here on purpose — they are lockfiles and belong in the tree.
+/bazel-*
