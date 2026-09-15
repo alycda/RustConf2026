@@ -1,6 +1,7 @@
 // Copy of ../git/devcontainer.json plus a name and the WORKSHOP_HOME_NIX
 // override pointing at ./home.nix (which imports the shared ../home.nix and
-// adds Node 22, wasm-bindgen-cli and wasm-pack). devcontainer.json has no
+// adds Node 22, wasm-bindgen-cli at the lockfile's version, and wasm-pack).
+// devcontainer.json has no
 // "extends" — keep in sync by hand.
 {
     "name": "FFI playground (wasm track)",

@@ -78,12 +78,15 @@ getrandom = { version = "0.2", features = ["custom"] }
 
 # The generated wasm lap (2015-12-01's `wasm` feature, src/wasm.rs). An
 # exact pin, unlike everything else in this table: wasm-bindgen's CLI
-# refuses a module built with any other crate version, and 0.2.121 is the
-# wasm-bindgen-cli in the nixpkgs channel shell.nix reads (checked
-# 2026-09-15 with `nix-instantiate --eval -E '(import <nixpkgs>
-# {}).wasm-bindgen-cli.version'`). Bumping is this line plus whatever the
-# channel moved to; `just days wasm-demo` checks the two agree before it
-# runs, so a mismatch names both versions instead of failing mid-build.
+# refuses a module built with any other crate version, so the CLI has to
+# be installed at exactly this version wherever the lap runs. Everything
+# that installs one reads it from here: CI's wasm job asks `cargo pkgid`,
+# the wasm devcontainer's home.nix reads days/Cargo.lock and takes
+# nixpkgs' matching `wasm-bindgen-cli_0_2_<n>` attribute, and `just days
+# wasm-demo` checks PATH agrees before it builds. Bumping is this line,
+# `cargo update -p wasm-bindgen`, and confirming nixpkgs carries the new
+# version as an attribute (it keeps every recent one). 0.2.121 was the
+# channel's current CLI when the track was written, 2026-09-15.
 wasm-bindgen = "=0.2.121"
 
 itertools = "0.14"

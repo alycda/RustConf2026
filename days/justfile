@@ -235,9 +235,9 @@ swift-demo day: (bindgen day)
 # patch version of the crate, and its message names neither the lockfile nor
 # the fix — so the recipe asks cargo for the pinned version and the CLI for
 # its own, and says both, with the fixes, before spending a build. The pin is
-# in Cargo.toml's workspace table; it was chosen to match the nix channel's
-# wasm-bindgen-cli on the day it was written, and the channel is unpinned, so
-# the hint cannot promise that any environment still agrees — it says what
+# in Cargo.toml's workspace table; the wasm devcontainer installs the CLI at
+# that version by reading the lockfile, and CI does the same through `cargo
+# pkgid`, but a hand-installed CLI can be anything — so the hint says what
 # is on PATH and what the lockfile wants, and the two ways to make them meet.
 #
 # Nothing is fetched here. Contrast wasm-pack-demo below.
