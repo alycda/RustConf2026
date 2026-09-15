@@ -93,6 +93,23 @@ node_modules/
 # docs/plans; rename here when the recipe lands.
 /days/*/fortran/solve
 
+# R
+# Source: https://github.com/github/gitignore/blob/main/R.gitignore (trimmed —
+# upstream is written for packages and RStudio projects, and ignores docs/,
+# which is a real directory here, so it is not taken wholesale)
+# Pulled: 2026-09-15
+# `Rscript solve.R` leaves none of these; an interactive R session in the
+# track directory leaves all of them.
+.Rhistory
+.Rapp.history
+.RData
+.RDataTmp
+.Ruserdata
+.Rproj.user/
+# R CMD build / R CMD check output, if the extendr lap ever becomes a package.
+*.Rcheck/
+# Not listed: `R CMD SHLIB` writes .o and .so, covered by the C block above.
+
 # --- OS-specific (global) ---
 # Source: https://github.com/github/gitignore/blob/main/Global/macOS.gitignore
 # Pulled: 2026-08-08
