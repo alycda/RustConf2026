@@ -115,13 +115,24 @@ just setup-python   # Python 3.10+ and cffi, in a repo-local .venv
 just setup-swift    # swiftc — Xcode CLT on macOS, swift.org on Linux
 just setup-kotlin   # Kotlin/JNA — JDK 17+ and kotlinc (brew on macOS, sdkman on Linux)
 just setup-dart     # Dart SDK — brew tap on macOS, dart.dev on Linux (`just check` verifies the floor)
+just setup-wasm     # Exercise 4's track — the wasm32 target (rustup; built in under nix) and Node 22
 ```
+
+The wasm row is not a fifth choice for Exercise 3. It is Exercise 4's,
+afternoon material: the same wrapper you build in Exercise 2, compiled for
+`wasm32-unknown-unknown` and called from TypeScript with nothing generated —
+a runtime with no C in it, and the one export it needs that no C caller
+ever did. Nothing in the required toolchain changes for it; the target's
+std comes with `rustc` (rustup installs it on request, the nix shell's has
+it built in) and the linker is in the shell. Node is the track's own
+install, so it stays out of `shell.nix`; the "wasm track" devcontainer
+carries it, and so does the recipe.
 
 After `just setup-python`, activate the venv with `source .venv/bin/activate`
 so the next `just check` sees it. (💀 manual-setup folks: `shell.nix` isn't
-feeding you a `python3`, so bring your own, 3.10+.) The Kotlin and Dart tracks
-also have dedicated devcontainer variants in the "Reopen in Container" picker
-if you'd rather not install a JDK or the Dart SDK locally.
+feeding you a `python3`, so bring your own, 3.10+.) The Kotlin, Dart and wasm
+tracks also have dedicated devcontainer variants in the "Reopen in Container"
+picker if you'd rather not install a JDK, the Dart SDK or Node locally.
 
 "Enough to read simple function calls" is all the fluency the track needs.
 Not sure? Python is the shortest install; Swift is free if you're on a Mac.
