@@ -29,9 +29,6 @@ import { fileURLToPath } from "node:url"
 
 import { Cause, Console, Data, Effect, Exit } from "effect"
 
-import { callRust } from "./boundary.js"
-import type { RustError } from "./boundary.js"
-
 // wasm/src → wasm → 2015-12-01 → days; the repo root is one above that.
 const DAYS = resolve(dirname(fileURLToPath(import.meta.url)), "../../..")
 const INPUT = resolve(DAYS, "../inputs/2015-12-01.txt")
@@ -45,6 +42,24 @@ class GeneratedModule extends Data.TaggedError("GeneratedModule")<{
 }> {}
 class NoInput extends Data.TaggedError("NoInput")<{ readonly path: string }> {}
 class OutOfMemory extends Data.TaggedError("OutOfMemory")<{ readonly size: number }> {}
+
+/**
+ * Call one raw export. The only thing this ABI can throw is a trap — a
+ * Rust panic — and a trap is a bug, not an outcome to recover from, so it
+ * goes to Effect's defect channel, where `catchAll` cannot see it. There is
+ * no failure channel here at all: the exports return integers, and the
+ * integers are handled below as data, which is the C API's whole design.
+ * (boundary.ts, the generated lap's file, has a two-channel version of this
+ * because wasm-bindgen's glue throws Errors for `Err`; nothing here does.)
+ */
+const callExport = <A>(fn: string, thunk: () => A): Effect.Effect<A> =>
+  Effect.suspend(() => {
+    try {
+      return Effect.succeed(thunk())
+    } catch (cause) {
+      return Effect.die(new Error(`trap in ${fn}: ${cause instanceof Error ? cause.message : String(cause)}`))
+    }
+  })
 
 /** A nonzero status from the C API. The C side already classified it; this
  *  just gives the number a name the compiler can see. */
@@ -139,7 +154,7 @@ const call = (raw: Raw, fn: "part1" | "part2", bytes: Uint8Array) =>
         view[bytes.length] = 0
 
         const f = fn === "part1" ? raw.aoc_2015_12_01_part1 : raw.aoc_2015_12_01_part2
-        const status = yield* callRust(fn, () => f(input, out))
+        const status = yield* callExport(fn, () => f(input, out))
         if (status !== 0) {
           return yield* new StatusError({ fn, status, meaning: MEANING[status] ?? "unknown status" })
         }
@@ -165,7 +180,7 @@ const program = Effect.gen(function* () {
   // written straight into the borrowed buffer, which no TextEncoder would
   // ever produce. Both must come back as status -1, never as an answer.
   const nullStatus = yield* borrow(raw, 4, (out) =>
-    callRust("part1", () => raw.aoc_2015_12_01_part1(0, out)),
+    callExport("part1", () => raw.aoc_2015_12_01_part1(0, out)),
   )
   const garbage = yield* call(raw, "part1", new Uint8Array([0xff, 0xfe])).pipe(
     Effect.map(() => "an answer — WRONG"),
@@ -176,7 +191,7 @@ const program = Effect.gen(function* () {
 })
 
 const describe = (
-  e: ModuleNotBuilt | BadModule | GeneratedModule | NoInput | OutOfMemory | StatusError | RustError,
+  e: ModuleNotBuilt | BadModule | GeneratedModule | NoInput | OutOfMemory | StatusError,
 ): string => {
   switch (e._tag) {
     case "GeneratedModule":
@@ -185,11 +200,6 @@ const describe = (
         "that is the wasm feature's module, and only wasm-bindgen's glue can satisfy it. " +
         "The raw route wants the bare one: cd days && cargo build -p aoc-2015-12-01 --lib --target wasm32-unknown-unknown"
       )
-    // callRust's other channel. The raw exports return integers and never
-    // throw an Error of their own, so this is unreachable in practice — but
-    // the type says it can happen, and the compiler is right to insist.
-    case "RustError":
-      return `${e.fn} threw: ${e.detail}`
     case "ModuleNotBuilt":
       return `no wasm module — ${e.hint}`
     case "BadModule":
