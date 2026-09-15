@@ -118,12 +118,24 @@ impl Aoc20151201 {
     /// Exercise 2's C API cannot panic at all (unwinding across an
     /// `extern "C"` frame is UB, so every failure is data); wasm turns a
     /// panic into a trap that kills the instance. gdext does a third thing —
-    /// it catches the unwind, prints an engine error with the Rust panic
-    /// message, and returns the type's default. The caller gets `0` and the
-    /// process carries on.
+    /// it catches the unwind, prints the Rust panic message as an engine
+    /// error with a GDScript backtrace, and lets the caller continue.
     ///
-    /// `godot/test.gd` calls this and then keeps running, so the claim is
-    /// tested rather than quoted.
+    /// What the caller *gets back* is the part worth measuring, and measuring
+    /// it corrected the assumption this module was written on. gdext 0.5.5
+    /// does not return the type's default: it does not write the return slot
+    /// at all. A fresh slot happens to read `0`; a slot the caller just used
+    /// for a successful call still holds that call's answer. So
+    /// `part2_unwrapped("(((")` returns `0` on its own and `5` immediately
+    /// after `part2_unwrapped("()())")` — both observed under 4.7.2, neither
+    /// distinguishable from a real answer on the GDScript side.
+    ///
+    /// The lesson is not "catching is nicer than trapping". It is that the
+    /// two survivable panic semantics differ in what they cost you: wasm's
+    /// trap takes the instance and tells you; this one takes nothing, tells
+    /// the log, and hands the caller a plausible number. `godot/test.gd`
+    /// asserts the survival and prints the stale value rather than pinning
+    /// it — see the note there.
     #[func]
     fn part2_unwrapped(&self, input: GString) -> i64 {
         self.basement_position(&input)

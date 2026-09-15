@@ -125,6 +125,14 @@ export_credentials.cfg
 # Not listed: the cdylib the .gdextension descriptor points at is *.so, *.dylib
 # or *.dll wherever the demo copies it, and those rules are above. The
 # descriptor itself and project.godot are source and stay tracked.
+#
+# Added on building the track, not from upstream: Godot 4.4+ writes a .uid
+# sidecar beside every script and resource during the import scan, which
+# `just days godot-demo` runs on every invocation. In a project with scenes
+# these are worth committing — a .tscn references its scripts by UID. This
+# project has no scenes and nothing that resolves a UID, so they are pure
+# regenerated churn.
+*.uid
 
 # --- OS-specific (global) ---
 # Source: https://github.com/github/gitignore/blob/main/Global/macOS.gitignore
