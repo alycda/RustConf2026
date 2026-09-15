@@ -58,6 +58,7 @@ dependencies = [
  "aoc-ornaments",
  "criterion",
  "derive_more",
+ "getrandom 0.2.17",
  "miette",
  "rstest",
 ]

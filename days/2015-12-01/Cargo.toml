@@ -25,6 +25,12 @@ aoc-ornaments.workspace = true
 derive_more.workspace = true
 miette.workspace = true
 
+# Only when compiling for wasm32: the host build never sees this table, so
+# neither does the 1.85 floor check or any other day. src/wasm.rs says why
+# a day that never draws a random number has to name a source for one.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom.workspace = true
+
 [dev-dependencies]
 rstest.workspace = true
 
