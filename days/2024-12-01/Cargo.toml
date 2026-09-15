@@ -22,11 +22,16 @@ crate-type = ["rlib", "cdylib"]
 # - uthash: compiles src/uthash_wrapper.c at build time (uthash is a macro
 #   library — nothing to link until a C translation unit instantiates it;
 #   the nix shell carries the header).
-# The full absurdity is: cargo test --features qsort,cpp,uthash
+# - lapack: links a real system library — the only variant here that does.
+#   build.rs probes pkg-config for it and falls back to a bare -llapack;
+#   `nix-shell --arg full true` is the supported way to have one (shell.nix),
+#   and any distro's liblapack works too.
+# The full absurdity is: cargo test --features qsort,cpp,uthash,lapack
 [features]
 qsort = []
 cpp = []
 uthash = []
+lapack = []
 
 # Compiled unconditionally (pure Rust, no system deps), invoked only when
 # the cpp/uthash features are on — build.rs says why it can't be optional.
