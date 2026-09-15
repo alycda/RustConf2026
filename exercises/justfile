@@ -46,6 +46,17 @@ kotlin:
     # C side reads UTF-8, so say so rather than let cp1252 or ASCII transcode.
     kotlinc -script ex3.kts -classpath "$jna" -J-Djna.library.path=../../target/debug -J-Djna.encoding=UTF-8
 
+# Ex 4, wasm track: build for wasm32-unknown-unknown (ex4-wasm/build.sh, which also
+# prints the module's export section), then the TypeScript caller. `just setup-wasm`
+# once first. npm ci runs once, against the committed lockfile.
+wasm:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    ./ex4-wasm/build.sh
+    cd ex4-wasm/wasm
+    [ -d node_modules ] || npm ci --no-fund --no-audit
+    npm run -s ex4
+
 # Ex 3, Swift track: the header's swiftc line (scripts/swift-corelibs-flags.sh covers the Swift devcontainer)
 swift:
     #!/usr/bin/env bash

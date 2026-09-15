@@ -1,0 +1,19 @@
+{
+  "name": "ex4-wasm-consumer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Exercise 4: call your Ex 2 wrapper, built for wasm32-unknown-unknown, from TypeScript with nothing generated",
+  "scripts": {
+    "ex4": "tsx src/ex4.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "effect": "^3.22.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.2",
+    "tsx": "^4.23.13",
+    "typescript": "^5.9.3"
+  }
+}
