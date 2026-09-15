@@ -125,10 +125,10 @@ also have dedicated devcontainer variants in the "Reopen in Container" picker
 if you'd rather not install a JDK or the Dart SDK locally.
 
 The R track installs nothing beyond R itself — `.C()` is in base R, so there
-is no `pip`, no `pub get`, no jar to fetch — but R is a large download, and it
-is the one track with no devcontainer variant yet. If you have nix, `nix shell
-nixpkgs#R --command just days r-demo 2015-12-01` borrows it for one command
-and leaves nothing behind.
+is no `pip`, no `pub get`, no jar to fetch — but R is a large download, and
+like Fortran it has no devcontainer variant. If you have nix,
+`nix-shell -p R --run 'just days r-demo 2015-12-01'` borrows it for one
+command and leaves nothing behind.
 
 "Enough to read simple function calls" is all the fluency the track needs.
 Not sure? Python is the shortest install; Swift is free if you're on a Mac.

@@ -32,7 +32,7 @@
 # about 2.0 GiB on disk (nixpkgs unstable, R 4.6.1, measured 2026-09-15 with
 # `nix path-info -S`), which is the whole default shell over again for a
 # track most of the room will not take. `just setup-r` owns that install, and
-# `nix shell nixpkgs#R --command <cmd>` borrows it for a single command
+# `nix-shell -p R --run '<cmd>'` borrows it for a single command
 # without putting it in anyone's shell — which is how days/2015-12-01/r was
 # built and verified.
 #

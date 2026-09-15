@@ -70,7 +70,7 @@ never reaches R and the out-parameter is the only channel there is. The
 consumer initialises it to `NA_integer_` — `INT_MIN` once it crosses, a
 value no floor and no 1-based position can be — and treats "unchanged"
 as failure. `just days r-demo 2015-12-01` builds the cdylib and runs it
-(needs `just setup-r` once, or `nix shell nixpkgs#R --command` around it).
+(needs `just setup-r` once, or `nix-shell -p R --run` around it).
 
 **R via extendr (`src/extendr.rs`, `r/extendr.R`, feature `extendr`).** The
 generated lap, and the direct answer to what `.C()` cost. `#[extendr]` on

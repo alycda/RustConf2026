@@ -89,7 +89,7 @@ python-demo day: (bindgen day)
 
 
 # Exercise 3 (R track): call a day's cbindgen C API from R through .C().
-# `just setup-r` once first (or borrow one: nix shell nixpkgs#R).
+# `just setup-r` once first (or borrow one: nix-shell -p R).
 #
 # The one demo recipe with no `(bindgen day)` dependency, and that absence is
 # the track. Dart and Kotlin regenerate the header they do not parse so it is

@@ -15,8 +15,8 @@
 //! Off by default, and it has to be: unlike every other feature in this
 //! crate, building it needs R itself — extendr links against `libR` and
 //! reads R's headers at build time, so `cargo build --features extendr`
-//! wants `R` on the machine (`just setup-r`, or `nix shell nixpkgs#R
-//! --command`). The MSRV floor job builds the workspace with default
+//! wants `R` on the machine (`just setup-r`, or `nix-shell -p R
+//! --run`). The MSRV floor job builds the workspace with default
 //! features, which is what keeps that requirement out of everyone's way.
 
 use std::str::FromStr;

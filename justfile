@@ -106,7 +106,7 @@ setup-r:
     @echo "R from CRAN (distro repos, newer than what apt/dnf ship):"
     @echo "  https://cran.r-project.org/bin/linux/"
     @echo "Or borrow it for one command without installing anything:"
-    @echo "  nix shell nixpkgs#R --command just days r-demo 2015-12-01"
+    @echo "  nix-shell -p R --run 'just days r-demo 2015-12-01'"
 
 # devcontainer only: rebuild the home-manager profile (WORKSHOP_HOME_NIX is
 # set by the variant devcontainers so their extra packages survive a rebuild)
