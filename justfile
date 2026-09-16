@@ -39,6 +39,29 @@ demo:
     fi
     asciinema play -i 2 docs/demo/module2.cast
 
+# presenterm-lsp is deliberately not in shell.nix either, and for a stronger
+# reason than asciinema: it is not in nixpkgs, so `nix-shell -p` cannot borrow
+# it — it is built from source in alycda/dotfiles (tools/presenterm-lsp) and
+# installed by home-manager. Putting it in the workshop shell would make every
+# attendee compile a Rust crate over venue Wi-Fi to check a deck they do not
+# own. The recipe therefore resolves it from PATH and says where to get it.
+
+# presenterm reports build errors inside its TUI and never on exit, so a deck
+# that does not build looks exactly like one that does until you open it.
+
+# Presenter only: check the deck actually builds — `just check-slides [FILE...]`
+check-slides *FILES="slides.md":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! command -v presenterm-lsp >/dev/null; then
+        echo "presenterm-lsp not on PATH." >&2
+        echo "It lives in alycda/dotfiles: home-manager/modules/tools/presenterm.nix" >&2
+        echo "or run it straight out of a checkout:" >&2
+        echo "  cargo run --manifest-path ~/dotfiles/tools/presenterm-lsp/Cargo.toml -- --check {{ FILES }}" >&2
+        exit 127
+    fi
+    presenterm-lsp --check {{ FILES }}
+
 # Language-track setup (Exercise 3 — pick ONE track; see `just check`).
 # Required Rust/C toolchain comes from shell.nix, not from these recipes.
 
