@@ -129,4 +129,78 @@ pub unsafe extern "C" fn aoc_2015_12_01_part2(
         None => -2,
     }
 }
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::ffi::CString;
 
+    /// A null `out_floor` must be refused before anything is written, and a
+    /// null `input` must be refused before it is dereferenced. These are the
+    /// rule 5 parameter checks, exercised through the C entry point rather
+    /// than by reading it.
+    #[test]
+    fn nulls_are_refused_rather_than_dereferenced() {
+        let input = CString::new("(())").expect("no NUL bytes");
+        let mut floor: c_int = 11;
+
+        // SAFETY: `input` is live and NUL-terminated. The null `out_floor` is
+        // the case under test and must be rejected, not written through.
+        let null_out = unsafe { aoc_2015_12_01_part1(input.as_ptr(), std::ptr::null_mut()) };
+        // SAFETY: `floor` is writable for one `c_int`. The null `input` is the
+        // case under test.
+        let null_in = unsafe { aoc_2015_12_01_part1(std::ptr::null(), &raw mut floor) };
+
+        assert_eq!(null_out, -1, "a null out-parameter is -1");
+        assert_eq!(null_in, -1, "a null input is -1");
+        assert_eq!(
+            floor, 11,
+            "neither call may write through the out-parameter"
+        );
+    }
+
+    #[test]
+    fn a_real_input_is_answered() {
+        let input = CString::new("(()(()(").expect("no NUL bytes");
+        let mut floor: c_int = 0;
+
+        // SAFETY: `input` is live and NUL-terminated, `floor` is writable for
+        // one `c_int`, and both outlive the call.
+        let status = unsafe { aoc_2015_12_01_part1(input.as_ptr(), &raw mut floor) };
+
+        assert_eq!(status, 0);
+        assert_eq!(floor, 3, "five ( and two ) leaves Santa on floor 3");
+    }
+
+    /// Part 2's `-2` is an ordinary answer, not an error: Santa never reaches
+    /// the basement. It has its own code precisely so a caller can tell it
+    /// apart from the `-3` a panic would produce.
+    #[test]
+    fn never_reaching_the_basement_is_minus_two() {
+        let input = CString::new("(((").expect("no NUL bytes");
+        let mut position: c_int = 4;
+
+        // SAFETY: as above, for `position`.
+        let status = unsafe { aoc_2015_12_01_part2(input.as_ptr(), &raw mut position) };
+
+        assert_eq!(status, -2);
+        assert_eq!(
+            position, 4,
+            "out_position is left alone when there is no answer"
+        );
+    }
+
+    #[test]
+    fn the_first_basement_step_is_reported_one_based() {
+        let input = CString::new("()())").expect("no NUL bytes");
+        let mut position: c_int = 0;
+
+        // SAFETY: as above, for `position`.
+        let status = unsafe { aoc_2015_12_01_part2(input.as_ptr(), &raw mut position) };
+
+        assert_eq!(status, 0);
+        assert_eq!(
+            position, 5,
+            "the fifth instruction is the first into the basement"
+        );
+    }
+}

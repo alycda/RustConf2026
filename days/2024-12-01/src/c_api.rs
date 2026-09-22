@@ -189,4 +189,61 @@ pub unsafe extern "C" fn aoc_2024_12_01_part2(input: *const c_char, out_score: *
     unsafe { *out_score = score };
     0
 }
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::ffi::CString;
 
+    const EXAMPLE: &str = "3   4\n4   3\n2   5\n1   3\n3   9\n3   3\n";
+
+    #[test]
+    fn nulls_are_refused_rather_than_dereferenced() {
+        let input = CString::new(EXAMPLE).expect("no NUL bytes");
+        let mut out: i32 = 13;
+
+        // SAFETY: `input` is live and NUL-terminated. The null out-parameter
+        // is the case under test and must be rejected, not written through.
+        let null_out = unsafe { aoc_2024_12_01_part1(input.as_ptr(), std::ptr::null_mut()) };
+        // SAFETY: `out` is writable for one `i32`. The null input is the case
+        // under test.
+        let null_in = unsafe { aoc_2024_12_01_part1(std::ptr::null(), &raw mut out) };
+
+        assert_eq!(null_out, -1);
+        assert_eq!(null_in, -1);
+        assert_eq!(out, 13, "neither call may write through the out-parameter");
+    }
+
+    #[test]
+    fn both_parts_answer_the_example() {
+        let input = CString::new(EXAMPLE).expect("no NUL bytes");
+        let mut distance: i32 = 0;
+        let mut score: i32 = 0;
+
+        // SAFETY: `input` is live and NUL-terminated, both out-parameters are
+        // writable for one `i32`, and all outlive the calls.
+        let s1 = unsafe { aoc_2024_12_01_part1(input.as_ptr(), &raw mut distance) };
+        // SAFETY: as above, for `score`.
+        let s2 = unsafe { aoc_2024_12_01_part2(input.as_ptr(), &raw mut score) };
+
+        assert_eq!((s1, distance), (0, 11));
+        assert_eq!((s2, score), (0, 31));
+    }
+
+    /// The `-2` contract. Two columns of `i32::MIN`/`i32::MAX` make each
+    /// distance ~2^32, so the i64 total leaves the `int32_t` the caller asked
+    /// for. This is the case the module doc says the unchecked baseline
+    /// cannot cross with: it would have wrapped and returned `0`.
+    #[test]
+    fn a_distance_past_int32_reports_minus_two() {
+        let rows: String =
+            std::iter::repeat_n(format!("{}   {}\n", i32::MIN, i32::MAX), 4).collect();
+        let input = CString::new(rows).expect("no NUL bytes");
+        let mut distance: i32 = 7;
+
+        // SAFETY: as above, for `distance`.
+        let status = unsafe { aoc_2024_12_01_part1(input.as_ptr(), &raw mut distance) };
+
+        assert_eq!(status, -2, "the total distance does not fit an int32_t");
+        assert_eq!(distance, 7, "out_distance is left alone when we refuse");
+    }
+}
