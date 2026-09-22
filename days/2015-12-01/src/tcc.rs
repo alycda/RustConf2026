@@ -32,6 +32,17 @@ unsafe extern "C" {
 }
 
 /// Appends tcc's error/warning messages to the `String` behind `opaque`.
+///
+/// # Safety
+/// libtcc calls this only from `tcc_compile_string`/`tcc_relocate`, on the
+/// calling thread, with the `opaque` pointer handed to `tcc_set_error_func`.
+/// `call_i32_fn` passes `&mut errors` there and keeps it alive across both
+/// calls, so the cast below is the type that was registered.
+///
+/// `msg` is libtcc's own buffer: non-null and NUL-terminated by its contract,
+/// valid for this call only. `from_ptr` therefore scans a string this process
+/// produced, not caller input — unlike `c_api`, where the bound is the
+/// caller's promise. `to_string_lossy` copies before the pointer dies.
 unsafe extern "C" fn collect_errors(opaque: *mut c_void, msg: *const c_char) {
     unsafe {
         let errors = &mut *opaque.cast::<String>();
