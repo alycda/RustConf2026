@@ -5,10 +5,11 @@
 //! then load the compiled `cdylib` and call straight in — Kotlin via JNA in
 //! Exercise 3, or plain C.
 //!
-//! Plain status codes and out-parameters, not `Result`: a Rust panic
-//! unwinding across an `extern "C"` frame is undefined behavior, so nothing
-//! here can panic — bad input (a null pointer, invalid UTF-8) is a real
-//! possibility from a C caller and is handled as data, not asserted away.
+//! Plain status codes and out-parameters, not `Result`: a Rust panic that
+//! reaches an `extern "C"` frame aborts the process (Rust 1.81 and later —
+//! before that it was undefined behavior), so nothing here can panic — bad
+//! input (a null pointer, invalid UTF-8) is a real possibility from a C caller
+//! and is handled as data, not asserted away.
 //!
 //! These are built on the `checked_dead_reckon_*` functions specifically, not
 //! on whichever backend `Solution::part1`/`part2` currently
@@ -66,7 +67,7 @@ unsafe fn read_input<'a>(input: *const c_char) -> Option<&'a str> {
 /// The `catch_unwind` stays anyway. Nothing on this path panics now — the
 /// parse returns `Result` at every fallible step and the arithmetic is
 /// checked — but this is an `extern "C"` frame, where being wrong about that
-/// costs undefined behavior rather than a bad answer.
+/// costs an abort rather than a bad answer.
 fn solve_into(
     input: *const c_char,
     out_product: *mut c_int,

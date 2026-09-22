@@ -5,10 +5,11 @@
 //! can then load the compiled `cdylib` and call straight in — Python via
 //! `cffi` in Exercise 3, or plain C.
 //!
-//! Plain status codes and out-parameters, not `Result`: a Rust panic
-//! unwinding across an `extern "C"` frame is undefined behavior, so nothing
-//! here can panic — bad input (a null pointer, invalid UTF-8) is a real
-//! possibility from a C caller and is handled as data, not asserted away.
+//! Plain status codes and out-parameters, not `Result`: a Rust panic that
+//! reaches an `extern "C"` frame aborts the process (Rust 1.81 and later —
+//! before that it was undefined behavior), so nothing here can panic — bad
+//! input (a null pointer, invalid UTF-8) is a real possibility from a C caller
+//! and is handled as data, not asserted away.
 
 use std::ffi::{CStr, c_char, c_int};
 use std::str::FromStr;

@@ -9,10 +9,11 @@
 //! variant yet and will grow one; Exercise 2 is about the export *direction*,
 //! and tying the header's meaning to a cargo feature would muddy both.
 //!
-//! Plain status codes and out-parameters, not `Result`: a Rust panic
-//! unwinding across an `extern "C"` frame is undefined behavior, so nothing
-//! here can panic — bad input (a null pointer, invalid UTF-8) is a real
-//! possibility from a C caller and is handled as data, not asserted away.
+//! Plain status codes and out-parameters, not `Result`: a Rust panic that
+//! reaches an `extern "C"` frame aborts the process (Rust 1.81 and later —
+//! before that it was undefined behavior), so nothing here can panic — bad
+//! input (a null pointer, invalid UTF-8) is a real possibility from a C caller
+//! and is handled as data, not asserted away.
 //!
 //! The panic that mattered on this day was not a hypothetical one. Until the
 //! commit before this module existed, `calibration_value` walked the line by
@@ -63,7 +64,7 @@ unsafe fn read_input<'a>(input: *const c_char) -> Option<&'a str> {
 /// same `-2` — same shape as 2021-12-02's `-3`. Nothing on this path panics:
 /// the parse is infallible, the scan is by character, the arithmetic is
 /// checked. But this is an `extern "C"` frame, where being wrong about that
-/// costs undefined behavior rather than a bad answer, and a caller that
+/// costs an abort rather than a bad answer, and a caller that
 /// somehow got here has learned the only thing the code can honestly tell
 /// it — no answer, don't read `*out_value`.
 fn solve_into(

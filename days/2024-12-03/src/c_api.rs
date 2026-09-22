@@ -4,17 +4,17 @@
 //! compiled `cdylib` and call straight in — the Exercise 3 tracks, or
 //! plain C.
 //!
-//! Plain status codes and out-parameters, not `Result`: a Rust panic
-//! unwinding across an `extern "C"` frame is undefined behavior, so
-//! nothing here can panic. That is why this surface is built on the byte
-//! cursor (`crate::cursor`) rather than the nom solution: the cursor is
-//! panic-free for arbitrary bytes by construction (a failed parse is a
-//! position to move past, and its operands are capped at the statement's
-//! three digits), while the nom path panics on an operand too long for
-//! `usize` — `digit1` accepts any digit run and `Product::new` then
-//! `expect`s the parse. Trusted puzzle input never does that; a C caller
-//! is not trusted input. The README's "practically a C signature already"
-//! line about the cursor, cashed in.
+//! Plain status codes and out-parameters, not `Result`: a Rust panic that
+//! reaches an `extern "C"` frame aborts the process (Rust 1.81 and later —
+//! before that it was undefined behavior), so nothing here can panic. That is
+//! why this surface is built on the byte cursor (`crate::cursor`) rather than
+//! the nom solution: the cursor is panic-free for arbitrary bytes by
+//! construction (a failed parse is a position to move past, and its operands
+//! are capped at the statement's three digits), while the nom path panics on
+//! an operand too long for `usize` — `digit1` accepts any digit run and
+//! `Product::new` then `expect`s the parse. Trusted puzzle input never does
+//! that; a C caller is not trusted input. The README's "practically a C
+//! signature already" line about the cursor, cashed in.
 //!
 //! Sums are `u64` out-parameters. Overflow is unreachable through this
 //! surface rather than checked: each product is at most 999 × 999 (the

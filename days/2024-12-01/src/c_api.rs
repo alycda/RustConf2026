@@ -5,14 +5,15 @@
 //! a C FFI can then load the compiled `cdylib` and call straight in — the
 //! Exercise 3 tracks, or plain C.
 //!
-//! Plain status codes and out-parameters, not `Result`: a Rust panic
-//! unwinding across an `extern "C"` frame is undefined behavior, so nothing
-//! here can panic. On this day that rules out more than the usual suspects:
-//! `Day1`'s own `FromStr` expects trusted puzzle input and says so (it
-//! panics on a malformed line), and both parts do unchecked `i32`
-//! arithmetic that a hostile input could overflow. A C caller is not
-//! trusted input, so this module parses defensively and accumulates in
-//! `i64`, reporting overflow as a status instead of a wrap or a panic.
+//! Plain status codes and out-parameters, not `Result`: a Rust panic that
+//! reaches an `extern "C"` frame aborts the process (Rust 1.81 and later —
+//! before that it was undefined behavior), so nothing here can panic. On this
+//! day that rules out more than the usual suspects: `Day1`'s own `FromStr`
+//! expects trusted puzzle input and says so (it panics on a malformed line),
+//! and both parts do unchecked `i32` arithmetic that a hostile input could
+//! overflow. A C caller is not trusted input, so this module parses defensively
+//! and accumulates in `i64`, reporting overflow as a status instead of a wrap
+//! or a panic.
 //!
 //! Built on the pure-Rust baseline (`sort_pure_rust`, and part 2's naive
 //! scan spelled with checked arithmetic) specifically — not whichever
