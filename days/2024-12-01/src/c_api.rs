@@ -30,6 +30,22 @@ use crate::sort_pure_rust;
 /// # Safety
 /// `input` must be null or point to a NUL-terminated C string valid for the
 /// duration of the call.
+///
+/// The scan for that terminator is unbounded. `CStr::from_ptr` reads forward
+/// until it meets a NUL byte. A caller that passes an unterminated buffer
+/// reads past the end of its own allocation. The terminator is the only
+/// limit that exists here.
+///
+/// Power of Ten rule 2 wants every loop bounded, and at an FFI boundary that
+/// means the caller supplies a length. The C string protocol carries no
+/// length, so this bound is the caller's promise rather than a parameter.
+/// A length parameter would change the signature every Exercise 3 track is
+/// written against, so the limit is named here rather than skipped.
+///
+/// The returned lifetime `'a` is not tied to `input`. The caller chooses it
+/// and `'static` type-checks. Every caller in this module reads the result
+/// before it returns, which is what makes the present code correct. A new
+/// caller must do the same.
 unsafe fn read_input<'a>(input: *const c_char) -> Option<&'a str> {
     if input.is_null() {
         return None;
