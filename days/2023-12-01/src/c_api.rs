@@ -22,6 +22,15 @@
 //! [`read_input`] promises to *accept*. The Rust binary could never reach it
 //! (real puzzle inputs are ASCII); a C caller reaches it by typing.
 
+#![warn(clippy::pedantic)]
+#![warn(missing_docs)]
+#![deny(unsafe_op_in_unsafe_fn)]
+// Power of Ten rule 10: this module is the shim, so it carries the pedantic
+// setting even though the day crate around it does not. Scoped here on
+// purpose — crate-wide `pedantic` reports 17-39 findings per day, nearly all
+// in puzzle code, and burying two real casts in ~150 style notes is how a
+// lint stops being read. `-D warnings` belongs in CI, never in source.
+
 use std::ffi::{CStr, c_char, c_int, c_uint};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::str::FromStr;
@@ -157,7 +166,7 @@ mod tests {
         // SAFETY: `part1` is a live NUL-terminated string and `answer` is
         // writable for one `c_uint`; both outlive the call.
         assert_eq!(
-            unsafe { aoc_2023_12_01_part1(part1.as_ptr(), &mut answer) },
+            unsafe { aoc_2023_12_01_part1(part1.as_ptr(), &raw mut answer) },
             0
         );
         assert_eq!(answer, 142);
@@ -169,7 +178,7 @@ mod tests {
         let mut answer: c_uint = 0;
         // SAFETY: as above.
         assert_eq!(
-            unsafe { aoc_2023_12_01_part2(part2.as_ptr(), &mut answer) },
+            unsafe { aoc_2023_12_01_part2(part2.as_ptr(), &raw mut answer) },
             0
         );
         assert_eq!(answer, 281);
@@ -185,7 +194,7 @@ mod tests {
         // SAFETY: a null `input` is explicitly part of this function's
         // contract; `answer` is writable for one `c_uint`.
         assert_eq!(
-            unsafe { aoc_2023_12_01_part1(std::ptr::null(), &mut answer) },
+            unsafe { aoc_2023_12_01_part1(std::ptr::null(), &raw mut answer) },
             -1
         );
         assert_eq!(answer, 7, "out_value must be left alone when we refuse");
@@ -210,7 +219,7 @@ mod tests {
         // SAFETY: `text` is a live NUL-terminated string and `answer` is
         // writable for one `c_uint`.
         assert_eq!(
-            unsafe { aoc_2023_12_01_part2(text.as_ptr(), &mut answer) },
+            unsafe { aoc_2023_12_01_part2(text.as_ptr(), &raw mut answer) },
             0
         );
         assert_eq!(answer, 19 + 42);

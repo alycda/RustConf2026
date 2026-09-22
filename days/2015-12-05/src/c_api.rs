@@ -16,6 +16,15 @@
 //! input (a null pointer, invalid UTF-8) is a real possibility from a C
 //! caller and is handled as data, not asserted away.
 
+#![warn(clippy::pedantic)]
+#![warn(missing_docs)]
+#![deny(unsafe_op_in_unsafe_fn)]
+// Power of Ten rule 10: this module is the shim, so it carries the pedantic
+// setting even though the day crate around it does not. Scoped here on
+// purpose — crate-wide `pedantic` reports 17-39 findings per day, nearly all
+// in puzzle code, and burying two real casts in ~150 style notes is how a
+// lint stops being read. `-D warnings` belongs in CI, never in source.
+
 use std::ffi::{CStr, c_char, c_int, c_uint};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::str::FromStr;
@@ -54,7 +63,8 @@ unsafe fn read_input<'a>(input: *const c_char) -> Option<&'a str> {
 /// nice lines under the original rules into `*out_count`.
 ///
 /// Returns `0` on success, `-1` if `input`/`out_count` is null or `input`
-/// isn't valid UTF-8, `-2` if counting panicked.
+/// isn't valid UTF-8, `-2` if counting panicked, `-3` if the count exceeds
+/// `uint32_t`.
 ///
 /// # Safety
 /// `input` must point to a NUL-terminated C string. `out_count` must point
@@ -94,7 +104,16 @@ fn solve_into(input: *const c_char, out_count: *mut c_uint, predicate: fn(&str) 
         return -2;
     };
 
-    unsafe { *out_count = count as c_uint };
+    // `count` is a `usize`. The old `as c_uint` truncated silently on a
+    // 64-bit target, so a caller with more than `u32::MAX` nice lines got a
+    // small number and `0` — a wrong answer reported as success, which is the
+    // failure mode the status codes exist to prevent. It takes a ~8GiB input
+    // to reach, and unreachable is still not checked.
+    let Ok(count) = c_uint::try_from(count) else {
+        return -3;
+    };
+
+    unsafe { *out_count = count };
     0
 }
 
@@ -102,7 +121,8 @@ fn solve_into(input: *const c_char, out_count: *mut c_uint, predicate: fn(&str) 
 /// rules into `*out_count`.
 ///
 /// Returns `0` on success, `-1` if `input`/`out_count` is null or `input`
-/// isn't valid UTF-8, `-2` if counting panicked.
+/// isn't valid UTF-8, `-2` if counting panicked, `-3` if the count exceeds
+/// `uint32_t`.
 ///
 /// # Safety
 /// Same contract as [`aoc_2015_12_05_part1`], for `out_count`.
@@ -144,7 +164,7 @@ mod tests {
         let mut count: c_uint = 7;
 
         let status =
-            without_panic_noise(|| solve_into(input.as_ptr(), &mut count, panicking_predicate));
+            without_panic_noise(|| solve_into(input.as_ptr(), &raw mut count, panicking_predicate));
 
         assert_eq!(status, -2, "a caught panic must arrive as the status code");
         assert_eq!(count, 7, "out_count must be left alone when we refuse");
@@ -157,7 +177,7 @@ mod tests {
 
         // SAFETY: `input` is a live NUL-terminated string and `count` is
         // writable for one `c_uint`. Both outlive the call.
-        let status = unsafe { aoc_2015_12_05_part1(input.as_ptr(), &mut count) };
+        let status = unsafe { aoc_2015_12_05_part1(input.as_ptr(), &raw mut count) };
 
         assert_eq!(status, 0);
         assert_eq!(count, 1, "the first line is nice, the second is not");

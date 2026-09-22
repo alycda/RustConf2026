@@ -17,6 +17,15 @@
 //! "does this build have the physics engine" would muddy both, and would make
 //! the header's meaning depend on a cargo feature.
 
+#![warn(clippy::pedantic)]
+#![warn(missing_docs)]
+#![deny(unsafe_op_in_unsafe_fn)]
+// Power of Ten rule 10: this module is the shim, so it carries the pedantic
+// setting even though the day crate around it does not. Scoped here on
+// purpose — crate-wide `pedantic` reports 17-39 findings per day, nearly all
+// in puzzle code, and burying two real casts in ~150 style notes is how a
+// lint stops being read. `-D warnings` belongs in CI, never in source.
+
 use std::ffi::{CStr, c_char, c_int};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::str::FromStr;
@@ -163,7 +172,7 @@ mod tests {
         let mut answer: c_int = 0;
         // SAFETY: `course` is a live NUL-terminated string and `answer` is
         // writable for one `c_int`; both outlive the call.
-        let status = unsafe { aoc_2021_12_02_part1(course.as_ptr(), &mut answer) };
+        let status = unsafe { aoc_2021_12_02_part1(course.as_ptr(), &raw mut answer) };
 
         assert_eq!(status, -3, "expected the overflow status code");
         assert_eq!(answer, 0, "out_product must be left alone when we refuse");
@@ -178,7 +187,7 @@ mod tests {
 
         let mut answer: c_int = 0;
         // SAFETY: as above.
-        let status = unsafe { aoc_2021_12_02_part1(course.as_ptr(), &mut answer) };
+        let status = unsafe { aoc_2021_12_02_part1(course.as_ptr(), &raw mut answer) };
 
         assert_eq!(status, 0);
         assert_eq!(answer, 150);

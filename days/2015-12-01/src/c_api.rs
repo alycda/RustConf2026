@@ -11,6 +11,15 @@
 //! input (a null pointer, invalid UTF-8) is a real possibility from a C caller
 //! and is handled as data, not asserted away.
 
+#![warn(clippy::pedantic)]
+#![warn(missing_docs)]
+#![deny(unsafe_op_in_unsafe_fn)]
+// Power of Ten rule 10: this module is the shim, so it carries the pedantic
+// setting even though the day crate around it does not. Scoped here on
+// purpose — crate-wide `pedantic` reports 17-39 findings per day, nearly all
+// in puzzle code, and burying two real casts in ~150 style notes is how a
+// lint stops being read. `-D warnings` belongs in CI, never in source.
+
 use std::ffi::{CStr, c_char, c_int};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::str::FromStr;
@@ -120,3 +129,4 @@ pub unsafe extern "C" fn aoc_2015_12_01_part2(
         None => -2,
     }
 }
+

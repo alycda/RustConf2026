@@ -21,6 +21,15 @@
 //! Exercise 2 is about the *export* direction, and entangling it with
 //! "which import won" would muddy both.
 
+#![warn(clippy::pedantic)]
+#![warn(missing_docs)]
+#![deny(unsafe_op_in_unsafe_fn)]
+// Power of Ten rule 10: this module is the shim, so it carries the pedantic
+// setting even though the day crate around it does not. Scoped here on
+// purpose — crate-wide `pedantic` reports 17-39 findings per day, nearly all
+// in puzzle code, and burying two real casts in ~150 style notes is how a
+// lint stops being read. `-D warnings` belongs in CI, never in source.
+
 use std::ffi::{CStr, c_char, c_int};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -162,7 +171,7 @@ pub unsafe extern "C" fn aoc_2024_12_01_part2(input: *const c_char, out_score: *
         // see the module doc for why the unchecked baseline can't cross here.
         let mut total: i64 = 0;
         for l in &left {
-            let count = right.iter().filter(|r| *r == l).count() as i64;
+            let count = i64::try_from(right.iter().filter(|r| *r == l).count()).ok()?;
             let weighted = i64::from(*l).checked_mul(count)?;
             let next = total.checked_add(weighted)?;
             total = next;
@@ -180,3 +189,4 @@ pub unsafe extern "C" fn aoc_2024_12_01_part2(input: *const c_char, out_score: *
     unsafe { *out_score = score };
     0
 }
+

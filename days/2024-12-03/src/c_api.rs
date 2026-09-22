@@ -22,6 +22,15 @@
 //! exceeding a `u64` would take an input north of a hundred terabytes —
 //! and a NUL-terminated C string that large cannot be handed over intact.
 
+#![warn(clippy::pedantic)]
+#![warn(missing_docs)]
+#![deny(unsafe_op_in_unsafe_fn)]
+// Power of Ten rule 10: this module is the shim, so it carries the pedantic
+// setting even though the day crate around it does not. Scoped here on
+// purpose — crate-wide `pedantic` reports 17-39 findings per day, nearly all
+// in puzzle code, and burying two real casts in ~150 style notes is how a
+// lint stops being read. `-D warnings` belongs in CI, never in source.
+
 use std::ffi::{CStr, c_char, c_int};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -135,7 +144,8 @@ mod tests {
         let input = CString::new("mul(2,3)").expect("no NUL bytes");
         let mut sum: u64 = 9;
 
-        let status = without_panic_noise(|| solve_into(input.as_ptr(), &mut sum, panicking_scan));
+        let status =
+            without_panic_noise(|| solve_into(input.as_ptr(), &raw mut sum, panicking_scan));
 
         assert_eq!(status, -2, "a caught panic must arrive as the status code");
         assert_eq!(sum, 9, "out_sum must be left alone when we refuse");
@@ -148,7 +158,7 @@ mod tests {
 
         // SAFETY: `input` is a live NUL-terminated string and `sum` is
         // writable for one `u64`. Both outlive the call.
-        let status = unsafe { aoc_2024_12_03_part1(input.as_ptr(), &mut sum) };
+        let status = unsafe { aoc_2024_12_03_part1(input.as_ptr(), &raw mut sum) };
 
         assert_eq!(status, 0);
         assert_eq!(sum, 33, "2*4 + 5*5, with the malformed mul[3,7] skipped");
