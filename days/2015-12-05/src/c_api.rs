@@ -17,6 +17,7 @@
 //! caller and is handled as data, not asserted away.
 
 use std::ffi::{CStr, c_char, c_int, c_uint};
+use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::str::FromStr;
 
 use crate::{Day, is_nice_pure_rust, is_nice_v2_pure_rust};
@@ -53,7 +54,7 @@ unsafe fn read_input<'a>(input: *const c_char) -> Option<&'a str> {
 /// nice lines under the original rules into `*out_count`.
 ///
 /// Returns `0` on success, `-1` if `input`/`out_count` is null or `input`
-/// isn't valid UTF-8.
+/// isn't valid UTF-8, `-2` if counting panicked.
 ///
 /// # Safety
 /// `input` must point to a NUL-terminated C string. `out_count` must point
@@ -63,6 +64,20 @@ pub unsafe extern "C" fn aoc_2015_12_05_part1(
     input: *const c_char,
     out_count: *mut c_uint,
 ) -> c_int {
+    solve_into(input, out_count, is_nice_pure_rust)
+}
+
+/// Shared body of both entry points: parse, count the lines `predicate`
+/// accepts, write the count.
+///
+/// Both parts differ only in that predicate, so the guard lives here once
+/// rather than twice. The `catch_unwind` is a backstop, not the guard —
+/// nothing on this path panics today, because the parse is infallible and
+/// both predicates are pure character tests. It stays because this is an
+/// `extern "C"` frame, where being wrong about that costs an abort rather
+/// than a bad answer, and because a workshop attendee editing a predicate is
+/// exactly the reader who finds out otherwise.
+fn solve_into(input: *const c_char, out_count: *mut c_uint, predicate: fn(&str) -> bool) -> c_int {
     if out_count.is_null() {
         return -1;
     }
@@ -73,7 +88,12 @@ pub unsafe extern "C" fn aoc_2015_12_05_part1(
         return -1;
     };
 
-    let count = day.iter().filter(|line| is_nice_pure_rust(line)).count();
+    let Ok(count) = catch_unwind(AssertUnwindSafe(|| {
+        day.iter().filter(|line| predicate(line.as_str())).count()
+    })) else {
+        return -2;
+    };
+
     unsafe { *out_count = count as c_uint };
     0
 }
@@ -82,7 +102,7 @@ pub unsafe extern "C" fn aoc_2015_12_05_part1(
 /// rules into `*out_count`.
 ///
 /// Returns `0` on success, `-1` if `input`/`out_count` is null or `input`
-/// isn't valid UTF-8.
+/// isn't valid UTF-8, `-2` if counting panicked.
 ///
 /// # Safety
 /// Same contract as [`aoc_2015_12_05_part1`], for `out_count`.
@@ -91,17 +111,55 @@ pub unsafe extern "C" fn aoc_2015_12_05_part2(
     input: *const c_char,
     out_count: *mut c_uint,
 ) -> c_int {
-    if out_count.is_null() {
-        return -1;
-    }
-    let Some(text) = (unsafe { read_input(input) }) else {
-        return -1;
-    };
-    let Ok(day) = Day::from_str(text) else {
-        return -1;
-    };
+    solve_into(input, out_count, is_nice_v2_pure_rust)
+}
 
-    let count = day.iter().filter(|line| is_nice_v2_pure_rust(line)).count();
-    unsafe { *out_count = count as c_uint };
-    0
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::ffi::CString;
+
+    /// Runs `f` with the panic hook silenced, so an intentionally panicking
+    /// predicate does not print a backtrace over the test output. The hook is
+    /// process-global, which is why this restores it.
+    fn without_panic_noise<T>(f: impl FnOnce() -> T) -> T {
+        let previous = std::panic::take_hook();
+        std::panic::set_hook(Box::new(|_| {}));
+        let out = f();
+        std::panic::set_hook(previous);
+        out
+    }
+
+    fn panicking_predicate(_line: &str) -> bool {
+        panic!("a predicate an attendee edited into something fallible");
+    }
+
+    /// The guard, exercised through `solve_into` rather than through a real
+    /// predicate, because neither shipped predicate can panic — that is the
+    /// point of the backstop. Injecting the panic is the only way to prove
+    /// the status code survives the trip out instead of aborting the process.
+    #[test]
+    fn a_panicking_predicate_reports_minus_two() {
+        let input = CString::new("aaa\nbbb\n").expect("no NUL bytes");
+        let mut count: c_uint = 7;
+
+        let status =
+            without_panic_noise(|| solve_into(input.as_ptr(), &mut count, panicking_predicate));
+
+        assert_eq!(status, -2, "a caught panic must arrive as the status code");
+        assert_eq!(count, 7, "out_count must be left alone when we refuse");
+    }
+
+    #[test]
+    fn a_real_input_still_counts() {
+        let input = CString::new("ugknbfddgicrmopn\njchzalrnumimnmhp\n").expect("no NUL bytes");
+        let mut count: c_uint = 0;
+
+        // SAFETY: `input` is a live NUL-terminated string and `count` is
+        // writable for one `c_uint`. Both outlive the call.
+        let status = unsafe { aoc_2015_12_05_part1(input.as_ptr(), &mut count) };
+
+        assert_eq!(status, 0);
+        assert_eq!(count, 1, "the first line is nice, the second is not");
+    }
 }

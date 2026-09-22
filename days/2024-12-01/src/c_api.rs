@@ -22,6 +22,7 @@
 //! "which import won" would muddy both.
 
 use std::ffi::{CStr, c_char, c_int};
+use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use crate::sort_pure_rust;
 
@@ -98,22 +99,36 @@ pub unsafe extern "C" fn aoc_2024_12_01_part1(
         return -1;
     };
 
-    sort_pure_rust(&mut left);
-    sort_pure_rust(&mut right);
+    // Parts 1 and 2 diverge past this point — one sorts and zips, the other
+    // weights by occurrence count — so there is no shared `solve_into` to put
+    // the guard in, as 2015-12-05 and 2024-12-03 have. It wraps each
+    // computation in place instead.
+    //
+    // `-2` keeps its meaning: the answer left the `int32_t`, reported by the
+    // checked arithmetic below rather than by a panic. A panic is a separate
+    // `-3`, because folding it into `-2` would tell a C caller "your input
+    // overflowed" about a bug in here.
+    let outcome = catch_unwind(AssertUnwindSafe(|| {
+        sort_pure_rust(&mut left);
+        sort_pure_rust(&mut right);
 
-    // The distances are summed in i64 — a single |l - r| can exceed
-    // i32::MAX on its own (i32::MIN vs i32::MAX), which is the same trap
-    // the qsort comparator documents from the other side of the boundary.
-    let mut total: i64 = 0;
-    for (l, r) in left.iter().zip(right.iter()) {
-        let distance = (i64::from(*l) - i64::from(*r)).abs();
-        let Some(next) = total.checked_add(distance) else {
-            return -2;
-        };
-        total = next;
-    }
+        // The distances are summed in i64 — a single |l - r| can exceed
+        // i32::MAX on its own (i32::MIN vs i32::MAX), which is the same trap
+        // the qsort comparator documents from the other side of the boundary.
+        let mut total: i64 = 0;
+        for (l, r) in left.iter().zip(right.iter()) {
+            let distance = (i64::from(*l) - i64::from(*r)).abs();
+            let next = total.checked_add(distance)?;
+            total = next;
+        }
 
-    let Ok(distance) = i32::try_from(total) else {
+        i32::try_from(total).ok()
+    }));
+
+    let Ok(computed) = outcome else {
+        return -3;
+    };
+    let Some(distance) = computed else {
         return -2;
     };
     unsafe { *out_distance = distance };
@@ -124,7 +139,8 @@ pub unsafe extern "C" fn aoc_2024_12_01_part1(
 /// weighted by its occurrence count in the right column — into `*out_score`.
 ///
 /// Returns `0` on success, `-1` for the same input errors as
-/// [`aoc_2024_12_01_part1`], `-2` if the score doesn't fit in an `int32_t`.
+/// [`aoc_2024_12_01_part1`], `-2` if the score doesn't fit in an `int32_t`,
+/// `-3` if the computation panicked.
 ///
 /// # Safety
 /// Same contract as [`aoc_2024_12_01_part1`], for `out_score`.
@@ -140,21 +156,25 @@ pub unsafe extern "C" fn aoc_2024_12_01_part2(input: *const c_char, out_score: *
         return -1;
     };
 
-    // similarity_pure_rust's naive scan, spelled with checked arithmetic —
-    // see the module doc for why the unchecked baseline can't cross here.
-    let mut total: i64 = 0;
-    for l in &left {
-        let count = right.iter().filter(|r| *r == l).count() as i64;
-        let Some(weighted) = i64::from(*l).checked_mul(count) else {
-            return -2;
-        };
-        let Some(next) = total.checked_add(weighted) else {
-            return -2;
-        };
-        total = next;
-    }
+    // Same split as part 1: `-2` is the overflow answer, `-3` is a panic.
+    let outcome = catch_unwind(AssertUnwindSafe(|| {
+        // similarity_pure_rust's naive scan, spelled with checked arithmetic —
+        // see the module doc for why the unchecked baseline can't cross here.
+        let mut total: i64 = 0;
+        for l in &left {
+            let count = right.iter().filter(|r| *r == l).count() as i64;
+            let weighted = i64::from(*l).checked_mul(count)?;
+            let next = total.checked_add(weighted)?;
+            total = next;
+        }
 
-    let Ok(score) = i32::try_from(total) else {
+        i32::try_from(total).ok()
+    }));
+
+    let Ok(computed) = outcome else {
+        return -3;
+    };
+    let Some(score) = computed else {
         return -2;
     };
     unsafe { *out_score = score };

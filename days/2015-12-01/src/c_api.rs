@@ -12,6 +12,7 @@
 //! and is handled as data, not asserted away.
 
 use std::ffi::{CStr, c_char, c_int};
+use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::str::FromStr;
 
 use crate::{Day, basement_position_pure_rust, sum_pure_rust};
@@ -47,7 +48,7 @@ unsafe fn read_input<'a>(input: *const c_char) -> Option<&'a str> {
 /// Parses `input` and writes the floor Santa ends up on into `*out_floor`.
 ///
 /// Returns `0` on success, `-1` if `input`/`out_floor` is null or `input`
-/// isn't valid UTF-8.
+/// isn't valid UTF-8, `-3` if summing the instructions panicked.
 ///
 /// # Safety
 /// `input` must point to a NUL-terminated C string. `out_floor` must point
@@ -67,7 +68,16 @@ pub unsafe extern "C" fn aoc_2015_12_01_part1(
         return -1;
     };
 
-    unsafe { *out_floor = sum_pure_rust(&day) };
+    // `sum_pure_rust` is `iter().sum::<i32>()`, and `Day::from_str` maps each
+    // character to ±1, so a caller who sends more than `i32::MAX` characters
+    // overflows the accumulator. That panics wherever `overflow-checks` is on
+    // and wraps where it is not. Neither belongs in an `extern "C"` frame, so
+    // the panic becomes `-3` here and `*out_floor` is left alone.
+    let Ok(floor) = catch_unwind(AssertUnwindSafe(|| sum_pure_rust(&day))) else {
+        return -3;
+    };
+
+    unsafe { *out_floor = floor };
     0
 }
 
@@ -75,7 +85,8 @@ pub unsafe extern "C" fn aoc_2015_12_01_part1(
 /// that sends Santa into the basement into `*out_position`.
 ///
 /// Returns `0` on success, `-1` for a null/invalid-UTF-8 `input` (or a null
-/// `out_position`), `-2` if Santa never enters the basement.
+/// `out_position`), `-2` if Santa never enters the basement, `-3` if the scan
+/// panicked.
 ///
 /// # Safety
 /// Same contract as [`aoc_2015_12_01_part1`], for `out_position`.
@@ -94,7 +105,14 @@ pub unsafe extern "C" fn aoc_2015_12_01_part2(
         return -1;
     };
 
-    match basement_position_pure_rust(&day) {
+    // Same backstop as part 1. The `-2` below is an ordinary answer ("Santa
+    // never reaches the basement"), so a panic needs its own code rather than
+    // arriving as that one.
+    let Ok(found) = catch_unwind(AssertUnwindSafe(|| basement_position_pure_rust(&day))) else {
+        return -3;
+    };
+
+    match found {
         Some(position) => {
             unsafe { *out_position = position };
             0

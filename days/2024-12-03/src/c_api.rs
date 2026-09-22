@@ -23,6 +23,7 @@
 //! and a NUL-terminated C string that large cannot be handed over intact.
 
 use std::ffi::{CStr, c_char, c_int};
+use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use crate::cursor;
 
@@ -54,6 +55,30 @@ unsafe fn read_input<'a>(input: *const c_char) -> Option<&'a str> {
     unsafe { CStr::from_ptr(input) }.to_str().ok()
 }
 
+/// Shared body of both entry points: read the input, scan it, write the sum.
+///
+/// Both parts differ only in which cursor scan runs, so the guard lives here
+/// once. The module doc explains why this surface is built on the cursor
+/// rather than the nom solution: the cursor is panic-free for arbitrary bytes
+/// by construction. `catch_unwind` is the backstop for that claim being
+/// wrong, not the thing that makes it true, and it costs an abort rather than
+/// a bad answer to find out the hard way.
+fn solve_into(input: *const c_char, out_sum: *mut u64, solve: fn(&str) -> usize) -> c_int {
+    if out_sum.is_null() {
+        return -1;
+    }
+    let Some(text) = (unsafe { read_input(input) }) else {
+        return -1;
+    };
+
+    let Ok(sum) = catch_unwind(AssertUnwindSafe(|| solve(text))) else {
+        return -2;
+    };
+
+    unsafe { *out_sum = sum as u64 };
+    0
+}
+
 /// Scans `input` and writes part 1's sum of every well-formed `mul(X,Y)`
 /// into `*out_sum`.
 ///
@@ -67,15 +92,7 @@ unsafe fn read_input<'a>(input: *const c_char) -> Option<&'a str> {
 /// call.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn aoc_2024_12_03_part1(input: *const c_char, out_sum: *mut u64) -> c_int {
-    if out_sum.is_null() {
-        return -1;
-    }
-    let Some(text) = (unsafe { read_input(input) }) else {
-        return -1;
-    };
-
-    unsafe { *out_sum = cursor::part1(text) as u64 };
-    0
+    solve_into(input, out_sum, cursor::part1)
 }
 
 /// Scans `input` and writes part 2's sum — only the `mul(X,Y)`s enabled by
@@ -88,13 +105,52 @@ pub unsafe extern "C" fn aoc_2024_12_03_part1(input: *const c_char, out_sum: *mu
 /// Same contract as [`aoc_2024_12_03_part1`].
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn aoc_2024_12_03_part2(input: *const c_char, out_sum: *mut u64) -> c_int {
-    if out_sum.is_null() {
-        return -1;
-    }
-    let Some(text) = (unsafe { read_input(input) }) else {
-        return -1;
-    };
+    solve_into(input, out_sum, cursor::part2)
+}
 
-    unsafe { *out_sum = cursor::part2(text) as u64 };
-    0
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::ffi::CString;
+
+    /// See 2015-12-05's copy: the panic hook is process-global, so a test
+    /// that provokes a panic on purpose silences and restores it.
+    fn without_panic_noise<T>(f: impl FnOnce() -> T) -> T {
+        let previous = std::panic::take_hook();
+        std::panic::set_hook(Box::new(|_| {}));
+        let out = f();
+        std::panic::set_hook(previous);
+        out
+    }
+
+    fn panicking_scan(_input: &str) -> usize {
+        panic!("the nom path this surface deliberately does not use");
+    }
+
+    /// The module doc claims the cursor is panic-free for arbitrary bytes by
+    /// construction. This proves the backstop behind that claim: if the claim
+    /// is ever wrong, a C caller gets `-2` rather than an aborted process.
+    #[test]
+    fn a_panicking_scan_reports_minus_two() {
+        let input = CString::new("mul(2,3)").expect("no NUL bytes");
+        let mut sum: u64 = 9;
+
+        let status = without_panic_noise(|| solve_into(input.as_ptr(), &mut sum, panicking_scan));
+
+        assert_eq!(status, -2, "a caught panic must arrive as the status code");
+        assert_eq!(sum, 9, "out_sum must be left alone when we refuse");
+    }
+
+    #[test]
+    fn a_real_input_still_scans() {
+        let input = CString::new("xmul(2,4)%&mul[3,7]!@^mul(5,5)").expect("no NUL bytes");
+        let mut sum: u64 = 0;
+
+        // SAFETY: `input` is a live NUL-terminated string and `sum` is
+        // writable for one `u64`. Both outlive the call.
+        let status = unsafe { aoc_2024_12_03_part1(input.as_ptr(), &mut sum) };
+
+        assert_eq!(status, 0);
+        assert_eq!(sum, 33, "2*4 + 5*5, with the malformed mul[3,7] skipped");
+    }
 }
