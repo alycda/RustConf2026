@@ -7,9 +7,10 @@
 //!
 //! Plain status codes and out-parameters, not `Result`: a Rust panic that
 //! reaches an `extern "C"` frame aborts the process (Rust 1.81 and later —
-//! before that it was undefined behavior), so nothing here can panic — bad
+//! before that it was undefined behavior), so nothing here may panic — bad
 //! input (a null pointer, invalid UTF-8) is a real possibility from a C caller
-//! and is handled as data, not asserted away.
+//! and is handled as data, not asserted away. The codes are the repo-wide
+//! table in `days/README.md` ("C API status codes").
 //!
 //! These are built on the `checked_dead_reckon_*` functions specifically, not
 //! on whichever backend `Solution::part1`/`part2` currently
@@ -31,6 +32,11 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::str::FromStr;
 
 use crate::{Day, checked_dead_reckon_pure_rust, checked_dead_reckon_with_aim_pure_rust};
+
+// The repo-wide status codes (days/README.md, "C API status codes").
+const INVALID_INPUT: c_int = -1;
+const OVERFLOW: c_int = -3;
+const INTERNAL: c_int = -4;
 
 /// Reads `input` as a `&str`, or `None` if it's null or not valid UTF-8.
 ///
@@ -62,10 +68,11 @@ unsafe fn read_input<'a>(input: *const c_char) -> Option<&'a str> {
 
 /// Shared body of both entry points: parse, run `solve`, write the answer.
 ///
-/// The overflow status code is the one place this day departs from
-/// 2015-12-01's otherwise identical `c_api`. That day summed ±1 and could not
-/// realistically overflow; this one multiplies horizontal by depth, and part 2
-/// on a genuine puzzle input already lands within ~10% of `i32::MAX`. An input
+/// Overflow is where this day was first taught something 2015-12-01's
+/// otherwise identical `c_api` never had to learn. That day sums ±1 and needs
+/// gigabytes of input to overflow; this one multiplies horizontal by depth,
+/// and part 2 on a genuine puzzle input already lands within ~10% of
+/// `i32::MAX`. An input
 /// a little larger — trivially constructed by a C caller, who is not
 /// restricted to real puzzle inputs — leaves the `i32`, and this has to say so
 /// rather than write a wrapped number into `*out_product`.
@@ -92,24 +99,34 @@ unsafe fn read_input<'a>(input: *const c_char) -> Option<&'a str> {
 /// The `catch_unwind` stays anyway. Nothing on this path panics now — the
 /// parse returns `Result` at every fallible step and the arithmetic is
 /// checked — but this is an `extern "C"` frame, where being wrong about that
-/// costs an abort rather than a bad answer.
-fn solve_into(
+/// costs an abort rather than a bad answer. It reports `-4`, not the `-3` it
+/// used to share with overflow: a panic here is a bug in this crate, and
+/// telling the caller its course overflowed would send them looking in the
+/// wrong place.
+///
+/// # Safety
+/// The contract of [`aoc_2021_12_02_part1`]. It dereferences both pointers,
+/// so it is an `unsafe fn` even though it is not exported.
+unsafe fn solve_into(
     input: *const c_char,
     out_product: *mut c_int,
     solve: fn(&[crate::Command]) -> Option<i32>,
 ) -> c_int {
     if out_product.is_null() {
-        return -1;
+        return INVALID_INPUT;
     }
     let Some(text) = (unsafe { read_input(input) }) else {
-        return -1;
+        return INVALID_INPUT;
     };
     let Ok(day) = Day::from_str(text) else {
-        return -1;
+        return INVALID_INPUT;
     };
 
-    let Ok(Some(product)) = catch_unwind(AssertUnwindSafe(|| solve(&day))) else {
-        return -3;
+    let Ok(computed) = catch_unwind(AssertUnwindSafe(|| solve(&day))) else {
+        return INTERNAL;
+    };
+    let Some(product) = computed else {
+        return OVERFLOW;
     };
 
     unsafe { *out_product = product };
@@ -121,21 +138,27 @@ fn solve_into(
 ///
 /// Returns `0` on success, `-1` if `input`/`out_product` is null or `input`
 /// isn't valid UTF-8 or isn't a valid course, `-3` if the course overflows an
-/// `int32_t`.
+/// `int`, `-4` if the computation panicked. On any nonzero return
+/// `*out_product` is left untouched.
 ///
 /// # Safety
 /// `input` must point to a NUL-terminated C string. `out_product` must point
-/// to writable memory for one `int32_t`. Both must stay valid for the call.
+/// to writable memory for one `int`. Both must stay valid for the call.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn aoc_2021_12_02_part1(
     input: *const c_char,
     out_product: *mut c_int,
 ) -> c_int {
-    solve_into(input, out_product, checked_dead_reckon_pure_rust)
+    // SAFETY: the caller's contract is exactly `solve_into`'s.
+    unsafe { solve_into(input, out_product, checked_dead_reckon_pure_rust) }
 }
 
 /// Parses `input` and writes part two's answer — the same product, with
 /// `down`/`up` treated as aim adjustments — into `*out_product`.
+///
+/// Returns the same codes as [`aoc_2021_12_02_part1`], under the same
+/// conditions, and likewise leaves `*out_product` untouched on any nonzero
+/// return.
 ///
 /// # Safety
 /// Same contract as [`aoc_2021_12_02_part1`], for `out_product`.
@@ -144,13 +167,44 @@ pub unsafe extern "C" fn aoc_2021_12_02_part2(
     input: *const c_char,
     out_product: *mut c_int,
 ) -> c_int {
-    solve_into(input, out_product, checked_dead_reckon_with_aim_pure_rust)
+    // SAFETY: the caller's contract is exactly `solve_into`'s.
+    unsafe { solve_into(input, out_product, checked_dead_reckon_with_aim_pure_rust) }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::ffi::CString;
+
+    /// See 2015-12-05's copy: the panic hook is process-global, so a test
+    /// that provokes a panic on purpose silences and restores it.
+    fn without_panic_noise<T>(f: impl FnOnce() -> T) -> T {
+        let previous = std::panic::take_hook();
+        std::panic::set_hook(Box::new(|_| {}));
+        let out = f();
+        std::panic::set_hook(previous);
+        out
+    }
+
+    fn panicking_solve(_commands: &[crate::Command]) -> Option<i32> {
+        panic!("a solver an attendee edited into something fallible");
+    }
+
+    /// A panic is `-4`, no longer folded into the overflow code. Injected,
+    /// because neither shipped solver panics.
+    #[test]
+    fn a_panicking_solver_reports_minus_four() {
+        let course = CString::new("forward 5\n").expect("no NUL bytes");
+        let mut answer: c_int = 7;
+        // SAFETY: `course` is a live NUL-terminated string and `answer` is
+        // writable for one `c_int`; both outlive the call.
+        let status = without_panic_noise(|| unsafe {
+            solve_into(course.as_ptr(), &raw mut answer, panicking_solve)
+        });
+
+        assert_eq!(status, -4, "a caught panic must arrive as the status code");
+        assert_eq!(answer, 7, "out_product must be left alone when we refuse");
+    }
 
     /// The `-3` contract, exercised through the C entry point rather than
     /// through `checked_dead_reckon_*`, because the thing that regressed was

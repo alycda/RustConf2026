@@ -63,10 +63,12 @@ challenge](#the-open-challenge-espeak-ng) below. Nothing routes to it.
 
 **cbindgen C API (`src/c_api.rs`, Exercise 2).** Two `extern "C"` functions,
 `aoc_2023_12_01_part1`/`part2`, built around out-parameters and status codes
-rather than `Result`, because a panic unwinding across an `extern "C"` frame is
-undefined behavior. `0` on success, `-1` for a null pointer or invalid UTF-8,
-`-2` for a total too large for a `uint32_t`. `just days bindgen 2023-12-01`
-generates the header (not committed — see `.gitignore`); cbindgen is
+rather than `Result`, because a panic that reaches an `extern "C"` frame
+aborts the process (undefined behavior before Rust 1.81). `0` on success, `-1`
+for a null pointer or invalid UTF-8, `-3` for a total too large for a
+`uint32_t`, `-4` for a caught panic — the repo-wide codes in
+[`../README.md`](../README.md#c-api-status-codes). `just days bindgen
+2023-12-01` generates the header (not committed — see `.gitignore`); cbindgen is
 pointed at `src/c_api.rs` rather than at the crate, so a day that later grows a
 module full of *imported* `extern "C"` declarations doesn't get somebody else's
 API redeclared inside its own header.
@@ -437,7 +439,7 @@ other two and is not supposed to; correctness for it is
   eight lines of C-caller input blew past it. This day inherits the *reasoning*
   — arithmetic that cannot overflow, rather than a `catch_unwind` around a
   panic that only exists where `overflow-checks` is on — but not the
-  reachability: a line here is worth at most 99, so `-2` needs ~43 million
+  reachability: a line here is worth at most 99, so `-3` needs ~43 million
   lines, at least 86 MB. So `checked_total` is split out from `checked_sum`
   precisely so the *refusal* is testable at all even though the *path* isn't,
   and `c_api` states plainly which half is covered. An FFI contract you cannot

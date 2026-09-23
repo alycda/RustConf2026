@@ -38,6 +38,33 @@
   as the model to copy — which is also why CI lints them with `-D warnings`. Warnings in
   the sample are warnings in thirty forks of it.
 
+## C API status codes
+
+Every day with a `src/c_api.rs` exports two functions that return a `c_int`
+status and write the answer through an out-parameter. The status codes mean
+the same thing on every day:
+
+| Code | Meaning | `*out` |
+|------|---------|--------|
+| `0`  | Success. | written |
+| `-1` | Bad input: a null pointer, text that is not UTF-8, or text that is not this day's input format. | untouched |
+| `-2` | No answer: the input is valid, but the puzzle has no answer for it (2015-12-01 part 2: Santa never reaches the basement). | untouched |
+| `-3` | Overflow: the answer does not fit the out-parameter's type. | untouched |
+| `-4` | Internal error: a panic was caught at the boundary. This is a bug in the day, not in the caller's input. | untouched |
+
+A day uses only the codes it can return, and each function's doc comment
+(which cbindgen copies into the header) lists them. A code never changes
+meaning from one day to the next, so one code-to-message table serves every
+track. Any nonzero code is an error, and on an error the out-parameter keeps
+whatever the caller put there. The R track relies on that: `.C()` discards the
+return value, so an unchanged sentinel is R's only error signal.
+
+The `-3` guard is checked arithmetic, never a caught panic. Overflow panics
+only where `overflow-checks` is on, which is the dev profile and not release,
+so a panic-based guard is absent from the build most likely to ship.
+2021-12-02's `c_api.rs` records how that was found. The `catch_unwind` behind
+`-4` is a backstop for code that should not panic at all.
+
 ## Benchmarks (bonus)
 
 Several days carry criterion benchmarks — `2015-12-01`, `2015-12-05`, `2021-12-02`,

@@ -4,8 +4,8 @@
 #
 # Read `solve.R` first — this script only makes sense as its counterweight.
 # There, `.C()` discards the C function's return value, so a failure is
-# detectable only as "the out-parameter never changed" and the -1/-2 the C
-# API classified it with is gone. Here the boundary is R's other interface,
+# detectable only as "the out-parameter never changed" and the status code
+# the C API classified it with is gone. Here the boundary is R's other interface,
 # `.Call()`: SEXPs both ways, and `#[extendr]` generates the wrapper. A
 # Rust `Result<i32, String>` arrives as an R error *condition*, which is a
 # thing R already knows how to handle — `tryCatch`, a message, a class.

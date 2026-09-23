@@ -6,7 +6,7 @@
 //!
 //! Plain status codes and out-parameters, not `Result`: a Rust panic that
 //! reaches an `extern "C"` frame aborts the process (Rust 1.81 and later —
-//! before that it was undefined behavior), so nothing here can panic. That is
+//! before that it was undefined behavior), so nothing here may panic. That is
 //! why this surface is built on the byte cursor (`crate::cursor`) rather than
 //! the nom solution: the cursor is panic-free for arbitrary bytes by
 //! construction (a failed parse is a position to move past, and its operands
@@ -21,6 +21,16 @@
 //! cursor's 3-digit cap) and each costs at least eight input bytes, so
 //! exceeding a `u64` would take an input north of a hundred terabytes —
 //! and a NUL-terminated C string that large cannot be handed over intact.
+//!
+//! The cap has a second consequence: this surface and `Solution` are not
+//! interchangeable. `mul(1000,1)` sums to 0 here and to 1000 through the nom
+//! path, because the statement's three-digit limit is enforced by one and not
+//! the other. Neither is wrong about the statement; a caller comparing the C
+//! answer with the Rust binary's on an input outside it should expect them to
+//! differ.
+//!
+//! The status codes are the repo-wide table in `days/README.md` ("C API
+//! status codes"). This surface can return only `0`, `-1` and `-4`.
 
 #![warn(clippy::pedantic)]
 #![warn(missing_docs)]
@@ -35,6 +45,10 @@ use std::ffi::{CStr, c_char, c_int};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use crate::cursor;
+
+// The repo-wide status codes (days/README.md, "C API status codes").
+const INVALID_INPUT: c_int = -1;
+const INTERNAL: c_int = -4;
 
 /// Reads `input` as a `&str`, or `None` if it's null or not valid UTF-8.
 ///
@@ -72,16 +86,20 @@ unsafe fn read_input<'a>(input: *const c_char) -> Option<&'a str> {
 /// by construction. `catch_unwind` is the backstop for that claim being
 /// wrong, not the thing that makes it true, and it costs an abort rather than
 /// a bad answer to find out the hard way.
-fn solve_into(input: *const c_char, out_sum: *mut u64, solve: fn(&str) -> usize) -> c_int {
+///
+/// # Safety
+/// The contract of [`aoc_2024_12_03_part1`]. It dereferences both pointers,
+/// so it is an `unsafe fn` even though it is not exported.
+unsafe fn solve_into(input: *const c_char, out_sum: *mut u64, solve: fn(&str) -> usize) -> c_int {
     if out_sum.is_null() {
-        return -1;
+        return INVALID_INPUT;
     }
     let Some(text) = (unsafe { read_input(input) }) else {
-        return -1;
+        return INVALID_INPUT;
     };
 
     let Ok(sum) = catch_unwind(AssertUnwindSafe(|| solve(text))) else {
-        return -2;
+        return INTERNAL;
     };
 
     unsafe { *out_sum = sum as u64 };
@@ -92,8 +110,10 @@ fn solve_into(input: *const c_char, out_sum: *mut u64, solve: fn(&str) -> usize)
 /// into `*out_sum`.
 ///
 /// Returns `0` on success, `-1` if `input`/`out_sum` is null or `input`
-/// isn't valid UTF-8. Corruption is not an error — skipping it is the
-/// puzzle.
+/// isn't valid UTF-8, `-4` if the scan panicked. Corruption is not an
+/// error — skipping it is the puzzle. On any nonzero return `*out_sum` is
+/// left untouched. (No `-3`: see the module doc for why the sum cannot leave
+/// a `uint64_t`.)
 ///
 /// # Safety
 /// `input` must point to a NUL-terminated C string. `out_sum` must point
@@ -101,20 +121,23 @@ fn solve_into(input: *const c_char, out_sum: *mut u64, solve: fn(&str) -> usize)
 /// call.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn aoc_2024_12_03_part1(input: *const c_char, out_sum: *mut u64) -> c_int {
-    solve_into(input, out_sum, cursor::part1)
+    // SAFETY: the caller's contract is exactly `solve_into`'s.
+    unsafe { solve_into(input, out_sum, cursor::part1) }
 }
 
 /// Scans `input` and writes part 2's sum — only the `mul(X,Y)`s enabled by
 /// the most recent `do()`/`don't()` toggle count — into `*out_sum`.
 ///
-/// Returns `0` on success, `-1` for the same input errors as
-/// [`aoc_2024_12_03_part1`].
+/// Returns the same codes as [`aoc_2024_12_03_part1`], under the same
+/// conditions, and likewise leaves `*out_sum` untouched on any nonzero
+/// return.
 ///
 /// # Safety
 /// Same contract as [`aoc_2024_12_03_part1`].
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn aoc_2024_12_03_part2(input: *const c_char, out_sum: *mut u64) -> c_int {
-    solve_into(input, out_sum, cursor::part2)
+    // SAFETY: the caller's contract is exactly `solve_into`'s.
+    unsafe { solve_into(input, out_sum, cursor::part2) }
 }
 
 #[cfg(test)]
@@ -138,16 +161,19 @@ mod tests {
 
     /// The module doc claims the cursor is panic-free for arbitrary bytes by
     /// construction. This proves the backstop behind that claim: if the claim
-    /// is ever wrong, a C caller gets `-2` rather than an aborted process.
+    /// is ever wrong, a C caller gets `-4` rather than an aborted process.
     #[test]
-    fn a_panicking_scan_reports_minus_two() {
+    fn a_panicking_scan_reports_minus_four() {
         let input = CString::new("mul(2,3)").expect("no NUL bytes");
         let mut sum: u64 = 9;
 
-        let status =
-            without_panic_noise(|| solve_into(input.as_ptr(), &raw mut sum, panicking_scan));
+        // SAFETY: `input` is a live NUL-terminated string and `sum` is
+        // writable for one `u64`. Both outlive the call.
+        let status = without_panic_noise(|| unsafe {
+            solve_into(input.as_ptr(), &raw mut sum, panicking_scan)
+        });
 
-        assert_eq!(status, -2, "a caught panic must arrive as the status code");
+        assert_eq!(status, -4, "a caught panic must arrive as the status code");
         assert_eq!(sum, 9, "out_sum must be left alone when we refuse");
     }
 

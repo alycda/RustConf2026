@@ -64,7 +64,8 @@ int _call(_PartFnDart fn, String name, String text) {
 
   if (status != 0) {
     stderr.writeln('$name failed with status $status '
-        '(-1: input was null or not valid UTF-8)');
+        '(-1 bad input, -2 no answer, -3 overflow, -4 internal error; '
+        'see days/README.md)');
     exit(1);
   }
   return sum;

@@ -7,9 +7,11 @@
 //!
 //! Plain status codes and out-parameters, not `Result`: a Rust panic that
 //! reaches an `extern "C"` frame aborts the process (Rust 1.81 and later —
-//! before that it was undefined behavior), so nothing here can panic — bad
+//! before that it was undefined behavior), so nothing here may panic — bad
 //! input (a null pointer, invalid UTF-8) is a real possibility from a C caller
-//! and is handled as data, not asserted away.
+//! and is handled as data, not asserted away. The codes are the repo-wide
+//! table in `days/README.md` ("C API status codes"); this day is the one that
+//! uses all four.
 
 #![warn(clippy::pedantic)]
 #![warn(missing_docs)]
@@ -24,7 +26,13 @@ use std::ffi::{CStr, c_char, c_int};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::str::FromStr;
 
-use crate::{Day, basement_position_pure_rust, sum_pure_rust};
+use crate::Day;
+
+// The repo-wide status codes (days/README.md, "C API status codes").
+const INVALID_INPUT: c_int = -1;
+const NO_ANSWER: c_int = -2;
+const OVERFLOW: c_int = -3;
+const INTERNAL: c_int = -4;
 
 /// Reads `input` as a `&str`, or `None` if it's null or not valid UTF-8.
 ///
@@ -57,35 +65,45 @@ unsafe fn read_input<'a>(input: *const c_char) -> Option<&'a str> {
 /// Parses `input` and writes the floor Santa ends up on into `*out_floor`.
 ///
 /// Returns `0` on success, `-1` if `input`/`out_floor` is null or `input`
-/// isn't valid UTF-8, `-3` if summing the instructions panicked.
+/// isn't valid UTF-8, `-3` if the floor doesn't fit in an `int`, `-4` if
+/// the computation panicked. On any nonzero return `*out_floor` is left
+/// untouched.
 ///
 /// # Safety
 /// `input` must point to a NUL-terminated C string. `out_floor` must point
-/// to writable memory for one `int32_t`. Both must stay valid for the call.
+/// to writable memory for one `int`. Both must stay valid for the call.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn aoc_2015_12_01_part1(
     input: *const c_char,
     out_floor: *mut c_int,
 ) -> c_int {
     if out_floor.is_null() {
-        return -1;
+        return INVALID_INPUT;
     }
     let Some(text) = (unsafe { read_input(input) }) else {
-        return -1;
+        return INVALID_INPUT;
     };
     let Ok(day) = Day::from_str(text) else {
-        return -1;
+        return INVALID_INPUT;
     };
 
     // `sum_pure_rust` is `iter().sum::<i32>()`, and `Day::from_str` maps each
-    // character to ±1, so a caller who sends more than `i32::MAX` characters
-    // overflows the accumulator. That panics wherever `overflow-checks` is on
-    // and wraps where it is not. Neither belongs in an `extern "C"` frame, so
-    // the panic becomes `-3` here and `*out_floor` is left alone.
-    let Ok(floor) = catch_unwind(AssertUnwindSafe(|| sum_pure_rust(&day))) else {
-        return -3;
-    };
+    // character to ±1, so more than `i32::MAX` unbalanced parentheses
+    // overflow it: a panic where `overflow-checks` is on, a wrapped floor
+    // reported as success where it is off (release). `catch_unwind` only
+    // covers the first, so the sum is spelled with `checked_add` here and
+    // `sum_pure_rust` is left as the benches and the other tracks know it.
+    let outcome = catch_unwind(AssertUnwindSafe(|| {
+        day.iter()
+            .try_fold(0, |floor: c_int, &step| floor.checked_add(step))
+    }));
 
+    let Ok(computed) = outcome else {
+        return INTERNAL;
+    };
+    let Some(floor) = computed else {
+        return OVERFLOW;
+    };
     unsafe { *out_floor = floor };
     0
 }
@@ -94,8 +112,9 @@ pub unsafe extern "C" fn aoc_2015_12_01_part1(
 /// that sends Santa into the basement into `*out_position`.
 ///
 /// Returns `0` on success, `-1` for a null/invalid-UTF-8 `input` (or a null
-/// `out_position`), `-2` if Santa never enters the basement, `-3` if the scan
-/// panicked.
+/// `out_position`), `-2` if Santa never enters the basement, `-3` if the
+/// position doesn't fit in an `int`, `-4` if the scan panicked. On any
+/// nonzero return `*out_position` is left untouched.
 ///
 /// # Safety
 /// Same contract as [`aoc_2015_12_01_part1`], for `out_position`.
@@ -105,30 +124,40 @@ pub unsafe extern "C" fn aoc_2015_12_01_part2(
     out_position: *mut c_int,
 ) -> c_int {
     if out_position.is_null() {
-        return -1;
+        return INVALID_INPUT;
     }
     let Some(text) = (unsafe { read_input(input) }) else {
-        return -1;
+        return INVALID_INPUT;
     };
     let Ok(day) = Day::from_str(text) else {
-        return -1;
+        return INVALID_INPUT;
     };
 
-    // Same backstop as part 1. The `-2` below is an ordinary answer ("Santa
-    // never reaches the basement"), so a panic needs its own code rather than
-    // arriving as that one.
-    let Ok(found) = catch_unwind(AssertUnwindSafe(|| basement_position_pure_rust(&day))) else {
-        return -3;
-    };
+    // `basement_position_pure_rust` ends in `pos as i32 + 1`, which truncates
+    // silently past `i32::MAX` in every profile. This is its scan with the
+    // floor kept in an `i64` (each step is ±1, so it stays within the input's
+    // length) and the position converted with `try_from`.
+    let outcome = catch_unwind(AssertUnwindSafe(|| {
+        let mut floor: i64 = 0;
+        for (index, &step) in day.iter().enumerate() {
+            floor += i64::from(step);
+            if floor < 0 {
+                return c_int::try_from(index + 1).map_err(|_| OVERFLOW);
+            }
+        }
+        Err(NO_ANSWER)
+    }));
 
-    match found {
-        Some(position) => {
+    match outcome {
+        Ok(Ok(position)) => {
             unsafe { *out_position = position };
             0
         }
-        None => -2,
+        Ok(Err(status)) => status,
+        Err(_) => INTERNAL,
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -171,9 +200,9 @@ mod tests {
         assert_eq!(floor, 3, "five ( and two ) leaves Santa on floor 3");
     }
 
-    /// Part 2's `-2` is an ordinary answer, not an error: Santa never reaches
-    /// the basement. It has its own code precisely so a caller can tell it
-    /// apart from the `-3` a panic would produce.
+    /// Part 2's `-2` is a valid input with no answer: Santa never reaches the
+    /// basement. It has its own code precisely so a caller can tell it apart
+    /// from bad input (`-1`), overflow (`-3`) and a caught panic (`-4`).
     #[test]
     fn never_reaching_the_basement_is_minus_two() {
         let input = CString::new("(((").expect("no NUL bytes");

@@ -12,9 +12,10 @@
 //!
 //! Plain status codes and out-parameters, not `Result`: a Rust panic that
 //! reaches an `extern "C"` frame aborts the process (Rust 1.81 and later —
-//! before that it was undefined behavior), so nothing here can panic — bad
+//! before that it was undefined behavior), so nothing here may panic — bad
 //! input (a null pointer, invalid UTF-8) is a real possibility from a C
-//! caller and is handled as data, not asserted away.
+//! caller and is handled as data, not asserted away. The codes are the
+//! repo-wide table in `days/README.md` ("C API status codes").
 
 #![warn(clippy::pedantic)]
 #![warn(missing_docs)]
@@ -30,6 +31,11 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::str::FromStr;
 
 use crate::{Day, is_nice_pure_rust, is_nice_v2_pure_rust};
+
+// The repo-wide status codes (days/README.md, "C API status codes").
+const INVALID_INPUT: c_int = -1;
+const OVERFLOW: c_int = -3;
+const INTERNAL: c_int = -4;
 
 /// Reads `input` as a `&str`, or `None` if it's null or not valid UTF-8.
 ///
@@ -63,8 +69,8 @@ unsafe fn read_input<'a>(input: *const c_char) -> Option<&'a str> {
 /// nice lines under the original rules into `*out_count`.
 ///
 /// Returns `0` on success, `-1` if `input`/`out_count` is null or `input`
-/// isn't valid UTF-8, `-2` if counting panicked, `-3` if the count exceeds
-/// `uint32_t`.
+/// isn't valid UTF-8, `-3` if the count exceeds `uint32_t`, `-4` if
+/// counting panicked. On any nonzero return `*out_count` is left untouched.
 ///
 /// # Safety
 /// `input` must point to a NUL-terminated C string. `out_count` must point
@@ -74,7 +80,8 @@ pub unsafe extern "C" fn aoc_2015_12_05_part1(
     input: *const c_char,
     out_count: *mut c_uint,
 ) -> c_int {
-    solve_into(input, out_count, is_nice_pure_rust)
+    // SAFETY: the caller's contract is exactly `solve_into`'s.
+    unsafe { solve_into(input, out_count, is_nice_pure_rust) }
 }
 
 /// Shared body of both entry points: parse, count the lines `predicate`
@@ -87,21 +94,29 @@ pub unsafe extern "C" fn aoc_2015_12_05_part1(
 /// `extern "C"` frame, where being wrong about that costs an abort rather
 /// than a bad answer, and because a workshop attendee editing a predicate is
 /// exactly the reader who finds out otherwise.
-fn solve_into(input: *const c_char, out_count: *mut c_uint, predicate: fn(&str) -> bool) -> c_int {
+///
+/// # Safety
+/// The contract of [`aoc_2015_12_05_part1`]: it dereferences both pointers,
+/// so it is an `unsafe fn` even though it is not exported.
+unsafe fn solve_into(
+    input: *const c_char,
+    out_count: *mut c_uint,
+    predicate: fn(&str) -> bool,
+) -> c_int {
     if out_count.is_null() {
-        return -1;
+        return INVALID_INPUT;
     }
     let Some(text) = (unsafe { read_input(input) }) else {
-        return -1;
+        return INVALID_INPUT;
     };
     let Ok(day) = Day::from_str(text) else {
-        return -1;
+        return INVALID_INPUT;
     };
 
     let Ok(count) = catch_unwind(AssertUnwindSafe(|| {
         day.iter().filter(|line| predicate(line.as_str())).count()
     })) else {
-        return -2;
+        return INTERNAL;
     };
 
     // `count` is a `usize`. The old `as c_uint` truncated silently on a
@@ -110,7 +125,7 @@ fn solve_into(input: *const c_char, out_count: *mut c_uint, predicate: fn(&str) 
     // failure mode the status codes exist to prevent. It takes a ~8GiB input
     // to reach, and unreachable is still not checked.
     let Ok(count) = c_uint::try_from(count) else {
-        return -3;
+        return OVERFLOW;
     };
 
     unsafe { *out_count = count };
@@ -121,8 +136,8 @@ fn solve_into(input: *const c_char, out_count: *mut c_uint, predicate: fn(&str) 
 /// rules into `*out_count`.
 ///
 /// Returns `0` on success, `-1` if `input`/`out_count` is null or `input`
-/// isn't valid UTF-8, `-2` if counting panicked, `-3` if the count exceeds
-/// `uint32_t`.
+/// isn't valid UTF-8, `-3` if the count exceeds `uint32_t`, `-4` if
+/// counting panicked. On any nonzero return `*out_count` is left untouched.
 ///
 /// # Safety
 /// Same contract as [`aoc_2015_12_05_part1`], for `out_count`.
@@ -131,7 +146,8 @@ pub unsafe extern "C" fn aoc_2015_12_05_part2(
     input: *const c_char,
     out_count: *mut c_uint,
 ) -> c_int {
-    solve_into(input, out_count, is_nice_v2_pure_rust)
+    // SAFETY: the caller's contract is exactly `solve_into`'s.
+    unsafe { solve_into(input, out_count, is_nice_v2_pure_rust) }
 }
 
 #[cfg(test)]
@@ -159,14 +175,17 @@ mod tests {
     /// point of the backstop. Injecting the panic is the only way to prove
     /// the status code survives the trip out instead of aborting the process.
     #[test]
-    fn a_panicking_predicate_reports_minus_two() {
+    fn a_panicking_predicate_reports_minus_four() {
         let input = CString::new("aaa\nbbb\n").expect("no NUL bytes");
         let mut count: c_uint = 7;
 
-        let status =
-            without_panic_noise(|| solve_into(input.as_ptr(), &raw mut count, panicking_predicate));
+        // SAFETY: `input` is a live NUL-terminated string and `count` is
+        // writable for one `c_uint`. Both outlive the call.
+        let status = without_panic_noise(|| unsafe {
+            solve_into(input.as_ptr(), &raw mut count, panicking_predicate)
+        });
 
-        assert_eq!(status, -2, "a caught panic must arrive as the status code");
+        assert_eq!(status, -4, "a caught panic must arrive as the status code");
         assert_eq!(count, 7, "out_count must be left alone when we refuse");
     }
 

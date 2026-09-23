@@ -178,7 +178,8 @@ contains
 
       if (status /= 0) then
          write (error_unit, '(A,I0,A)') name//' failed with status ', status, &
-            ' (-1 bad input, -2 domain error)'
+            ' (-1 bad input, -2 no answer, -3 overflow, -4 internal error;'// &
+            ' see days/README.md)'
          ! gfortran buffers error_unit and prints its own `STOP 1` trailer
          ! from the runtime, unbuffered — without this the trailer lands
          ! above the message explaining it.

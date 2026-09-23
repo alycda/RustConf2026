@@ -326,7 +326,7 @@ zoneight234
         Ok(())
     }
 
-    /// The refusal behind [`c_api`]'s `-2`, exercised where it is cheap to
+    /// The refusal behind [`c_api`]'s `-3`, exercised where it is cheap to
     /// exercise. Reaching it through a real input means ~43 million lines;
     /// reaching the arithmetic means two numbers.
     ///

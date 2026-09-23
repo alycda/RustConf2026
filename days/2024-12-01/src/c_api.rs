@@ -7,13 +7,14 @@
 //!
 //! Plain status codes and out-parameters, not `Result`: a Rust panic that
 //! reaches an `extern "C"` frame aborts the process (Rust 1.81 and later —
-//! before that it was undefined behavior), so nothing here can panic. On this
+//! before that it was undefined behavior), so nothing here may panic. On this
 //! day that rules out more than the usual suspects: `Day1`'s own `FromStr`
 //! expects trusted puzzle input and says so (it panics on a malformed line),
 //! and both parts do unchecked `i32` arithmetic that a hostile input could
 //! overflow. A C caller is not trusted input, so this module parses defensively
 //! and accumulates in `i64`, reporting overflow as a status instead of a wrap
-//! or a panic.
+//! or a panic. The codes are the repo-wide table in `days/README.md` ("C API
+//! status codes").
 //!
 //! Built on the pure-Rust baseline (`sort_pure_rust`, and part 2's naive
 //! scan spelled with checked arithmetic) specifically — not whichever
@@ -34,6 +35,11 @@ use std::ffi::{CStr, c_char, c_int};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use crate::sort_pure_rust;
+
+// The repo-wide status codes (days/README.md, "C API status codes").
+const INVALID_INPUT: c_int = -1;
+const OVERFLOW: c_int = -3;
+const INTERNAL: c_int = -4;
 
 /// Reads `input` as a `&str`, or `None` if it's null or not valid UTF-8.
 ///
@@ -86,8 +92,9 @@ fn parse_columns(text: &str) -> Option<(Vec<i32>, Vec<i32>)> {
 /// pairwise absolute differences summed — into `*out_distance`.
 ///
 /// Returns `0` on success, `-1` if `input`/`out_distance` is null, `input`
-/// isn't valid UTF-8, or any line isn't exactly two integers, `-2` if the
-/// total doesn't fit in an `int32_t`.
+/// isn't valid UTF-8, or any line isn't exactly two integers, `-3` if the
+/// total doesn't fit in an `int32_t`, `-4` if the computation panicked. On
+/// any nonzero return `*out_distance` is left untouched.
 ///
 /// # Safety
 /// `input` must point to a NUL-terminated C string. `out_distance` must
@@ -99,13 +106,13 @@ pub unsafe extern "C" fn aoc_2024_12_01_part1(
     out_distance: *mut i32,
 ) -> c_int {
     if out_distance.is_null() {
-        return -1;
+        return INVALID_INPUT;
     }
     let Some(text) = (unsafe { read_input(input) }) else {
-        return -1;
+        return INVALID_INPUT;
     };
     let Some((mut left, mut right)) = parse_columns(text) else {
-        return -1;
+        return INVALID_INPUT;
     };
 
     // Parts 1 and 2 diverge past this point — one sorts and zips, the other
@@ -113,9 +120,9 @@ pub unsafe extern "C" fn aoc_2024_12_01_part1(
     // the guard in, as 2015-12-05 and 2024-12-03 have. It wraps each
     // computation in place instead.
     //
-    // `-2` keeps its meaning: the answer left the `int32_t`, reported by the
-    // checked arithmetic below rather than by a panic. A panic is a separate
-    // `-3`, because folding it into `-2` would tell a C caller "your input
+    // `-3` is the answer leaving the `int32_t`, reported by the checked
+    // arithmetic below rather than by a panic. A panic is a separate `-4`,
+    // because folding it into `-3` would tell a C caller "your input
     // overflowed" about a bug in here.
     let outcome = catch_unwind(AssertUnwindSafe(|| {
         sort_pure_rust(&mut left);
@@ -135,10 +142,10 @@ pub unsafe extern "C" fn aoc_2024_12_01_part1(
     }));
 
     let Ok(computed) = outcome else {
-        return -3;
+        return INTERNAL;
     };
     let Some(distance) = computed else {
-        return -2;
+        return OVERFLOW;
     };
     unsafe { *out_distance = distance };
     0
@@ -148,24 +155,25 @@ pub unsafe extern "C" fn aoc_2024_12_01_part1(
 /// weighted by its occurrence count in the right column — into `*out_score`.
 ///
 /// Returns `0` on success, `-1` for the same input errors as
-/// [`aoc_2024_12_01_part1`], `-2` if the score doesn't fit in an `int32_t`,
-/// `-3` if the computation panicked.
+/// [`aoc_2024_12_01_part1`], `-3` if the score doesn't fit in an `int32_t`,
+/// `-4` if the computation panicked. On any nonzero return `*out_score` is
+/// left untouched.
 ///
 /// # Safety
 /// Same contract as [`aoc_2024_12_01_part1`], for `out_score`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn aoc_2024_12_01_part2(input: *const c_char, out_score: *mut i32) -> c_int {
     if out_score.is_null() {
-        return -1;
+        return INVALID_INPUT;
     }
     let Some(text) = (unsafe { read_input(input) }) else {
-        return -1;
+        return INVALID_INPUT;
     };
     let Some((left, right)) = parse_columns(text) else {
-        return -1;
+        return INVALID_INPUT;
     };
 
-    // Same split as part 1: `-2` is the overflow answer, `-3` is a panic.
+    // Same split as part 1: `-3` is the overflow answer, `-4` is a panic.
     let outcome = catch_unwind(AssertUnwindSafe(|| {
         // similarity_pure_rust's naive scan, spelled with checked arithmetic —
         // see the module doc for why the unchecked baseline can't cross here.
@@ -181,10 +189,10 @@ pub unsafe extern "C" fn aoc_2024_12_01_part2(input: *const c_char, out_score: *
     }));
 
     let Ok(computed) = outcome else {
-        return -3;
+        return INTERNAL;
     };
     let Some(score) = computed else {
-        return -2;
+        return OVERFLOW;
     };
     unsafe { *out_score = score };
     0
@@ -229,12 +237,12 @@ mod tests {
         assert_eq!((s2, score), (0, 31));
     }
 
-    /// The `-2` contract. Two columns of `i32::MIN`/`i32::MAX` make each
+    /// The `-3` contract. Two columns of `i32::MIN`/`i32::MAX` make each
     /// distance ~2^32, so the i64 total leaves the `int32_t` the caller asked
     /// for. This is the case the module doc says the unchecked baseline
     /// cannot cross with: it would have wrapped and returned `0`.
     #[test]
-    fn a_distance_past_int32_reports_minus_two() {
+    fn a_distance_past_int32_reports_minus_three() {
         let rows: String =
             std::iter::repeat_n(format!("{}   {}\n", i32::MIN, i32::MAX), 4).collect();
         let input = CString::new(rows).expect("no NUL bytes");
@@ -243,7 +251,7 @@ mod tests {
         // SAFETY: as above, for `distance`.
         let status = unsafe { aoc_2024_12_01_part1(input.as_ptr(), &raw mut distance) };
 
-        assert_eq!(status, -2, "the total distance does not fit an int32_t");
+        assert_eq!(status, -3, "the total distance does not fit an int32_t");
         assert_eq!(distance, 7, "out_distance is left alone when we refuse");
     }
 }

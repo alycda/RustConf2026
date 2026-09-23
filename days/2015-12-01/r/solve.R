@@ -14,7 +14,8 @@
 # type void."
 #
 # Our C API is not void. `int aoc_2015_12_01_part1(const char *, int *)`
-# returns 0 / -1 / -2, and `.C()` discards it. Three consequences follow,
+# returns a status (0, or a negative code from the table in days/README.md),
+# and `.C()` discards it. Three consequences follow,
 # and each one is marked [1] [2] [3] where it shows up below:
 #
 #   [1] the string cannot be passed as a string,
@@ -104,18 +105,21 @@ call_part <- function(lib, name, text) {
 
   # [2] The status code is unobservable. `.C()` called the function for its
   # side effects on the arguments and handed back the modified argument
-  # list; the 0 / -1 / -2 that C API was designed around went nowhere R can
+  # list; the status code that C API was designed around went nowhere R can
   # look. The out-parameter is the only channel left, so the sentinel has to
   # be a value no real answer can be — and the plan's -999 is not one: part 1
   # is a floor, and a long enough input genuinely ends on -999. NA_integer_
   # is INT_MIN, which is not a floor this puzzle can reach and not a 1-based
-  # position at all. Unchanged means the call failed; which of the two
-  # failures it was (bad input, or Santa never reached the basement) is
-  # exactly what this interface cannot tell us.
+  # position at all. Unchanged means the call failed; which failure it was
+  # (bad input, Santa never reaching the basement, overflow, a caught panic)
+  # is exactly what this interface cannot tell us. The C side promises to
+  # leave the out-parameter alone on every one of them (days/README.md,
+  # "C API status codes"), which is the only reason this check works.
   if (is.na(result$out)) {
     stop(
       name, ": no answer arrived — .C() discards the return value, so the ",
-      "status code (-1 bad input, -2 domain error) went with it",
+      "status code (-1 bad input, -2 no answer, -3 overflow, ",
+      "-4 internal error; see days/README.md) went with it",
       call. = FALSE
     )
   }
