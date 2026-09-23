@@ -44,10 +44,11 @@ an ASCII-art library.
 **cbindgen C API (`src/c_api.rs`, Exercise 2).** The direction reverses:
 instead of Rust calling into a C library, Rust exposes itself *as* one.
 Two `extern "C"` functions, `aoc_2015_12_01_part1`/`part2`, built around
-out-parameters and status codes rather than `Result` — a panic unwinding
-across an `extern "C"` frame is undefined behavior, so nothing in this
-module can panic; a null pointer or invalid UTF-8 from a C caller is
-handled as data, not asserted away. `just days bindgen 2015-12-01`
+out-parameters and status codes rather than `Result` — a panic that
+reaches an `extern "C"` frame aborts the process (undefined behavior before
+Rust 1.81), so nothing in this module may panic; a null pointer or
+invalid UTF-8 from a C caller is handled as data, not asserted away.
+`just days bindgen 2015-12-01`
 generates the header (not committed — see `.gitignore`; cbindgen is
 required workshop tooling, so regenerating it is always a `just` call
 away).
@@ -81,7 +82,8 @@ oldest FFI: it matches on the symbol name, converts each argument by its
 R *vector mode* (Writing R Extensions §5.2 — `integer` → `int *`, `raw` →
 `unsigned char *`, `character` → `char **`), and then throws the C
 function's return value away, because the interface was designed for C
-functions of type `void`. Our C API is not `void`, so its `0`/`-1`/`-2`
+functions of type `void`. Our C API is not `void`, so its status code
+(`0`, or a negative code from [`../README.md`](../README.md#c-api-status-codes))
 never reaches R and the out-parameter is the only channel there is. The
 consumer initialises it to `NA_integer_` — `INT_MIN` once it crosses, a
 value no floor and no 1-based position can be — and treats "unchanged"
