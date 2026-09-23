@@ -7,7 +7,10 @@
 // C library this repo has linked came with one. shell.nix synthesizes both and
 // lets pkg-config's setup hook put them on PKG_CONFIG_PATH, so the loop below
 // stays the same three lines every C variant in this repo uses, for both
-// libraries and for whatever comes next. Fixing the gap on the nix side rather
+// libraries and for whatever comes next. Both libraries and both synthesized
+// .pc files live in shell.nix's `full` list — the shell attendees get by
+// default carries none of it, because nothing they run needs it; `nix-shell
+// --arg full true` is the one that does. Fixing the gap on the nix side rather
 // than here is deliberate: a build script that knows about include paths is a
 // build script that has to be re-taught them on every machine.
 //
@@ -36,8 +39,9 @@ fn main() {
         if !libs.status.success() {
             panic!(
                 "pkg-config could not find {name}.pc ({}). Run inside the project's nix shell \
-                 (see shell.nix), which synthesizes it — nixpkgs ships neither this day's \
-                 chipmunk.pc nor its duckdb.pc.",
+                 with the C libraries — `nix-shell --arg full true` (see shell.nix), which \
+                 synthesizes it: nixpkgs ships neither this day's chipmunk.pc nor its \
+                 duckdb.pc.",
                 String::from_utf8_lossy(&libs.stderr).trim()
             );
         }

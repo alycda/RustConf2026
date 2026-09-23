@@ -64,6 +64,11 @@ jobs:
       # per-day lockfile model was dropped, one shared lock is what pins every
       # day; if it can drift silently, it isn't pinning anything.
       - run: cargo test --workspace --locked
+      # The attendee scaffold too, as shipped: todo!() bodies and ignored
+      # example tests compile and the one live test runs. The Verify
+      # workflow only ever tests the solved overlay copied over this tree.
+      - run: cargo test --workspace --locked
+        working-directory: exercises
 
   lint:
     name: fmt + clippy
@@ -82,6 +87,11 @@ jobs:
       # Attendees read this code as the model to copy; warnings in the sample
       # are warnings in thirty forks of it.
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      # Same two checks on the scaffold attendees copy from.
+      - run: cargo fmt --all --check
+        working-directory: exercises
+      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+        working-directory: exercises
 
   msrv:
     name: rust 1.85 floor
@@ -106,6 +116,9 @@ jobs:
       # cargo re-resolve and it would quietly pick versions 1.85 can build,
       # proving something no attendee's checkout will reproduce.
       - run: cargo check --workspace --all-targets --locked
+      # exercises/ declares the same 1.85 floor and has its own lockfile.
+      - run: cargo check --workspace --all-targets --locked
+        working-directory: exercises
 
   # The jobs above prove the days build *bare* — a linking C compiler, no
   # system library — which is the property the feature gates exist to
@@ -115,14 +128,24 @@ jobs:
   # nothing type-checks against the headers they were transcribed from. So
   # the gates get tested from both sides, and this is the cheap side.
   #
-  # Only 2024-12-01, deliberately: its three variants need nothing a stock
-  # runner lacks. qsort is libc; cpp is one .cpp file the cc crate compiles
-  # with the runner's C++ compiler; uthash is a header-only library — one
-  # distro package on linux, one brew formula on macos, and CFLAGS carries
-  # the brew include path because the cc crate does not look under
-  # /opt/homebrew on its own. Both OSes, because the workshop's subject is
-  # linking and macos is where the attendees are. The days that link real
-  # libraries through pkg-config need the nix shell — that is the next job.
+  # Only 2024-12-01, deliberately, and only three of its four variants: those
+  # three need nothing a stock runner lacks. qsort is libc; cpp is one .cpp
+  # file the cc crate compiles with the runner's C++ compiler; uthash is a
+  # header-only library — one distro package on linux, one brew formula on
+  # macos, and CFLAGS carries the brew include path because the cc crate does
+  # not look under /opt/homebrew on its own. Both OSes, because the workshop's
+  # subject is linking and macos is where the attendees are. The days that
+  # link real libraries through pkg-config need the nix shell — that is the
+  # next job.
+  #
+  # The fourth variant, `lapack`, is why the steps below name their features
+  # instead of saying --all-features. It links liblapack, which is exactly the
+  # thing this job is defined by not needing, and it is covered in the nix
+  # shell below like every other real library. Spelling the three out is a
+  # list that has to be edited when a stock-runner variant is added — which is
+  # the right kind of maintenance, because --all-features here would silently
+  # pull in the next library-linking feature too and fail at link time with no
+  # hint about why this job was ever green.
   c-features:
     name: C features (2024-12-01) / ${{ matrix.os }}
     strategy:
@@ -149,12 +172,15 @@ jobs:
       # C-backed answer equals the pure-Rust one — the actual claim every
       # variant makes. --all-targets on clippy so the bindings and the
       # feature-gated benches are linted, not just compiled.
-      - run: cargo test -p aoc-2024-12-01 --all-features --locked
-      - run: cargo clippy -p aoc-2024-12-01 --all-features --all-targets --locked -- -D warnings
+      - run: cargo test -p aoc-2024-12-01 --features qsort,cpp,uthash --locked
+      - run: |
+          cargo clippy -p aoc-2024-12-01 --features qsort,cpp,uthash \
+            --all-targets --locked -- -D warnings
 
   # The other side of the feature gates, for the days that link real
   # libraries: caca and tcc (2015-12-01), hyperscan and icu (2015-12-05),
-  # chipmunk and duckdb (2021-12-02), yara and espeak (2023-12-01). Every
+  # chipmunk and duckdb (2021-12-02), yara and espeak (2023-12-01), lapack
+  # (2024-12-01). Every
   # one of those build scripts finds its library through pkg-config and,
   # when it can't, panics with "run inside the project's nix shell" — the
   # shell is the supported way to get the C libraries, for attendees and
@@ -164,19 +190,35 @@ jobs:
   # files shell.nix synthesizes (chipmunk, duckdb), tinycc's shared
   # libtcc, uthash on the cc include path, all of it.
   #
-  # Linux only. shell.nix reads <nixpkgs> unpinned; nixpkgs-unstable is
-  # the nix installer's default channel, which the devcontainer's nix
-  # feature leaves in place (setup.sh adds home-manager and touches no
-  # other channel). Several of these packages are unproven on nixpkgs'
-  # darwin, and the c-features job above already covers macos for the
-  # variants that need no library at all.
+  # `--arg full true` on every invocation below is load-bearing: the default
+  # shell is the workshop's five required tools and nothing else, so that
+  # attendees cloning on venue Wi-Fi don't download nine C libraries they
+  # never link. This job is the reason the full list still exists, and the
+  # only thing standing between it and silent rot. Drop the flag and the
+  # pkg-config roll call is the step that tells you, in one line.
+  #
+  # shell.nix reads <nixpkgs> unpinned; nixpkgs-unstable is the nix
+  # installer's default channel, which the devcontainer's nix feature
+  # leaves in place (setup.sh adds home-manager and touches no other
+  # channel).
+  #
+  # macOS is in the matrix because this job was Linux-only until #1: an
+  # attendee's first `nix-shell` on aarch64-darwin died evaluating
+  # nixpkgs' chipmunk (glfw2 is Linux-only, and chipmunk lists it for a
+  # demo binary), and nothing here ran shell.nix on a mac. The README's
+  # first option is macOS + nix; the job that proves the shell has to run
+  # where the attendees do.
   #
   # The first run pays for the nix store (rustc, the libraries, their
   # closures) from cache.nixos.org; cache-nix-action is deliberately not
   # here yet — measure the plain job first, add the cache if it earns it.
   ffi:
-    name: C libraries (nix shell) / ubuntu-latest
-    runs-on: ubuntu-latest
+    name: C libraries (nix shell) / ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -187,13 +229,13 @@ jobs:
       # missing this names it in one line, instead of a build-script
       # panic buried under a compile.
       - run: |
-          nix-shell ../shell.nix --run \
-            'pkg-config --modversion caca libtcc libhs icu-i18n icu-uc chipmunk duckdb yara espeak-ng'
+          nix-shell ../shell.nix --arg full true --run \
+            'pkg-config --modversion caca libtcc libhs icu-i18n icu-uc chipmunk duckdb yara espeak-ng lapack'
       # --all-features across the workspace: every feature-gated test runs,
       # including the ones asserting the C answer equals the pure-Rust one.
       # rustc, cargo and clippy are the shell's, not rustup's — that is the
       # point, and shell.nix carries clippy for exactly this reason.
-      - run: nix-shell ../shell.nix --run 'cargo test --workspace --all-features --locked'
+      - run: nix-shell ../shell.nix --arg full true --run 'cargo test --workspace --all-features --locked'
       - run: |
-          nix-shell ../shell.nix --run \
+          nix-shell ../shell.nix --arg full true --run \
             'cargo clippy --workspace --all-features --all-targets --locked -- -D warnings'

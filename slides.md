@@ -1,0 +1,984 @@
+---
+theme:
+    name: catppuccin-mocha
+    override:
+        footer:
+            style: template
+            left: "FFI Playground"
+            center: github.com/alycda/RustConf2026
+            # right: "Montréal: 2026-09-08"
+---
+
+<!-- comment: 08:00 - 09:00 - DOORS -->
+<!-- comment: slide_background_color 0b112e -->
+<!-- font_size: 7 -->
+
+![image:w:30%](./img/qr-code.png)
+
+# Using Advent of Code as an FFI Playground
+## RustConf 2026
+
+### Montréal
+#### 2026-09-08
+
+##### Alyssa Evans
+
+<!-- no_footer -->
+
+<!-- comment: 09:00 - Part 1 -->
+
+<!-- comment: slot - speaker card -->
+
+<!-- comment: slot - backstory -->
+
+<!-- comment: slot - who am I -->
+
+<!-- comment: slot - why are we here -->
+
+<!-- comment: slot - agenda -->
+
+<!-- comment: slot - self-check -->
+
+<!-- comment: slot - part-1 (why is FFI hard) -->
+
+<!-- comment: slot - exercise-1 (solve it in Rust) -->
+
+<!-- comment: slot - exercise-1-bonus (find a C library, try to load it) -->
+
+<!-- comment: 09:55 - 10:05 - BREAK -->
+
+<!-- comment: 10:05 - Part 2 -->
+
+<!-- comment: slot - lecture-2 (C as the bridge — live demo) -->
+
+<!-- comment: slot - part-2 (wrap it in C) -->
+
+<!-- comment: 10:55 - 11:05 - BREAK -->
+
+<!-- comment: 11:05 - Part 3 -->
+
+<!-- comment: slot - lecture-3 (one header, four runtimes) -->
+
+<!-- comment: slot - part-3 (bindings) -->
+
+<!-- comment: slot - exercise-3-bonus (try another language) -->
+
+<!-- comment: 12:00 - Wrap -->
+
+<!-- comment: slot - debrief -->
+
+<!-- comment: 12:30 - END -->
+
+<!-- end_slide -->
+
+<!-- alignment: center -->
+![image:w:40%](./workshop.png)
+
+<!-- speaker_note: |
+
+    (30s) Welcome to RustConf 2026 Workshops. I want to thank you all for being here with me today. My name is Alyssa and I'm going to share with you my process on how to break things in Rust while talking to other languages and their runtimes; and to help you choose your own adventure with FFI and Advent of Code.
+
+    -->
+
+<!-- end_slide -->
+
+What Is This?
+===
+
+![image:w:40%](./img/rustla-talk.jpg)
+
+<!-- font_size: 2 -->
+<!-- alignment: center -->
+Prior Art: [alycda/aoc-ffi](https://github.com/alycda/aoc-ffi) · [alycda/AoC-Ornaments](https://github.com/alycda/AoC-Ornaments)
+
+<!-- end_slide -->
+
+What Is This?
+===
+
+![image:w:40%](./img/rustla-room.jpg)
+
+<!-- font_size: 2 -->
+<!-- alignment: center -->
+Prior Art: [alycda/aoc-ffi](https://github.com/alycda/aoc-ffi) · [alycda/AoC-Ornaments](https://github.com/alycda/AoC-Ornaments)
+
+photo: [Lawrence Harvey](https://www.lawrenceharvey.com/newsroom/rust-la-kicks-off-2026-with-a-packed-community-meetup-in-los-angeles)
+
+<!-- end_slide -->
+
+Who Am I?
+===
+
+
+Staff Software Engineer, SDKs at [Ditto](https://ditto.com) 
+
+<!-- speaker_note: |
+
+    Last year I joined Ditto as a Staff Software Engineer. FFI is literally my day job. 
+    
+
+
+    Before Ditto, I spent 6 years in Free Ad-Supported Streaming TV (FAST) 
+
+        building Web Applications for Connected TVs and game consoles. 
+
+        Then I became _that engineer_ who kept pushing to adopt Rust.
+
+    -->
+
+<!-- end_slide -->
+
+Why Are We Here Today?
+===
+
+To break things, on purpose; and document the messy middle.
+
+<!-- speaker_note: |
+
+    ## Description
+
+    Using Advent of Code (AoC) puzzles as the substrate, participants build a working Rust FFI library from scratch, wrapping a real AoC solution in a C glue layer and calling it from multiple different target languages. By the end of the workshop, attendees leave with a working multi-language project, a replicable methodology, and hands-on intuition for the pitfalls that make production FFI hard.
+
+    AoC problems are uniquely well-suited for FFI practice because they have diverse input/output types (primitives, strings, iterators), a motivating narrative that makes repetition feel worthwhile, no production baggage — you can break things freely — and progressively increasing complexity across 12-25 days of problems each year. Unlike algorithm-focused competitive programming, this approach uses AoC’s rich problem variety to stress-test real cross-platform FFI patterns: string encoding mismatches between Java and Swift, async model incompatibilities, and the lowest-common-denominator constraints that make production FFI viable.
+
+    ## Learning Outcomes
+
+    After this workshop, attendees will be able to:
+
+    - Use Advent of Code as a structured, low-stakes FFI practice environment — progressing from primitives to strings to async across multiple target languages.
+    - Design a C glue layer that accommodates the lowest-common-denominator constraints of diverse language runtimes, using cbindgen or UniFFI.
+    - Avoid common FFI pitfalls: string encoding mismatches between Swift/Java, async model incompatibilities, over-exposing Rust idioms that don’t translate across language boundaries.
+    - Evaluate whether FFI is the right architectural choice for a given situation, including honest assessment of the maintenance burden, onboarding cost, and performance trade-offs.
+    - Replicate the AoC-as-FFI-playground methodology in their own learning or team onboarding — with a structured progression and a working starter template to build from.
+  -->
+
+<!-- end_slide -->
+
+Agenda
+===
+
+<!-- new_line -->
+
+- **NOW** — self-check + pick your day — *you*
+- **9:15** — why FFI is harder than it looks — *me*
+- **9:35** — Ex 1 · your day, pure Rust — *you*
+- **9:55** — break
+- **10:05** — C as the bridge (live demo) — *me*
+- **10:25** — Ex 2 · wrap it in a C boundary — *you*
+- **10:55** — break
+- **11:05** — one header, four runtimes — *me*
+- **11:30** — Ex 3 · bindings in YOUR language — *you*
+- **12:00** — debrief: what broke? — *all of us*
+
+<!-- end_slide -->
+
+Self-Check
+===
+
+```sh
+git clone https://github.com/alycda/RustConf2026
+cd RustConf2026 # optional: direnv allow
+just check # or ./scripts/self-check.sh
+```
+
+<!-- new_line -->
+
+<!-- speaker_note: |
+
+ -->
+
+<!-- end_slide -->
+
+Why Is This Hard?
+===
+
+An FFI signature is a **treaty** between two runtimes that disagree about memory, types, errors, and encoding —
+
+<!-- new_line -->
+
+and neither side can enforce it.
+
+<!-- speaker_note: |
+
+    (3m) Slow down — this is the thesis of the whole morning.
+
+    The compiler checks YOUR side of the treaty only. We're making a promise to the compiler that we know what we're doing — and we MUST keep it.
+
+    That's why we test from the OTHER side today.
+
+ -->
+<!-- end_slide -->
+
+Four Disagreements
+===
+
+<!-- incremental_lists: true -->
+
+1. **Memory** — who allocates, who frees, who's *sure*?
+2. **Types** — Rust's `String` doesn't exist over there. Neither does `Result`.
+3. **Errors** — panics don't cross. Exceptions don't cross. Integers cross.
+4. **Encoding** — "it's just a string"
+
+<!-- incremental_lists: false -->
+
+<!-- speaker_note: |
+
+    (5m) After 20 years of breaking things on the internet, encoding bugs are still the ones that ship silently.
+
+    Errors: so what actually crosses the boundary? Integers.
+
+ -->
+
+<!-- end_slide -->
+
+"It's Just a String"
+===
+
+<!-- incremental_lists: true -->
+
+* **Rust** — UTF-8; `CString` refuses interior NUL — validation at the boundary
+* **C** — bytes + NUL terminator, no promises whatsoever
+* **Swift** — UTF-8 inside (since Swift 5); the NSString bridge is UTF-16 — hidden work
+* **JVM** — **modified** UTF-8 via JNI. Not quite UTF-8. Really.
+* **Python** — unicode object; you `.encode()` first — explicit, honest
+* **Dart** — UTF-16 code units; `toNativeUtf8()` — and **you** free it
+
+<!-- incremental_lists: false -->
+
+<!-- speaker_note: |
+
+    (7m) Modified UTF-8: NUL encodes as TWO bytes, and supplementary characters differ too. Works with ASCII in every test — then someone's name has an emoji.
+
+    Sometimes the failure is silent corruption, not a crash. The crash is the easy case.
+
+    ---
+
+    Rust String CAN hold interior NUL — CString is what refuses. Swift String is UTF-8 internally since Swift 5; UTF-16 lives in the ObjC bridge.
+
+ -->
+
+<!-- end_slide -->
+
+Fight the Boundary, Not the Puzzle
+===
+
+**AoC gives you:**
+
+* pre-solved problems
+* every I/O shape: ints, strings, structs, grids
+
+<!-- new_line -->
+
+**Instead of:**
+
+* fighting the domain AND the boundary
+* asymptotic-notation anxiety
+* you get to save Christmas instead
+
+<!-- speaker_note: |
+
+    (5m) This is how I reinforced FFI when I joined Ditto: onboarding onto a Rust core serving a dozen platform SDKs, I went back to my AoC solutions and wrapped them in increasingly cursed ways — in public.
+
+    The puzzle is already solved, so every bug is a BOUNDARY bug. That narrows the debugging space to exactly the skill we're here to build.
+
+    Nothing is wasted when you document the messy middle.
+
+ -->
+
+<!-- end_slide -->
+
+Ex 1: Pick Your Day
+===
+
+20 min · `exercises/ex1-pure-rust`
+
+<!-- new_line -->
+
+Keep the solver pure: `&str` in, `i64` out — I/O stays **outside** the library
+
+<!-- new_line -->
+
+* ▶ 🥇 **2024-12-03** *Mull It Over* — raw string scan → `usize`; stateful parse (`do()` / `don't()`)
+* ▶ **2015-12-06** *Probably a Fire Hazard* — instruction lines → enum + rectangle → `u32`; one 1000×1000 grid, walked twice
+* 🥇 **2024-12-01** *Historian Hysteria* — two int lists → `i32`; sort-and-zip, then a frequency map
+* **2015-12-01** `()` floor counting · **2015-12-05** nice-string rules
+* **2020-12-02** password policies · **2021-12-02** submarine course
+* **2022-12-01** calorie sums · **2023-12-01** calibration digits
+
+<!-- new_line -->
+
+▶ the two I walk through · 🥇 golden: verified end to end in all four tracks
+
+<!-- speaker_note: |
+
+    (2m brief, then 20m yours)
+
+    (Survey landed: 2024-12-03 and 2015-12-06 are the two I walk through.
+    The rest of the menu is ordered goldens-first behind them.)
+
+    Any day works — the boundary steps are identical. That's the whole methodology.
+
+    The 🥇 rule is earned, not decorative: only days worked end to end in ALL
+    four tracks get one, and the two golden days are the only ones that
+    qualify — every track CI-verified against numbers the Rust tests pin.
+
+    Launch Ex 1, 20 min. Done early? Help a neighbour — or take the bonus.
+
+    Break at 9:55 — be strict.
+
+    ---
+
+    Menu source of truth: days/README.md in this repo.
+
+ -->
+
+<!-- end_slide -->
+
+▶ 🥇 2024-12-03: Mull It Over
+===
+
+raw string scan → `usize`; stateful parse (`do()` / `don't()`)
+
+<!-- new_line -->
+
+> **TODO(walk-through):** the example input, the parse, and the one line that becomes the boundary.
+
+<!-- speaker_note: |
+
+    TODO: the 2024-12-03 walk-through — how long, what to show (the puzzle statement's example, the stateful do()/don't() parse, the &str in / i64 out shape), and where the boundary will bite it in Ex 2.
+
+    ---
+
+    Rust reference: days/2024-12-03 (golden — all four tracks against one header). Both statement examples answer 161 for part 1 (src/lib.rs tests).
+
+
+    [??s]
+ -->
+
+<!-- end_slide -->
+
+▶ 2015-12-06: Probably a Fire Hazard
+===
+
+instruction lines → enum + rectangle → `u32`; one 1000×1000 grid walked twice, the per-light rule swapped by function pointer
+
+<!-- new_line -->
+
+> **TODO(walk-through):** the example input, the parse, and the one line that becomes the boundary.
+
+<!-- speaker_note: |
+
+    TODO: the 2015-12-06 walk-through — how long, what to show (the instruction lines to an enum plus a rectangle, the 1000×1000 grid walked twice, the per-light rule swapped by function pointer), and where the boundary will bite it in Ex 2.
+
+    ---
+
+    Rust reference: days/2015-12-06 (Rust + Dart tracks, cbindgen.toml present — not golden).
+
+
+    [??s]
+ -->
+
+<!-- end_slide -->
+
+Ahead of Schedule? Choose Your Adventure
+===
+
+Their boundary was designed for **their** solution — not yours.
+
+<!-- new_line -->
+
+If these puzzles get to be absurd, then so can I with shoving FFI in places it doesn't belong — because guess what inevitably ends up in production?
+
+<!-- new_line -->
+
+<!-- incremental_lists: true -->
+
+* **Banner your answer** — libcaca's FIGlet engine: opaque canvas, a `.flf` font from 1993, a boundary you design (`days/2015-12-01`)
+* **JIT your solver** — generate C from your own puzzle input, compile it at runtime with libtcc, benchmark the absurdity (`days/2015-12-01`)
+* **Race the sorts** — Rust vs libc `qsort` vs C++ `std::sort` behind a C shim, and the `a - b` comparator that overflows (`days/2024-12-01`)
+* **Beat Rust's hash maps with C** — part 2's frequency map through uthash; it wins, and the reason is the lesson (`days/2024-12-01`)
+* **Second track** — same day, another language's ceremony
+* **Harder shapes** — structs and arrays across the boundary on a tougher day
+
+<!-- incremental_lists: false -->
+
+<!-- speaker_note: |
+
+    (2m)
+
+    This slide only exists if we're ahead — fast room, AI-assisted exercises. Skip it silently otherwise.
+
+    Setup for the second line: all of Eric's puzzles are loosely based on real problems he encountered. So the absurdity is licensed — if the puzzles get to be absurd, so do I. And the punchline is not a joke: the absurd integration is exactly the thing that inevitably ends up in production.
+
+    The point of the menu: crates exist for all of this. Use them at work. Here, design the boundary yourself — that's the durable skill, and it's how you stop inheriting other people's boundary decisions.
+
+    (Show cargo run if the projector allows — the banner earns a laugh)
+
+    ---
+
+    Worked variants on the 2015-12-01 reference branches: libcaca banner (opaque-canvas pattern, CString NUL check, create/free contained) and libtcc JIT + criterion bench. [confirm: final public branch names at publish]
+
+    The two golden-day bullets are validated (2026-08-27, goldens line): the sort race is real (std::sort 1.2x, qsort 3.8x — the comparator overflow shipped live in the original talk and the tests pin i32::MAX/MIN because of it), and uthash at 10.6µs beats ahash's 13.1µs — the debrief line is that crossing frequency, not crossing, is the cost.
+
+    In-repo receipts for "ends up in production" (four-track merge, wip/tracks — pending validation before any of these get named on a slide): the same repo answers AoC puzzles through a speech synthesiser (espeak-ng, 2023-12-01), a malware scanner (YARA, 2023-12-01), a physics engine (Chipmunk2D, 2021-12-02), and a database (DuckDB, 2021-12-02) — every one behind a cargo feature, off by default.
+
+ -->
+
+<!-- end_slide -->
+
+C as the Bridge
+===
+
+Module 2 · 10:05
+
+<!-- speaker_note: (back from break — energy reset) -->
+
+<!-- end_slide -->
+
+The Incantation
+===
+
+Every word has a job
+
+```rust
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ex_part1(input: *const c_char) -> i64
+```
+
+<!-- new_line -->
+
+Design rule: expose the **narrowest surface that works** — what crosses the boundary is what you maintain *forever*.
+
+<!-- speaker_note: |
+
+    Read the signature aloud — every piece has a job. `unsafe` is honest labeling: C++ engineers write unsafe code constantly, they just don't label it. We label it and contain it to ONE file.
+
+    Edition 2024 spells it `#[unsafe(no_mangle)]`: exporting a symbol is an unsafe promise too — a name collision is UB the linker arranges.
+
+    ---
+
+    Signature is exercises/ex2-c-glue/src/lib.rs verbatim (edition 2024 via exercises/Cargo.toml). The worked shape with an out-param instead of an in-band i64: days/2024-12-03/src/c_api.rs.
+
+ -->
+
+<!-- end_slide -->
+
+Live: Rust → Header → C Caller
+===
+
+Four commands, one boundary — from `exercises/ex2-c-glue`
+
+```sh
+cargo build                              # Rust → shared library
+cbindgen --output include/ex2_c_glue.h   # Rust → C header (read it!)
+cc tests/c/test_glue.c -L../target/debug -lex2_c_glue \
+   -Wl,-rpath,"$PWD/../target/debug" -o test_glue
+./test_glue
+```
+
+<!-- new_line -->
+
+…then we feed it **garbage** and watch the contract hold.
+
+<!-- new_line -->
+
+```bash +exec +acquire_terminal
+just demo   # asciinema play docs/demo/module2.cast, borrowed from nix if absent
+```
+
+<!-- speaker_note: |
+
+    Read the generated header aloud — it's the demo's centrepiece.
+
+    First run, the todo!() still inside: a panic across extern "C" aborts. Rust won't let a lie cross the border.
+
+    Then the four steps, rebuild, and the money beat: invalid UTF-8 in, sentinel out, no crash — the boundary checks EARNED that.
+
+    (Demo-gods fallback: `asciinema play docs/demo/module2.cast` — 27s, the same three acts; docs/demo/module2.sh re-records it)
+
+    ---
+
+    The four beats are exercises/ex2-c-glue/build-and-test.sh, which calls itself "the same four beats as the Module 2 demo", cwd exercises/ex2-c-glue. ../target/debug because the exercises are one cargo workspace; the rpath is what lets test_glue find libex2_c_glue.so (.dylib on macOS) at run time — without it the link succeeds and the run doesn't.
+
+    Demo day: 2024-12-03 (Mull It Over) as the Ex 1 solver inside exercises/ex2-c-glue — the same crate and C harness the room opens at 10:25, so what they watch is what they do next. Each beat: `just <build|bindgen|cc|run>` from exercises/ex2-c-glue, or `cheat demo/<beat> | scripts/clip.sh` to paste it by hand.
+
+ -->
+
+<!-- end_slide -->
+
+Ex 2: Panics Don't Cross
+===
+
+30 min · `exercises/ex2-c-glue`
+
+<!-- new_line -->
+
+**✗ let it panic** — a panic crossing `extern "C"` **aborts the process** (Rust ≥ 1.81). No stack trace for the caller. Just gone.
+
+<!-- new_line -->
+
+**✓ validate + sentinel** — null check → `CStr` → UTF-8 check → call → in-band error value
+
+<!-- new_line -->
+
+A sentinel is only a sentinel if your day's answers can never **be** it — that proof is about your puzzle, not about C.
+
+<!-- speaker_note: |
+
+    Ex 2 is exactly this: four TODO steps, C harness provided. Step 0 is running the harness before implementing anything — watch the abort once, on purpose.
+
+    Spend one minute reading the generated header — knowing what cbindgen produced is the difference between using it and trusting it.
+
+    Done early? Help a neighbour.
+
+    ---
+
+    ex2 ships INVALID_INPUT = -1 (exercises/ex2-c-glue/src/lib.rs). 2015-12-01 is the counterexample: floors are signed, -1 is a reachable answer, so there -1 is not a sentinel — the slide's last line, in one day.
+    Timing valve: this block can run +10 by trimming M3.
+
+ -->
+
+<!-- end_slide -->
+
+One Header, Four Runtimes
+===
+
+Module 3 · 11:05
+
+<!-- speaker_note: (back from break — the header hasn't changed since Ex 2. Only the caller does.) -->
+
+<!-- end_slide -->
+
+Load, Then Look Up
+===
+
+Two questions the header can't answer: **where** is the library, and **what** is it called here?
+
+<!-- new_line -->
+
+<!-- incremental_lists: true -->
+
+* **Python / Dart** — you compute the path. `../../target/{debug,release}/` × three names: `libex2_c_glue.so` · `libex2_c_glue.dylib` · `ex2_c_glue.dll`. No platform check — whichever file cargo produced is the one that exists.
+* **Kotlin / JNA** — `Native.load("ex2_c_glue")`: bare name in, JNA does the three-name mapping. You give it `jna.library.path`.
+* **Swift** — no runtime search at all. `-L` finds it for the link, `-rpath` for the run. Same search, spelled to the linker.
+* **Lookup** — cffi reads the header · JNA matches method names to symbols · Dart looks up a string · Swift got typed functions from clang
+
+<!-- incremental_lists: false -->
+
+<!-- new_line -->
+
+Nothing in `ex2_c_glue.h` says where `libex2_c_glue` lives. It never will.
+
+<!-- speaker_note: |
+
+    (6m) The header is a treaty about calls. Two things happen before any call and the header is silent on both.
+
+    [next: Python / Dart]  three filenames because three OSes name a cdylib three ways — and Windows drops the lib prefix. No if-platform: try all three, whichever exists is the one cargo built. First Windows run ever is what taught this.
+    [next: Kotlin]  JNA does that same mapping itself from the bare name — you only tell it where to look.
+    [next: Swift]  the compiled-language spelling of the same search. -L answers the linker, -rpath answers the loader — two flags because link time and run time are different questions. Skip -rpath and the link succeeds and the run doesn't. Ex 2's cc line had the same shape.
+    [next: Lookup]  four answers to "what is it called": Python parses the header as data; JNA matches your method NAMES to exported symbols; Dart looks up a literal string; Swift asked clang and got a typed function. That gradient is the debrief-two slide — hold it.
+
+    ---
+
+    Sources: exercises/ex3-bindings/{python/bindings.py,dart/ex3.dart} TODO 2 comments (three names, no platform check); kotlin/ex3.kts header (JNA maps the bare name itself, -Djna.library.path); swift/main.swift header (-L/-rpath, an env var would be DYLD_* on one OS and LD_* on the other). book/src/boundary.md "Where the library is at run time is a third question again" — and the Swift devcontainer ladder: a module resolving is not the same as its library loading.
+
+    [6m]
+ -->
+
+<!-- end_slide -->
+
+The String Crosses — Then What?
+===
+
+One `const char *`, four prices — and four spellings of NULL
+
+<!-- new_line -->
+
+<!-- incremental_lists: true -->
+
+* **Swift** — `String` → `UnsafePointer<CChar>` bridged for you. UTF-8 inside since Swift 5, so what's left to pay? NULL: the imported parameter is Optional — `nil`
+* **Kotlin / JNA** — `String` → `const char*` for you, in the **platform charset** unless `-Djna.encoding=UTF-8`. NULL: declare `String?`, pass `null`
+* **Python / cffi** — `.encode("utf-8")` yourself; cffi adds the terminator. What about an embedded NUL? NULL: `ffi.NULL`
+* **Dart / ffi** — `toNativeUtf8()` allocates. `calloc.free` in a `finally` — that's yours. NULL: `nullptr`
+
+<!-- incremental_lists: false -->
+
+<!-- new_line -->
+
+Every track ends the same way: `ex_part1(NULL) == -1`. The contract you wrote in Ex 2 — proved from the outside.
+
+<!-- speaker_note: |
+
+    (7m) Ex 2 made you do the conversion by hand — null check, CStr, UTF-8 check. Every runtime does it again on its side, and they disagree about how much to show you.
+
+    [next: Swift]  the bridge is free-looking, not free: a NUL-terminated copy still gets made for the call, and the pointer is only valid for the call. Hidden work still fails, just further from your code.
+    [next: Kotlin]  JNA's default is the platform charset, not UTF-8 — the justfile pins it. The M1 modified-UTF-8 story lives next door: fine with ASCII in every test, then someone's name has an emoji.
+    [next: Python]  explicit and honest. Ask the file's question: cffi adds the NUL — so what does a string with a NUL in the middle become? Rust's String can hold one; CString refuses it.
+    [next: Dart]  nothing hidden. You allocate, you free, you hold the pointer. Dart makes you do what Swift hid — the file asks which you prefer.
+    [next: closing]  four spellings of NULL, one answer: -1, not a crash. The sentinel you chose in Ex 2 is what each runtime now checks for.
+
+    Launch is the next slide.
+
+    ---
+
+    Sources: exercises/ex3-bindings/{swift/main.swift TODO 1–3, kotlin/ex3.kts TODO 1+3, python/bindings.py TODO 3–4, dart/ex3.dart TODO 3}; exercises/justfile pins -Djna.encoding=UTF-8 with the comment "JNA's default is the platform charset, not UTF-8". Swift UTF-8 storage: swift.org/blog/utf8-string (Swift 5).
+
+    [unverified] nil and nullptr: the Swift file only hints "the imported signature takes an Optional pointer" and the Dart file has no NULL TODO at all — neither spelling is proven in-repo. Python's ffi.NULL and Kotlin's String? are in the files.
+
+    [7m]
+ -->
+
+<!-- end_slide -->
+
+Ex 3: One Header, Four Runtimes
+===
+
+30 min · `exercises/ex3-bindings` — in **your** language
+
+<!-- incremental_lists: true -->
+
+* **Swift** — auto-bridges `String` → `const char*`. Free lunch? Hidden work.
+* **Kotlin / JNA** — interface + `Native.load()`. Mind the default encoding.
+* **Python / cffi** — paste the header, `.encode()` yourself. Explicit, honest.
+* **Dart / ffi** — typedef pairs, hand-transcribed signatures, `toNativeUtf8()`, you free. Maximum honesty.
+
+<!-- incremental_lists: false -->
+
+<!-- speaker_note: |
+
+    The spectrum IS the lesson: Swift hides everything, Dart hides nothing. Neither end is better — but you must KNOW what's hidden, because hidden work still fails. It just fails further from your code.
+
+    Launch Ex 3. Collect your debrief answer as you go: what did your runtime need that the header couldn't say?
+
+    Golden-day branches are the safety net. Done early? The Ex 3 bonus — a second track.
+
+    ---
+
+    Dart is the extreme answer to the debrief question: dart:ffi never reads the C header at all — signatures are hand-transcribed as Dart types (days/2015-12-05/dart/solve.dart), and the generated header exists so you can eyeball your transcription. A typo'd transcription compiles and corrupts silently — the treaty, unenforced.
+
+    Timing valve: shrink to 25 if the room is behind.
+
+ -->
+
+<!-- end_slide -->
+
+×4
+===
+
+languages calling the same Rust — before lunch
+
+<!-- speaker_note: (point at the room — this number is theirs, not mine) -->
+
+<!-- end_slide -->
+
+Ahead of Schedule? Try Another Language
+===
+
+Same header, same day — a second runtime's ceremony
+
+<!-- new_line -->
+
+<!-- incremental_lists: true -->
+
+* **Cross the spectrum** — did Swift hide it? Do it in Dart. Did Dart make you free it? See what Swift did for you.
+* **Same four steps** — load, look up, convert the string, prove the hostile-input contract — different runtime, different answers
+* **The answer key is one directory over** — the golden days carry all four tracks against one header (`days/2024-12-01`, `days/2024-12-03`)
+
+<!-- incremental_lists: false -->
+
+<!-- new_line -->
+
+Your debrief answer, twice: what did the **second** runtime need that the header couldn't say?
+
+<!-- speaker_note: |
+
+    (2m) Only if we're ahead — skip it silently otherwise.
+
+    The point is the comparison, not the second binding: two runtimes against one header is the whole of lecture 3, in your own hands. Pick the far end of the spectrum from the one you just did.
+
+    ---
+
+    Tracks and worked references: exercises/ex3-bindings/README.md. The second track needs its toolchain — `just check` says which rows are green.
+
+
+    [??s]
+ -->
+
+<!-- end_slide -->
+
+Debrief: What Broke?
+===
+
+<!-- incremental_lists: true -->
+
+1. What broke — and what did the error **actually tell you**?
+2. What did your language **hide** from you?
+3. What surprised you in the **generated** code?
+
+<!-- incremental_lists: false -->
+
+<!-- new_line -->
+
+Best bug in the room gets a retelling.
+
+<!-- speaker_note: |
+
+    Facilitate, don't lecture. Harvest 3–4 stories; connect each to its pattern — encoding, ownership, hidden bridging.
+
+ -->
+
+<!-- end_slide -->
+
+Who Actually Read the Header?
+===
+
+One header, four treaties — enforced, consumed, copied, remembered
+
+<!-- incremental_lists: true -->
+
+* **Swift** — clang compiles against it. Drift is a compile error. **Enforced.**
+* **Python / cffi** — reads it at runtime, derives every call. Can't drift — but trusts it blind. **Consumed.**
+* **Dart / ffi** — never opens it. Typedefs hand-transcribed, header as reference. **Copied.**
+* **Kotlin / JNA** — never opens it either. Interface hand-mapped, kept in sync by care. **Remembered.**
+
+<!-- incremental_lists: false -->
+
+Only one track keeps the guarantee your Ex 2 C harness had: `#include`, then a compiler.
+
+<!-- speaker_note: |
+
+    Debrief, part two. You told me what your runtime needed that the header couldn't say — now: did your runtime read the header at all? Only one did. Swift handed it to clang and got typed functions back; a stale header is a compile error. Python read it as data at runtime — it can't drift, but nobody verified it. Dart and Kotlin never opened it: the header sat there as documentation while the treaty got re-typed by hand.
+
+    Segue: the only way to buy Swift's guarantee for the other three is to generate the binding from the source of truth — UniFFI. Not today.
+
+    ---
+
+    Receipts, verified in-repo 2026-08-25:
+    - swift/module.modulemap (2023-12-01): "This file is the whole reason this track differs from the other three." No hand-transcribed signature anywhere in solve.swift.
+    - python/solve.py (2015-12-01): reads include/aoc_2015_12_01.h, strips the preprocessor lines, feeds ffi.cdef(); regenerates via `just days bindgen` if the header is missing.
+    - dart/solve.dart (2015-12-05): "hand-transcribed from include/aoc_2015_12_05.h below."
+    - kotlin/solve.kt (2021-12-02): self-describes as "the least checked — nothing here verifies that the header still says what this interface assumes."
+    - Ex 2's C harness (tests/c/test_glue.c) #includes the generated header — C and Swift are the two places a compiler checks it.
+
+    As of 2026-08-27 the goldens line makes this slide literal instead of assembled: days/2024-12-01 and days/2024-12-03 each carry ALL FOUR tracks against ONE header on ONE day — enforced, consumed, copied and remembered, side by side over the same two functions, every cell CI-asserted against numbers the Rust tests pin. If a track question needs a receipt mid-slide, point there: the four files sit in one directory and their headers cross-reference each other's trade.
+
+    FAQ ("why not add the check to the others?"): ffigen (Dart) and jextract (Kotlin) exist — but they ARE generated bindings — the same C shape plus a toolchain. Wiring one up is bonus/afternoon material, not a fix; the uneven gradient is the exhibit.
+
+ -->
+
+<!-- end_slide -->
+
+Debrief Seed: What Windows Hid
+===
+
+<!-- skip_slide -->
+
+First full three-OS run of the merged tree: **red only on Windows** — and not one failure was in the days.
+
+<!-- incremental_lists: true -->
+
+* `.venv/bin/python` → `.venv/Scripts/python` — same venv, the interpreter moved
+* `shasum` → `sha256sum` — Git-for-Windows bash is a different bash
+* `java -cp "a.jar:b.jar"` → `;` — with `:` the JVM loads neither and says nothing
+* `libaoc_2015_12_05.so` / `.dylib` → `aoc_2015_12_05.dll` — no `lib` prefix
+* `print("Part 1 🐍(🦀): …")` → `UnicodeEncodeError: 'charmap'` — stdout inherited **cp1252**
+
+<!-- incremental_lists: false -->
+
+<!-- new_line -->
+
+```python
+for name in ("libaoc_2015_12_05.so", "libaoc_2015_12_05.dylib", "aoc_2015_12_05.dll"):
+```
+
+No platform check — whichever file cargo produced is the one that exists.
+
+<!-- speaker_note: |
+
+    My own answer to question two, if the room is quiet.
+
+    The tracks were green on linux for weeks. The merge put them on the full grid — first Windows run ever.
+    [next: Scripts]  the venv is the same venv; the interpreter moved
+    [next: sha256sum]  bash on Windows is a different bash
+    [next: classpath]  the one that fails silently — nothing loads, no error
+    [next: dll]  same cdylib, different name — three filenames, no platform check
+    [next: cp1252]  Dart and Kotlin printed the same snake and crab. Python asked the console.
+
+    None of these are FFI. All of them sit on the boundary.
+
+    ---
+
+    Found 2026-09-04 on wip/ffi-ci: gate commit → one fix per track → gate lifted → UTF-8 stdout.
+    Self-check passed in every Windows cell throughout; the workshop's Windows answer is still WSL2.
+    sys.stdout.reconfigure(encoding="utf-8") — a no-op where stdout is already UTF-8.
+
+
+    [??s]
+ -->
+
+<!-- end_slide -->
+
+Debrief Seed: Global State, Twice
+===
+
+<!-- skip_slide -->
+
+`cargo test` with every C library on — first run of the new job
+
+| espeak tests | runs failed |
+|---|---|
+| alone, parallel | 0/10 |
+| all 26, `--test-threads=1` | 0/10 |
+| all 26, parallel | **4/10** |
+| all 26, parallel, initialise once | 0/20 |
+
+<!-- pause -->
+
+```rust
+let mut guard = lock()?;            // Mutex<bool>: is espeak initialised?
+if !*guard {
+    espeak_Initialize(AUDIO_OUTPUT_SYNCHRONOUS, 0, std::ptr::null(), 0);
+    espeak_SetVoiceByName(english.as_ptr());
+    *guard = true;
+}
+```
+
+<!-- pause -->
+
+Measure, don't assume.
+
+<!-- speaker_note: |
+
+    The day's README already says it: ask whether a library's state is per-handle or global before you design around it. The lock was there. The tests still went red.
+
+    [next: table]  alone: green. serial: green. together: four in ten.
+      That's not a race in my code — every espeak call was already under one lock.
+    [next: code]  espeak_Initialize isn't a reset. Every call reloads the phoneme data — frees it, reallocates it — and pointers into the old block survive.
+      Single-threaded, the block comes back at the same address, so it works. Add nineteen other tests allocating and it doesn't.
+
+    Initialise once. The bool lives inside the mutex because "is it initialised" is global state too.
+    [next: measure]  YARA next door: fresh rules per solve, no lock, no once. Same puzzle, opposite answer.
+
+    ---
+
+    Measured 2026-09-04, espeak-ng 1.52.0.1 from nixpkgs, 16 cores; CI hit it first try on a 4-core runner.
+    Instrumented: init 1 fine, inits 2–7 all nineteen references empty — "1" and "one" both "".
+    Locale, core count, and yara-as-culprit each ruled out before the fix.
+    Code on the slide is trimmed: the real block is inside unsafe, with the error checks (days/2023-12-01/src/espeak.rs).
+
+
+    [??s]
+ -->
+
+<!-- end_slide -->
+
+When Is FFI the Right Call?
+===
+
+<!-- incremental_lists: true -->
+
+1. **Team** — who maintains the boundary in two years?
+2. **Timeline** — the ecosystem's rewrite arrives on **its** schedule, not yours
+3. **Consistency** — same logic on six platforms? FFI earns its keep.
+4. **Performance** — **measure it.** No, FFI wasn't faster. It's fun, though.
+
+<!-- incremental_lists: false -->
+
+<!-- speaker_note: |
+
+    "You can totally write this in Rust — and someone maybe already did. But it's probably already written in C, so why wait?"
+
+    The figlet story: the standard.flf font in this repo is from 1993. The pure-Rust rewrite started in 2019 and hit 1.0 this March — seven years. The libcaca boundary in days/2015-12-01 landed the same day it was started. [confirm: quote a properly measured port time, not the commit gap]
+
+    Rewrites are best-case, and when one matures, adopt it — FFI is the bridge that doesn't bet against the future. But it's the same-day answer, and for thirty years it was the ONLY answer.
+
+    Honest caveat both ways: production bindings cost more than the rewrite estimate says, too.
+
+    Big-O lies — benchmark your actual data. Real numbers, measured in-repo (aarch64, bench profile):
+
+    - 2015-12-01, pure sum vs the libtcc JIT: ~557ns vs ~1.27ms — ~2,300x. The gap is per-call compile/relocate/teardown, not the arithmetic.
+    - 2024-12-01 sort race (1000 i32): pure Rust ~4.1µs, C++ std::sort through a C shim ~5.0µs (~1.2x), libc qsort ~15.7µs (~3.8x — every comparison is an indirect call the boundary can't inline).
+    - The asterisk that keeps point 4 honest: 2024-12-01's part-2 lookup race — naive scan ~99µs, std HashMap ~23µs, ahash ~13µs, uthash through FFI ~10.6µs. The C hash table WON. Crossing frequency is the cost, not crossing: per-comparison qsort loses 3.8x, two bulk crossings amortized over a thousand lookups beat ahash.
+    - So the slide line stays true as comedy and needs the asterisk as engineering: "No, FFI wasn't faster — except the time it was, and the difference was how often we crossed."
+
+    Sometimes the battle-tested C library IS the right answer — the boundary you built today is how you use it well. In-repo proof: 2015-12-05 answers is_nice through ICU's regex engine AND vectorscan (Hyperscan) — two industrial engines, one boundary pattern (days/2015-12-05); vectorscan beat plain Rust at part 1 and lost part 2 by 6-9x, which is a better lesson than either half alone.
+
+    Migration: strangler fig, not big bang.
+
+ -->
+
+<!-- end_slide -->
+
+Yes, AI Helped Build This
+===
+
+**Delegated to AI:**
+
+* C test boilerplate, makefiles
+* glibc archaeology
+* "suggest a day to abuse"
+
+<!-- new_line -->
+
+**Kept human:**
+
+* boundary design, ownership contracts
+* reading the segfault
+* knowing when the answer is wrong
+
+<!-- new_line -->
+
+AI writes any binding in a minute. It can't build your intuition for **where to look when it breaks.** That was today.
+
+<!-- speaker_note: |
+
+    Full transparency — this is what AI did here, and what it didn't. Use it the same way during exercises: delegate the boring, own the boundary.
+
+ -->
+
+<!-- end_slide -->
+
+Take the Playground Home
+===
+
+<!-- incremental_lists: true -->
+
+1. Pick a solved problem → progress the boundary: **primitives → strings → structs → errors → async**
+2. Reference solutions unlocked **today** — compare, argue, learn twice
+3. Add a day. Add a language. Break something new.
+4. Bring it to your team — **the compiler errors become the curriculum**
+
+<!-- incremental_lists: false -->
+
+<!-- speaker_note: |
+
+    The methodology is the takeaway, not the code.
+
+    Reference branches just went public — everything you fought with has a worked answer now. The comparison is where the second half of the learning lives.
+
+    ---
+
+    Timing valve: wrap compresses to 8 min if the room ran long.
+
+ -->
+
+<!-- end_slide -->
+
+Nothing Is Wasted
+===
+
+when you document the **messy middle**
+
+<!-- new_line -->
+
+![image:w:30%](./img/qr-code.png)
+
+github.com/alycda/RustConf2026
+
+<!-- speaker_note: |
+
+    (End with energy — thank them, take questions in the hall)
+
+    Q&A runs to 12:30; the wrap slide stays up.
+
+ -->

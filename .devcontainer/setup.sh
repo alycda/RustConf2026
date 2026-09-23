@@ -26,17 +26,70 @@ export HOME=${HOME:-/root}
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_DIR="$(dirname "$SCRIPT_DIR")"
 
-# Add Nix channels
-nix-channel --add https://github.com/nix-community/home-manager/archive/master.tar.gz home-manager
-nix-channel --update
+# Add the home-manager channel once. An unconditional `nix-channel --update`
+# here pulled a fresh master on every rebuild, so the generation always
+# differed and the skip-if-unchanged guard below could never fire. Updating
+# home-manager is now deliberate: nix-channel --update home-manager, then
+# `just _rebuild`.
+if ! nix-channel --list | grep -q '^home-manager '; then
+  nix-channel --add https://github.com/nix-community/home-manager/archive/master.tar.gz home-manager
+  nix-channel --update home-manager
+fi
 
 # Install home-manager
 nix-shell '<home-manager>' -A install
 
 # Apply the configuration from this repo. Variant devcontainers (jj, kotlin,
-# flutter) set WORKSHOP_HOME_NIX via containerEnv to their own home.nix, which
+# flutter, swift, godot) set WORKSHOP_HOME_NIX via containerEnv to their own home.nix, which
 # imports the shared one below and adds packages.
-home-manager switch -b backup -f "${WORKSHOP_HOME_NIX:-${SCRIPT_DIR}/home.nix}"
+HOME_NIX="${WORKSHOP_HOME_NIX:-${SCRIPT_DIR}/home.nix}"
+
+# Only switch if the generation would actually change. A switch is not atomic
+# from the outside: it unlinks the old home-manager path before adding the new
+# one, so for a few seconds ~/.nix-profile/bin holds neither rustc nor cargo.
+# Anything that probes for a toolchain in that window sees it missing and, in
+# rust-analyzer's case, gives up on the workspace for good — it does not
+# re-probe, so days/ stays unloaded until someone restarts the server by hand.
+# That is why every devcontainer.json runs this script as onCreateCommand,
+# which completes before the extension host starts, rather than as
+# postCreateCommand, which runs beside it. A no-op switch opens that window
+# for nothing, and this script re-runs whenever the container is rebuilt and
+# whenever `just _rebuild` is invoked by hand.
+#
+# `home-manager build` is a plain nix-build: it evaluates the same generation
+# and writes a result symlink without touching the profile. If that path is
+# already the live one, there is nothing to install.
+hm_profile=""
+for candidate in \
+    "${XDG_STATE_HOME:-${HOME}/.local/state}/nix/profiles/home-manager" \
+    "/nix/var/nix/profiles/per-user/${USER}/home-manager"; do
+  if [ -e "$candidate" ]; then hm_profile="$candidate"; break; fi
+done
+
+hm_current=""
+if [ -n "$hm_profile" ]; then
+  hm_current="$(readlink -f "$hm_profile" 2>/dev/null || true)"
+fi
+hm_wanted=""
+# No live profile — a fresh container, since /nix is not a mounted volume —
+# means there is nothing to compare against: go straight to the switch rather
+# than pay a full, silent build first and then switch anyway. The comparison
+# earns its build on a re-run (`just _rebuild`) against a profile that exists.
+if [ -n "$hm_current" ]; then
+  build_dir="$(mktemp -d)"
+  trap 'rm -rf "$build_dir"' EXIT
+  # A build failure here is not fatal: fall through to the switch and let it
+  # report the real error, rather than swallowing a broken home.nix.
+  if (cd "$build_dir" && home-manager build -f "$HOME_NIX") >/dev/null 2>&1; then
+    hm_wanted="$(readlink -f "${build_dir}/result" 2>/dev/null || true)"
+  fi
+fi
+
+if [ -n "$hm_wanted" ] && [ "$hm_wanted" = "$hm_current" ]; then
+  echo "home-manager: generation unchanged, skipping switch"
+else
+  home-manager switch -b backup -f "$HOME_NIX"
+fi
 
 # Allow direnv for this template repo (if it has .envrc)
 if [ -f "${WORKSPACE_DIR}/.envrc" ]; then

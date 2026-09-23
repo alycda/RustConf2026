@@ -19,9 +19,25 @@ cheats:
 # valid in trees that predate the day library)
 mod? days
 
+# (`mod?` for the same reason as days above)
+# the workshop exercises: `just exercises ex2`, `just exercises python`, …
+mod? exercises
+
 # verify required toolchain + optional tracks (always exits 0; CI: run scripts/self-check.sh)
 check:
     -@./scripts/self-check.sh
+
+# asciinema is deliberately not in shell.nix (my rig, not the workshop's
+# contract), so the recipe borrows it when absent.
+
+# Presenter only: replay the recorded Module 2 demo — the demo-gods fallback for the Live slide
+demo:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! command -v asciinema >/dev/null; then
+        exec nix-shell -p asciinema --run "asciinema play -i 2 docs/demo/module2.cast"
+    fi
+    asciinema play -i 2 docs/demo/module2.cast
 
 # Language-track setup (Exercise 3 — pick ONE track; see `just check`).
 # Required Rust/C toolchain comes from shell.nix, not from these recipes.
@@ -73,10 +89,65 @@ setup-dart:
 # Dart track: distro installs vary — points at dart.dev
 [linux]
 setup-dart:
-    @echo "Install the Dart SDK (3.0+): https://dart.dev/get-dart"
+    @echo "Install the Dart SDK: https://dart.dev/get-dart (then: just check — it verifies the version floor)"
     @echo "Or skip that: reopen the repo in the 'Flutter/Dart track' devcontainer."
+
+# gfortran is deliberately not in shell.nix: ~102 MiB for one optional
+# track, the same rule that keeps the C libraries behind `--arg full true`.
+# Nor does any C toolchain an attendee already has bring it along — the
+# Xcode CLT ships clang and no Fortran front end whatsoever, which is why
+# the macOS recipe installs a compiler rather than pointing at one.
+
+# Fortran track: gfortran, which arrives with brew's gcc (the CLT has none)
+[macos]
+setup-fortran:
+    brew install gcc
+    @echo "brew's gcc is what provides gfortran; then re-run: just check"
+
+# Fortran track: distro package, or nix for a no-install shell
+[linux]
+setup-fortran:
+    @echo "Debian/Ubuntu: sudo apt install gfortran · Fedora: sudo dnf install gcc-gfortran"
+    @echo "Or install nothing system-wide: nix-shell -p gfortran (then run just from inside it)"
+    @echo "then re-run: just check"
+# R track: `Rscript` is the whole toolchain — no package manager step, no
+# dependency to fetch. .C() is in base R.
+
+# R track: R via brew (the formula is lowercase `r`, the command is `R`)
+[macos]
+setup-r:
+    brew install r
+
+# R track: CRAN publishes per-distro repositories — points at them
+[linux]
+setup-r:
+    @echo "R from CRAN (distro repos, newer than what apt/dnf ship):"
+    @echo "  https://cran.r-project.org/bin/linux/"
+    @echo "Or borrow it for one command without installing anything:"
+    @echo "  nix-shell -p R --run 'just days r-demo 2015-12-01'"
+
+# Godot/GDExtension track: the editor binary, which is also the headless one
+[macos]
+setup-godot:
+    brew install --cask godot
+    @echo "Then re-run: just check (it verifies the 4.6 floor the .gdextension declares)"
+
+# Godot track: distros disagree on the package name AND on which major it is
+# — `godot` is 3.x on Debian and Fedora, where 4.x is `godot4` — so this
+# points at the download rather than guessing. Nothing here needs the editor
+# UI: the same binary runs the track headless.
+[linux]
+setup-godot:
+    @echo "Install Godot 4.6+ from https://godotengine.org/download (the standard build, not .NET)"
+    @echo "Your distro may package it as 'godot4'; scripts/godot-bin.sh finds either."
+    @echo "Renamed it, or unzipped it somewhere off PATH? Point at it: export GODOT=/path/to/Godot_v4.7-stable_linux.x86_64"
+    @echo "Or install nothing: reopen in the Godot devcontainer variant (.devcontainer/godot), which carries the engine."
+    @echo "then: just check — it verifies the 4.6 floor the .gdextension declares."
 
 # devcontainer only: rebuild the home-manager profile (WORKSHOP_HOME_NIX is
 # set by the variant devcontainers so their extra packages survive a rebuild)
+# Goes through setup.sh rather than calling `home-manager switch` directly,
+# so a rebuild that changes nothing skips the switch (see the guard there)
+# instead of emptying the profile under a running rust-analyzer.
 _rebuild:
-    home-manager switch -b backup -f "${WORKSHOP_HOME_NIX:-.devcontainer/home.nix}"
+    bash .devcontainer/setup.sh

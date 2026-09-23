@@ -1,0 +1,9 @@
+---
+syntax: bash
+tags: [ demo ]
+---
+# the whole Module 2 demo, in order (cwd: exercises/ex2-c-glue)
+cargo build
+cbindgen --output include/ex2_c_glue.h
+cc tests/c/test_glue.c -L../target/debug -lex2_c_glue -Wl,-rpath,"$PWD/../target/debug" -o test_glue
+./test_glue

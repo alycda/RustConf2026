@@ -1,6 +1,141 @@
-{ pkgs ? import <nixpkgs> {} }:
+# Two shells, one file.
+#
+#   nix-shell                    the workshop shell: the five required tools
+#                                (rustc, cargo, cbindgen, a C compiler, just)
+#                                plus the small conveniences around them.
+#   nix-shell --arg full true    the above plus every C library the days'
+#                                default-off cargo features link against.
+#
+# The split exists for the room. Attendees who clone on-site pay for the
+# default shell over venue Wi-Fi, and none of the C libraries below are on
+# the path through the exercises: every one of them sits behind a cargo
+# feature that is off by default, and every build.rs skips its pkg-config
+# probe unless that feature is on (days/2021-12-02/build.rs is the pattern).
+# So the download they cannot avoid stays as small as the workshop's own
+# contract — which is what scripts/self-check.sh verifies and what
+# book/src/nix.md has always advertised.
+#
+# Measured on nixpkgs-unstable, 2026-09-06, via `nix-build --dry-run`:
+# 726.5 MiB for this shell against 1.4 GiB with `--arg full true`. The
+# libraries are not a rounding error next to the Rust toolchain; they are
+# roughly the other half of the download. Most of that half is one package:
+# espeak-ng costs ~600 MiB on its own, because nixpkgs' build wants audio
+# output and so drags in libpulseaudio and most of ffmpeg — for a day that
+# only calls espeak_TextToPhonemes and friends. duckdb is a distant second
+# at ~73 MiB; every other library here is under 20 MiB. If the full shell
+# ever needs to get cheaper, an audio-less espeak-ng is the whole game.
+#
+# What is in neither shell: the language tracks' own runtimes. Swift, the
+# Dart SDK, a JDK and kotlinc have never been here — an attendee picks ONE
+# track (README step 3) and nobody should pay for the other three on venue
+# Wi-Fi. R makes that rule impossible to argue with: 646 MiB to download and
+# about 2.0 GiB on disk (nixpkgs unstable, R 4.6.1, measured 2026-09-15 with
+# `nix path-info -S`), which is the whole default shell over again for a
+# track most of the room will not take. `just setup-r` owns that install, and
+# `nix-shell -p R --run '<cmd>'` borrows it for a single command
+# without putting it in anyone's shell — which is how days/2015-12-01/r was
+# built and verified.
+#
+# R is the one runtime that IS in the `full` shell, and only there. It is
+# not for running the R track; it is because 2015-12-01's `extendr` feature
+# links libR at build time, and `full` is defined as "everything the
+# default-off features need to build" — the ffi job runs `cargo test
+# --workspace --all-features` inside it and had no way to build that one
+# feature without R (run 35003544822: extendr-api's build.rs panics, both
+# OSes). Cached for every runner (aarch64-darwin, x86_64-linux,
+# aarch64-linux all answer 200 from cache.nixos.org), so it is a download,
+# never a compile.
+#
+# `--arg full true` is what .github/workflows/rust.yml's `ffi` job passes,
+# and what anyone reaching for `cargo test --all-features` wants. direnv
+# takes it too, if you'd rather have the full set load on `cd`: change
+# .envrc's `use nix` to `use nix --arg full true`.
+{ nixpkgs ? import <nixpkgs> {}, full ? false }:
 
 let
+  # Two nixpkgs packages are broken on darwin (details at each override). The
+  # fixes are applied as an overlay so that `pkgs.chipmunk` and `pkgs.tinycc`
+  # *are* the fixed packages everywhere below: a plain let-binding shadowing
+  # them inside `with pkgs; [ ... ]` works too, but a later `pkgs.chipmunk`
+  # anywhere in this file would silently reach the unfixed one, and on darwin
+  # that is issue #1 again with the fix sitting thirty lines above it.
+  #
+  # Each override carries a tripwire. The channel is unpinned, so the day
+  # nixpkgs fixes the package the override keeps forcing a source build for
+  # no reason; the warnIf fires on that day, instead of the comments quietly
+  # describing a nixpkgs that no longer exists.
+  pkgs = nixpkgs.extend (final: prev: let inherit (prev) lib; in {
+    chipmunk =
+      lib.warnIf
+        (!lib.any (d: (d.pname or "") == "glfw") prev.chipmunk.buildInputs)
+        "shell.nix: nixpkgs' chipmunk no longer depends on glfw2; drop the override"
+        (darwinFixes.chipmunk prev);
+    tinycc =
+      if !prev.stdenv.hostPlatform.isDarwin then prev.tinycc else
+      lib.warnIf
+        (!lib.any (i: lib.hasInfix (builtins.placeholder "lib") (i.text or "")) prev.tinycc.pkgconfigItems)
+        "shell.nix: nixpkgs' tinycc ships a libtcc.pc with real paths; drop the override"
+        (darwinFixes.tinycc prev);
+  });
+
+  darwinFixes = {
+    # nixpkgs' tinycc writes its libtcc.pc through makePkgconfigItem, which only
+    # knows how to defer `placeholder "out"`; the item uses `placeholder "lib"`
+    # and `placeholder "dev"` too, and those survive into the installed file as
+    # bare 52-character hashes: `-L/0sra2y…/lib -Wl,--rpath /0sra2y…/lib`. Linux
+    # never noticed — the cc wrapper already passes the real -L for every
+    # buildInput, and GNU ld swallows the bogus path as --rpath's argument. On
+    # macOS clang rejects the stray positional path before ld runs, so
+    # 2015-12-01's `tcc` feature cannot link. The rewritten item uses the
+    # `@lib@`/`@dev@` forms that copyPkgconfigItems' substituteAllInPlace does
+    # resolve.
+    #
+    # Except libtcc.dylib's install name is `@rpath/libtcc.dylib` — tinycc
+    # skips the fixDarwinDylibNames hook the rest of nixpkgs runs, so a test
+    # binary links fine and then aborts at load with "Library not loaded".
+    # The hook is added here; it rewrites the id to the store path in fixup.
+    #
+    # darwin only (the overlay above): Linux loads libtcc fine through the cc
+    # wrapper and gets tcc from cache.nixos.org; a source build there costs
+    # ~65 s with tinycc's Linux-only installCheck. On darwin it is ~15 s.
+    tinycc = prev: prev.tinycc.overrideAttrs (old: {
+      nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ prev.fixDarwinDylibNames ];
+      pkgconfigItems = [
+        (prev.makePkgconfigItem {
+          name = "libtcc";
+          inherit (old) version;
+          description = "Tiny C compiler backend";
+          # The variables are the single source for the paths; pkg-config
+          # expands ${libdir} itself. The rpath is one token — the upstream
+          # item's `-Wl,--rpath <path>` is two, and build.rs splits on
+          # whitespace — so a link that bypasses nixpkgs' wrapped linker (a
+          # ~/.cargo/config.toml `linker =`, say) still finds the dylib.
+          cflags = [ "-I\${includedir}" ];
+          libs = [ "-L\${libdir}" "-Wl,-rpath,\${libdir}" "-ltcc" ];
+          variables = {
+            prefix = "@out@";
+            includedir = "@dev@/include";
+            libdir = "@lib@/lib";
+          };
+        })
+      ];
+    });
+
+    # nixpkgs' chipmunk declares `platforms = unix` but pulls glfw2, libglut
+    # and the X11 stack into buildInputs — all of it for the `chipmunk_demos`
+    # binary, none of it for libchipmunk. glfw2 is `platforms = linux`, so on
+    # aarch64-darwin the evaluator refuses the whole package, and with it the
+    # whole shell (issue #1). The override drops the demo and its inputs;
+    # Chipmunk's own CMakeLists offers BUILD_DEMOS for exactly this. The
+    # library then builds on macOS from source in about a minute — nothing in
+    # cache.nixos.org has this derivation, on either platform.
+    chipmunk = prev: prev.chipmunk.overrideAttrs (old: {
+      buildInputs = [ ];
+      cmakeFlags = (old.cmakeFlags or [ ]) ++ [ "-DBUILD_DEMOS=OFF" ];
+      postInstall = "";
+    });
+  };
+
   # The jj devcontainer exports WORKSHOP_HOME_NIX=<...>/.devcontainer/jj/home.nix
   # via containerEnv; impure eval reads it here. jj sheets live with that
   # variant (.devcontainer/jj/cheat/) and only its container sees them —
@@ -34,7 +169,12 @@ let
       tags: ${p.tags}
       readonly: true
   '') cheatPaths);
-  # nixpkgs ships neither of this day's two C libraries with a pkg-config
+
+  # The two derivations below are referenced only from the `full` list, and
+  # Nix is lazy, so the default shell never evaluates them — no chipmunk or
+  # duckdb path is realised, let alone downloaded.
+  #
+  # nixpkgs ships neither of 2021-12-02's two C libraries with a pkg-config
   # file: chipmunk has include/chipmunk/*.h and lib/libchipmunk.so, duckdb has
   # include/duckdb.h and lib/libduckdb.so, and `pkg-config --libs <name>` fails
   # for both even with the packages in buildInputs.
@@ -44,7 +184,9 @@ let
   # build script the exception in a repo where they all look alike, so the
   # missing files are synthesized here instead: writeTextDir puts each at
   # $out/lib/pkgconfig/, which pkg-config's setup hook adds to PKG_CONFIG_PATH
-  # like any other package's. Two libraries, two gaps, one technique.
+  # like any other package's. Two libraries, two gaps, one technique — and a
+  # third .pc, libtcc's, fixed by a different one above: nixpkgs ships that
+  # file, just with the wrong contents, so it is overridden rather than added.
   chipmunkPc = pkgs.writeTextDir "lib/pkgconfig/chipmunk.pc" ''
     prefix=${pkgs.chipmunk}
     Name: chipmunk
@@ -64,9 +206,10 @@ let
     Cflags: -I${pkgs.duckdb.dev}/include
     Libs: -L${pkgs.duckdb.lib}/lib -lduckdb
   '';
-in
-pkgs.mkShell {
-  buildInputs = with pkgs; [
+
+  # The workshop shell: everything an attendee needs for Exercises 1-3, and
+  # nothing whose absence they'd only discover by opting into a feature.
+  workshop = with pkgs; [
     # required workshop toolchain (verified by `just check`); mkShell's stdenv
     # already provides the C compiler and linker. `just` is required too — it
     # is how attendees invoke everything.
@@ -81,12 +224,26 @@ pkgs.mkShell {
     # safety net: python3 for the Python track; git so pure/minimal shells
     # (and jj colocated clones) get a current git (no verification needed)
     python3 git
+    # Here rather than in `full`, despite having no consumer in this list:
+    # every C-backed day's build.rs shells out to pkg-config, and the panic
+    # naming shell.nix and the missing .pc only happens if pkg-config runs at
+    # all. Leave it out of the default shell and an attendee who flips a
+    # feature on gets "failed to run pkg-config: No such file or directory"
+    # instead of the message telling them which shell to be in.
+    pkg-config
+  ];
+
+  # The C libraries behind the days' cargo features. None of these is reachable
+  # from `just check`, the exercises, or any default `cargo build` — enabling
+  # the feature is the only way to need them, and `--arg full true` is how you
+  # get them. .github/workflows/rust.yml's `ffi` job is the CI side of that.
+  cLibraries = with pkgs; [
     # 2015-12-01 banners its answer through libcaca's FIGlet engine
     # (days/2015-12-01/src/caca.rs) and JIT-compiles a C function with
     # libtcc at runtime (days/2015-12-01/src/tcc.rs), both via FFI — no
     # system-wide installs needed, `pkg-config` picks up caca.pc and
     # libtcc.pc automatically via its setup hook.
-    libcaca tinycc pkg-config
+    libcaca tinycc
     # 2015-12-05 scans lines two ways, both via FFI: through vectorscan
     # (the maintained Hyperscan fork, days/2015-12-05/src/hyperscan.rs) and
     # through ICU's regex engine via a small C shim
@@ -115,7 +272,25 @@ pkgs.mkShell {
     # pkg-config: the cc wrapper injects the include path for every
     # buildInputs entry, which is how that day's build.rs finds <uthash.h>.
     uthash
+    # lapack for days/2024-12-01's absurd sort (cargo feature `lapack`, off by
+    # default): LAPACK's DLASRT is a Fortran subroutine, and days/2024-12-01/
+    # src/lapack.rs calls it from Rust — the hidden-length ABI the 2015-12-01
+    # Fortran track meets from the safe side, met here from the other one.
+    # nixpkgs ships lapack.pc (in the dev output), so that day's build.rs
+    # probes it like every other library here and synthesizes nothing. ~24 MiB
+    # of download all in: 13.9 for liblapack, 6.9 for openblas (nixpkgs' LAPACK
+    # provider) and 3.4 for the gfortran runtime it links against.
+    lapack
+    # R for days/2015-12-01's extendr lap (cargo feature `extendr`, off by
+    # default). Not a C library, but it plays one here: extendr-api's build
+    # script runs `R CMD config` and links libR, and nothing else in the
+    # full shell provides them. See the header for why this is the only
+    # runtime in either shell.
+    R
   ];
+in
+pkgs.mkShell {
+  buildInputs = workshop ++ pkgs.lib.optionals full cLibraries;
 
   CHEAT_CONFIG_PATH = cheatConf;
 

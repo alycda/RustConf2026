@@ -1,0 +1,28 @@
+# Exercise 2, one beat at a time — the four commands of build-and-test.sh
+# as separate recipes, for the Module 2 live demo and for watching each
+# step land. `just build` … from this directory, or `just exercises glue
+# build` … from the repo root. The script stays the reference; when it
+# changes, change the matching recipe (and the demo/* cheat that mirrors it).
+
+# the first recipe is the default
+_default:
+    @just --list
+
+# 1/4 Rust → shared library (../target: the exercises are one cargo workspace)
+build:
+    cargo build
+
+# 2/4 Rust → C header — this is the artifact worth reading aloud
+bindgen:
+    cbindgen --output include/ex2_c_glue.h
+
+# 3/4 compile the C caller against the library; the rpath is what lets it start
+cc:
+    cc tests/c/test_glue.c -L../target/debug -lex2_c_glue -Wl,-rpath,"$PWD/../target/debug" -o test_glue
+
+# 4/4 run it — NULL and invalid UTF-8 go in first; a todo!() still inside aborts here
+run:
+    ./test_glue
+
+# all four, in order — same as ../build-and-test.sh
+all: build bindgen cc run

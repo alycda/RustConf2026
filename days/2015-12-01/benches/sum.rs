@@ -1,6 +1,6 @@
 //! Pure Rust vs. libtcc-JIT-compiled C, head to head.
 //!
-//! Puzzle inputs aren't committed (see `days/.gitignore`), so this builds
+//! Puzzle inputs aren't committed (see `.gitignore`), so this builds
 //! its own synthetic instruction stream rather than reading one — same
 //! reasoning as `src/main.rs`. `sum_via_c`/`basement_position_via_c` pay
 //! for a full compile-relocate-lookup-teardown cycle on every call (that's

@@ -88,9 +88,9 @@ def main() -> None:
         sys.stdout.reconfigure(encoding="utf-8")
     ffi, lib = load_library()
 
-    input_path = DAYS_DIR / "inputs" / "2024-12-01.txt"
+    input_path = REPO_ROOT / "inputs" / "2024-12-01.txt"
     if not input_path.exists():
-        sys.exit(f"no puzzle input at {input_path} (see days/.gitignore)")
+        sys.exit(f"no puzzle input at {input_path} (see .gitignore)")
     text = input_path.read_text()
 
     print(f"Part 1 🐍(🦀): {call(ffi, lib.aoc_2024_12_01_part1, 'part1', text)}")

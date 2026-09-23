@@ -45,7 +45,7 @@ bench day *args:
 
 # cbindgen header for a day's C-callable surface (Exercise 2), where a day
 # has one — a bonus, and not every day carries one. Not committed (see
-# days/.gitignore): cbindgen is required workshop tooling, so this is
+# .gitignore): cbindgen is required workshop tooling, so this is
 # always a `just` call away instead of a file to keep in sync by hand.
 # Exercise 3 tracks regenerate it the same way before building against it.
 bindgen day:
@@ -82,12 +82,45 @@ python-demo day: (bindgen day)
     fi
     cd "{{day}}" && cargo build --lib
     cd ..
-    # Prefer the repo-local venv even when it isn't activated — same
-    # reasoning as scripts/self-check.sh's probe_python.
-    py="$(pwd)/../.venv/bin/python"
-    [ -x "$py" ] || py=python3
+    # scripts/venv-python.sh owns the venv-vs-python3 rule (shared with
+    # self-check, the exercises justfile and CI).
+    py="$(../scripts/venv-python.sh)"
     "$py" "{{day}}/python/solve.py"
 
+# Exercise 3 (R track): call a day's cbindgen C API from R through .C().
+# `just setup-r` once first (or borrow one: nix-shell -p R).
+#
+# The one demo recipe with no `(bindgen day)` dependency, and that absence is
+# the track. Dart and Kotlin regenerate the header they do not parse so it is
+# there to eyeball; R does not even transcribe it — `.C()` matches on the
+# symbol name and trusts the vector modes it was handed, so nothing in
+# r/solve.R would be any different if the header did not exist. Generating
+# one here would be theatre. The cdylib is the whole dependency.
+r-demo day:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -f "{{day}}/r/solve.R" ]; then
+        echo "days/{{day}} has no r/solve.R — not every day carries one" >&2
+        exit 1
+    fi
+    cd "{{day}}" && cargo build --lib
+    Rscript r/solve.R
+
+# The R track's generated lap (extendr): same day, same cdylib, the other R
+# interface. Separate recipe rather than a flag on r-demo because the build
+# is genuinely different — `--features extendr` links against libR and reads
+# R's headers, so this one cannot even compile without R installed, while
+# r-demo only needs R to *run*. That asymmetry is the lap's whole cost and it
+# belongs in the recipe list where someone will meet it.
+r-extendr-demo day:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -f "{{day}}/r/extendr.R" ]; then
+        echo "days/{{day}} has no r/extendr.R — not every day carries one" >&2
+        exit 1
+    fi
+    cd "{{day}}" && cargo build --lib --features extendr
+    Rscript r/extendr.R
 
 # Exercise 3 (Dart/dart:ffi track): call a day's cbindgen C API from Dart.
 # `just setup-dart` once first. Depends on `bindgen` rather than
@@ -106,7 +139,6 @@ dart-demo day: (bindgen day)
     cd dart
     dart pub get
     dart run solve.dart
-
 
 
 # Exercise 3 (Kotlin/JNA track): call a day's cbindgen C API from Kotlin.
@@ -129,26 +161,22 @@ kotlin-demo day: (bindgen day)
         echo "days/{{day}} has no kotlin/solve.kt — not every day carries one" >&2
         exit 1
     fi
-    jna_version=5.17.0
-    jna_sha256=b3a9408e7c51e08ef0e3bfcc08f443f6ec0f6191ba8cd7c18d53d2b22e5bdbc0
+    # The pin, the hash, the cache and the checksum tool all live in
+    # scripts/fetch-jna.sh, shared with the exercises and CI; it honours the
+    # JNA_JAR the kotlin devcontainer exports and prints the jar's path.
+    jna="$(../scripts/fetch-jna.sh)"
     cd "{{day}}" && cargo build --lib
     cd kotlin
-    jna="jna-${jna_version}.jar"
-    if [ ! -f "$jna" ]; then
-        echo "fetching $jna from Maven Central"
-        curl -fsSL -o "$jna.tmp" \
-            "https://repo1.maven.org/maven2/net/java/dev/jna/jna/${jna_version}/${jna}"
-        # Verified before it is moved into place, so an interrupted or
-        # tampered download never becomes a cached jar that later runs.
-        echo "${jna_sha256}  ${jna}.tmp" | shasum -a 256 -c - >/dev/null
-        mv "$jna.tmp" "$jna"
-    fi
     # -include-runtime bundles the Kotlin stdlib, so the result runs under
     # plain `java` — which is exactly what scripts/self-check.sh guarantees
     # for this track (kotlinc + a runnable java, nothing else).
     kotlinc solve.kt -classpath "$jna" -include-runtime -d solve.jar
-    java -cp "solve.jar:$jna" SolveKt
-
+    # ':' everywhere but Windows, where the JVM splits a classpath on ';'.
+    # cygpath is the tell that this is Git Bash driving a native Windows java
+    # — the same tell scripts/fetch-jna.sh uses to hand back a path it can open.
+    cp_sep=:
+    command -v cygpath >/dev/null 2>&1 && cp_sep=';'
+    java -cp "solve.jar${cp_sep}$jna" SolveKt
 
 # Exercise 3 (Swift track): call a day's cbindgen C API from Swift.
 # `just setup-swift` once first (the Xcode CLT on macOS, swift.org on Linux —
@@ -215,23 +243,136 @@ swift-demo day: (bindgen day)
     # startup with `libBlocksRuntime.so: cannot open shared object file`.
     # Compiling, linking and *loading* are three separate searches; -L answers
     # the second and only -rpath answers the third.
-    corelibs=()
-    profile="$HOME/.nix-profile"
-    if [ -d "$profile/lib/swift/linux/$(uname -m)" ]; then
-        corelibs+=(-I "$profile/lib/swift/linux/$(uname -m)")
-        corelibs+=(-Xcc "-I$profile/include")
-        corelibs+=(-L "$profile/lib/swift/linux" -L "$profile/lib")
-        corelibs+=(-Xlinker -rpath -Xlinker "$profile/lib/swift/linux")
-        corelibs+=(-Xlinker -rpath -Xlinker "$profile/lib")
-    fi
+    # The flags themselves live in scripts/swift-corelibs-flags.sh, shared
+    # with the exercises justfile and CI; it prints nothing where the layout
+    # above is absent.
     swiftc solve.swift -o .build/solve \
         -I . \
-        ${corelibs[@]+"${corelibs[@]}"} \
+        $(../../../scripts/swift-corelibs-flags.sh) \
         -L "$target/debug" -L "$target/release" \
         -l"aoc_$(printf '%s' "{{day}}" | tr - _)" \
         -Xlinker -rpath -Xlinker "$target/debug" \
         -Xlinker -rpath -Xlinker "$target/release"
     ./.build/solve
+
+# Exercise 3 (Fortran track): call a day's cbindgen C API from Fortran.
+# `just setup-fortran` once first (gfortran — what `just check` probes).
+# Depends on `bindgen` rather than duplicating its cbindgen invocation —
+# the header isn't actually parsed (Fortran wants the signatures written
+# as an `interface` block, see the day's fortran/solve.f90), but
+# regenerating it keeps it available for eyeballing alongside the
+# hand-transcribed ones. Here that comparison is the exercise: gfortran
+# checks every call against the block, and the header is the only way to
+# find out whether the block itself is right.
+#
+# Compiled and linked like the Swift track, and for the same reason: this
+# is the second compiled consumer, so "debug or release" is a linker flag
+# rather than a runtime search. Both -L/-rpath pairs go on unconditionally
+# — a directory that doesn't exist costs nothing, and debug comes first
+# for the same reason it does in the dlopen-ing tracks. -rpath takes
+# absolute paths on purpose; this is a development recipe, not something
+# being shipped. Spelled -Wl,-rpath,<path> rather than Swift's
+# `-Xlinker -rpath -Xlinker <path>` because gfortran is a gcc driver and
+# that is its spelling; both forms reach ld and ld64 alike.
+#
+# The executable is `solve`, beside the source, where the other compiled
+# track uses .build/: the root .gitignore already names
+# /days/*/fortran/solve, written when the Fortran rules landed. Nothing
+# else is dropped here — solve.f90 declares a `program`, not a `module`,
+# so there is no .mod (the ignore rule covers that too, for the day a
+# track grows one).
+#
+# Nothing fetched, nothing pinned: ISO_C_BINDING is in the Fortran
+# standard, so the inputs here are the cdylib and the header this repo
+# just built. The compiler is this track's only dependency.
+fortran-demo day: (bindgen day)
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -f "{{day}}/fortran/solve.f90" ]; then
+        echo "days/{{day}} has no fortran/solve.f90 — not every day carries one" >&2
+        exit 1
+    fi
+    cd "{{day}}" && cargo build --lib
+    target="$(cd ../target && pwd)"
+    cd fortran
+    gfortran solve.f90 -o solve \
+        -L "$target/debug" -L "$target/release" \
+        -l"aoc_$(printf '%s' "{{day}}" | tr - _)" \
+        -Wl,-rpath,"$target/debug" -Wl,-rpath,"$target/release"
+    ./solve
+# Exercise 3 (Godot/GDExtension track): call a day's Rust from GDScript.
+# `just setup-godot` once first (what `just check` probes).
+#
+# No `(bindgen day)` dependency, and this is the first track without one.
+# The other four consume the cbindgen header — python and swift parse it,
+# dart and kotlin keep it beside their hand-transcriptions — but a
+# GDExtension reads no header in either direction. The engine hands the
+# library a get_proc_address at load and the library asks for every engine
+# function by name; the library hands back its classes the same way. The
+# only static contract is godot/aoc.gdextension, which is not generated by
+# anything.
+#
+# --features godot, because the gdext crate declares rust-version 1.94 and
+# the workspace floor is 1.85 — see the day's Cargo.toml. First build is
+# minutes: gdext generates bindings for the whole engine API from a JSON
+# file it ships. Later ones are seconds.
+godot-demo day:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -f "{{day}}/godot/test.gd" ]; then
+        echo "days/{{day}} has no godot/test.gd — not every day carries one" >&2
+        exit 1
+    fi
+    # scripts/godot-bin.sh owns the godot-vs-godot4 rule (shared with
+    # self-check); it honours $GODOT for an official download off PATH.
+    if ! godot="$(../scripts/godot-bin.sh)"; then
+        echo "no Godot 4 binary found — run: just setup-godot" >&2
+        exit 1
+    fi
+    lib="aoc_$(printf '%s' "{{day}}" | tr - _)"
+    cd "{{day}}" && cargo build --lib --features godot
+    # res:// is rooted at the project directory and the engine will not walk
+    # out of it, so the descriptor cannot name ../../target/debug — the
+    # cdylib comes to it. Three filenames for one library, the same three
+    # python/solve.py searches at runtime: whichever cargo produced is the
+    # one that exists. godot/lib/ is gitignored by the repo-wide *.so,
+    # *.dylib and *.dll rules.
+    mkdir -p godot/lib
+    found=
+    for name in "lib${lib}.so" "lib${lib}.dylib" "${lib}.dll"; do
+        if [ -f "../target/debug/$name" ]; then
+            cp "../target/debug/$name" "godot/lib/$name"
+            found="$name"
+        fi
+    done
+    if [ -z "$found" ]; then
+        echo "cargo built no cdylib for {{day}} — is crate-type = [\"rlib\", \"cdylib\"] set?" >&2
+        exit 1
+    fi
+    cd godot
+    # The import scan, every time. The engine finds .gdextension files while
+    # scanning the project and records them in .godot/extension_list.cfg; on
+    # a tree that has never been scanned (a fresh clone, a CI runner) the
+    # script below starts, loads no extension, and fails with "Identifier
+    # Aoc20151201 not declared" — a message about the script rather than
+    # about the library it was never told to load.
+    #
+    # `|| true`, and then check the artifact instead. The *first* --import on
+    # a project with no .godot/ does all its work and then aborts on the way
+    # out (SIGABRT, exit 134, after "EditorSettings: Save OK!"); the second
+    # and every later one exits 0. Observed on 4.7.2, headless, Linux. Since
+    # what this step is for is a file, the file is what to test — and the run
+    # that actually matters, the one below, reports its own exit code
+    # honestly.
+    "$godot" --headless --import || true
+    if [ ! -f .godot/extension_list.cfg ]; then
+        echo "godot --import produced no .godot/extension_list.cfg — the extension will not load" >&2
+        exit 1
+    fi
+    # test.gd is both the test and the demo: it asserts the statement
+    # examples, then prints this day's answers if you have dropped an input
+    # at <repo>/inputs/{{day}}.txt.
+    "$godot" --headless -s test.gd
 
 # scaffold a new day from _template, e.g. `just new 2022-12-01`
 new day:

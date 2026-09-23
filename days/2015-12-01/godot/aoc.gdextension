@@ -1,0 +1,61 @@
+; The whole static contract between the engine and libaoc_2015_12_01.
+;
+; Not generated, not validated at build time, and not a header: an INI file
+; naming one symbol, one minimum version, and one library path per platform.
+; The engine reads it, dlopens the matching row, calls entry_symbol, and hands
+; the library a get_proc_address it uses to ask for every engine function it
+; will ever call, by name. Everything else about this boundary is negotiated
+; at load.
+
+[configuration]
+
+; Must match what `#[gdextension]` in src/godot.rs expands to. gdext's default
+; is gdext_rust_init; nothing checks the two agree until the engine fails the
+; load with "No entry symbol found".
+entry_symbol = "gdext_rust_init"
+
+; The floor, and it has to agree with the `api-4-6` feature in Cargo.toml.
+; Lower than the engine you are running is fine — GDExtension is forward
+; compatible inside 4.x, which is why the same .so built for 4.6 loads in the
+; 4.7 nixpkgs ships. Higher than the engine is a refused load.
+compatibility_minimum = 4.6
+
+; Let the editor drop and reload the library when cargo rebuilds it. Costs
+; nothing headless; saves restarting the editor every build if anyone opens
+; this project for real.
+reloadable = true
+
+[libraries]
+
+; res:// is rooted at this directory and the engine will not walk out of it,
+; so these cannot point into days/target/ — `just days godot-demo 2015-12-01`
+; copies the cdylib into lib/ (gitignored) and this table names it there.
+;
+; Three filenames for one library, which is the same fact python/solve.py
+; discovers by trying all three at runtime: a cdylib takes the host's naming
+; convention, not Rust's. Debug and release rows are identical here because
+; the recipe always copies whichever profile it built to the same name; a
+; project shipping both would keep them apart.
+;
+; The keys are matched as (platform, [precision], arch). A row that does not
+; match is not an error — the engine simply loads nothing and every class in
+; it is missing, which reads like a broken script rather than a missing file.
+
+linux.debug.x86_64 = "res://lib/libaoc_2015_12_01.so"
+linux.release.x86_64 = "res://lib/libaoc_2015_12_01.so"
+linux.debug.arm64 = "res://lib/libaoc_2015_12_01.so"
+linux.release.arm64 = "res://lib/libaoc_2015_12_01.so"
+
+; macOS gets no arch suffix: the engine expects one row per configuration and
+; a universal binary or a .framework behind it. A cargo cdylib is
+; single-arch, and on an Apple Silicon Mac that is the arm64 the engine also
+; is — which is the cheap version of what backstitch ships as a .framework.
+macos.debug = "res://lib/libaoc_2015_12_01.dylib"
+macos.release = "res://lib/libaoc_2015_12_01.dylib"
+
+; No lib prefix on Windows, and no MSVC-vs-MinGW distinction because a cargo
+; cdylib is one file either way.
+windows.debug.x86_64 = "res://lib/aoc_2015_12_01.dll"
+windows.release.x86_64 = "res://lib/aoc_2015_12_01.dll"
+windows.debug.arm64 = "res://lib/aoc_2015_12_01.dll"
+windows.release.arm64 = "res://lib/aoc_2015_12_01.dll"

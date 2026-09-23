@@ -1,0 +1,6 @@
+---
+syntax: bash
+tags: [ demo ]
+---
+# 2/4 Rust → C header — this is the artifact worth reading aloud
+cbindgen --output include/ex2_c_glue.h

@@ -77,10 +77,10 @@ void main() {
   final part2 =
       lib.lookupFunction<_PartFnNative, _PartFnDart>('aoc_2024_12_03_part2');
 
-  final inputFile = File('${_dayDir().parent.path}/inputs/2024-12-03.txt');
+  final inputFile = File('${_dayDir().parent.parent.path}/inputs/2024-12-03.txt');
   if (!inputFile.existsSync()) {
     stderr.writeln(
-        'no puzzle input at ${inputFile.path} (see days/.gitignore)');
+        'no puzzle input at ${inputFile.path} (see .gitignore)');
     exit(1);
   }
   final text = inputFile.readAsStringSync();

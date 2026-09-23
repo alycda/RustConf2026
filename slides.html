@@ -1,0 +1,1593 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Using Advent of Code as an FFI Playground — RustConf 2026 Workshop</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap"
+    rel="stylesheet">
+  <style>
+    *,
+    *::before,
+    *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg: #0a0a0a;
+      --surface: #1d1d1d;
+      --surface-2: #2a2a2a;
+      --border: #3a3a3a;
+      --text: #f6f6f6;
+      --text-dim: #9c9c9c;
+      --light: #d6d6d6;
+      --accent: #e9ef44;
+      --accent-glow: #e9ef4422;
+      --blue: #9c9c9c;
+      --green: #d6d6d6;
+      --purple: #9c9c9c;
+      --yellow: #e9ef44;
+      --red: #e9ef44;
+      --font-display: 'Space Grotesk', 'Kairos Sans', sans-serif;
+      --font-body: 'Inter', sans-serif;
+      --font-mono: 'Space Mono', 'Aeonik Fono', monospace;
+    }
+
+    html {
+      font-size: 18px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    .deck {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 5vh 8vw;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.5s ease, transform 0.5s ease;
+      transform: translateY(12px);
+      will-change: opacity, transform;
+    }
+
+    .slide.active {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    .slide::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 70% 20%, #e9ef4407 0%, transparent 70%),
+        radial-gradient(ellipse 60% 50% at 20% 80%, #ffffff03 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .grid-bg::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 60px 60px;
+      opacity: 0.15;
+      pointer-events: none;
+    }
+
+    .diamond-bg::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(var(--text-dim) 1px, transparent 1.5px);
+      background-size: 38px 38px;
+      -webkit-mask-image: linear-gradient(90deg, transparent 30%, #000 100%);
+      mask-image: linear-gradient(90deg, transparent 30%, #000 100%);
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    .slide-number {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--accent);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+      font-weight: 500;
+    }
+
+    h1 {
+      font-family: var(--font-display);
+      font-size: 4.5rem;
+      line-height: 1.02;
+      font-weight: 500;
+      letter-spacing: -0.03em;
+      margin-bottom: 1.5rem;
+    }
+
+    h1 em {
+      color: var(--accent);
+      font-style: normal;
+    }
+
+    h2 {
+      font-family: var(--font-display);
+      font-size: 3rem;
+      font-weight: 500;
+      line-height: 1.12;
+      margin-bottom: 1.8rem;
+      letter-spacing: -0.02em;
+    }
+
+    h2 em {
+      color: var(--accent);
+      font-style: normal;
+    }
+
+    h3 {
+      font-family: var(--font-body);
+      font-size: 1.1rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.8rem;
+    }
+
+    p,
+    li {
+      font-size: 1.1rem;
+      line-height: 1.65;
+      color: var(--text-dim);
+      max-width: 52ch;
+    }
+
+    p strong,
+    li strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .lead {
+      font-size: 1.35rem;
+      color: var(--text);
+      font-weight: 300;
+      line-height: 1.6;
+      max-width: 48ch;
+    }
+
+    code {
+      font-family: var(--font-mono);
+      font-size: 0.85em;
+      background: var(--surface-2);
+      padding: 0.15em 0.45em;
+      border-radius: 4px;
+      color: var(--accent);
+      border: 1px solid var(--border);
+    }
+
+    pre {
+      font-family: var(--font-mono);
+      font-size: 0.95rem;
+      line-height: 1.6;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 8px;
+      padding: 1.5rem 1.8rem;
+      overflow-x: auto;
+      max-width: 80ch;
+      color: var(--text);
+    }
+
+    pre code {
+      background: none;
+      border: none;
+      padding: 0;
+      color: inherit;
+      font-size: 1em;
+    }
+
+    .title-slide {
+      justify-content: flex-end;
+      align-items: flex-start;
+      padding-bottom: 12vh;
+    }
+
+    .title-slide h1 {
+      font-size: 5rem;
+      margin-bottom: 0.8rem;
+    }
+
+    .title-slide .subtitle {
+      font-family: var(--font-body);
+      font-size: 1.25rem;
+      color: var(--text-dim);
+      font-weight: 300;
+      max-width: 42ch;
+      line-height: 1.5;
+      margin-bottom: 2rem;
+    }
+
+    .title-slide .tag {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--accent);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      display: inline-block;
+      padding: 0.4rem 0.8rem;
+      border: 1px solid var(--accent);
+      border-radius: 4px;
+    }
+
+    .title-glow {
+      position: absolute;
+      top: 15%;
+      right: 8%;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, var(--accent-glow) 0%, transparent 60%);
+      filter: blur(60px);
+      pointer-events: none;
+    }
+
+    /* QR sits on the glow's origin: the glow is a 500px circle at top:15%/right:8%,
+       so its centre is 250px in from both edges; the QR is centred on that point. */
+    .title-qr {
+      position: absolute;
+      top: calc(15% + 250px);
+      right: calc(8% + 250px);
+      width: 240px;
+      height: 240px;
+      transform: translate(50%, -50%);
+      border-radius: 8px;
+      z-index: 1;
+    }
+
+    /* Full-bleed image slide: one image, no chrome. The image scales to the
+       slide's padded box and keeps its aspect ratio; square cards fill the
+       height, wide ones fill the width. */
+    .image-slide {
+      justify-content: center;
+      align-items: center;
+    }
+
+    .image-slide img {
+      max-width: 100%;
+      max-height: 90vh;
+      object-fit: contain;
+      border-radius: 12px;
+      box-shadow: 0 24px 80px #00000099;
+    }
+
+    /* Photo + text split: one landscape image on the left, a short lead and
+       a couple of links on the right. Quiet by design; it is backstory. */
+    .two-col.media {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      align-items: center;
+    }
+
+    /* Portrait photos stacked in one frame; the frame is height-bound so a
+       tall phone photo never overflows the slide. */
+    .photo-stack {
+      position: relative;
+      height: 76vh;
+      justify-self: center;
+      aspect-ratio: 3 / 4;
+      max-width: 100%;
+    }
+
+    .photo-stack img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+
+    .photo-stack .credit {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -1.8rem;
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      text-align: center;
+    }
+
+    .photo-stack .credit a {
+      color: inherit;
+      text-decoration: none;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* Step reveal: anything with data-step starts hidden; → shows the next
+       step before advancing the slide, ← hides the last one before going back.
+       The counter never moves. Presenterm's <!-- pause -->, in spirit. */
+    [data-step] {
+      opacity: 0;
+      transition: opacity 0.7s ease;
+    }
+
+    [data-step].on {
+      opacity: 1;
+    }
+
+    .hl-list a {
+      color: var(--text);
+      text-decoration: none;
+      border-bottom: 1px solid var(--accent);
+    }
+
+    .section-slide {
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+
+    .section-slide h2 {
+      font-size: 3.8rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .section-slide .section-sub {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    .mountain-icon {
+      font-size: 0.9rem;
+      margin-bottom: 0.8rem;
+      display: block;
+      color: var(--accent);
+      font-family: var(--font-mono);
+      letter-spacing: 0.3em;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3rem;
+      align-items: start;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 3px;
+      height: 100%;
+    }
+
+    .card.accent::before {
+      background: var(--accent);
+    }
+
+    .card.blue::before {
+      background: var(--blue);
+    }
+
+    .card.green::before {
+      background: var(--green);
+    }
+
+    .card.purple::before {
+      background: var(--purple);
+    }
+
+    .card.yellow::before {
+      background: var(--yellow);
+    }
+
+    .card.accent h3 {
+      color: var(--accent);
+    }
+
+    .card.blue h3 {
+      color: var(--blue);
+    }
+
+    .card.green h3 {
+      color: var(--green);
+    }
+
+    .card.purple h3 {
+      color: var(--purple);
+    }
+
+    .card.yellow h3 {
+      color: var(--yellow);
+    }
+
+    .card h3 {
+      font-size: 0.85rem;
+      margin-bottom: 0.6rem;
+      letter-spacing: 0.1em;
+    }
+
+    .card p,
+    .card li {
+      font-size: 1rem;
+      line-height: 1.55;
+    }
+
+    .card ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .card li {
+      padding: 0.3rem 0;
+    }
+
+    .card li::before {
+      content: '→';
+      margin-right: 0.6rem;
+      opacity: 0.4;
+    }
+
+    .principles {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.2rem;
+      margin-top: 0.5rem;
+    }
+
+    .principle {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.8rem 2rem;
+      position: relative;
+    }
+
+    .principle .p-num {
+      font-family: var(--font-mono);
+      font-size: 2.5rem;
+      font-weight: 700;
+      opacity: 0.08;
+      position: absolute;
+      top: 0.5rem;
+      right: 1rem;
+    }
+
+    .principle .p-title {
+      font-family: var(--font-body);
+      font-weight: 700;
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .principle p {
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    .principle.p-accent {
+      border-left: 3px solid var(--accent);
+    }
+
+    .principle.p-accent .p-title {
+      color: var(--accent);
+    }
+
+    .principle.p-blue {
+      border-left: 3px solid var(--blue);
+    }
+
+    .principle.p-blue .p-title {
+      color: var(--blue);
+    }
+
+    .principle.p-green {
+      border-left: 3px solid var(--green);
+    }
+
+    .principle.p-green .p-title {
+      color: var(--green);
+    }
+
+    .principle.p-purple {
+      border-left: 3px solid var(--purple);
+    }
+
+    .principle.p-purple .p-title {
+      color: var(--purple);
+    }
+
+    .contrast {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      margin: 1.5rem 0;
+      max-width: 700px;
+    }
+
+    .contrast-box {
+      padding: 1.5rem 1.8rem;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    .contrast-box.no {
+      background: var(--surface);
+      border-color: var(--border);
+      opacity: 0.7;
+    }
+
+    .contrast-box.no .contrast-label {
+      color: var(--text-dim);
+    }
+
+    .contrast-box.no p {
+      color: var(--text-dim);
+    }
+
+    .contrast-box.yes {
+      background: var(--surface);
+      border-color: var(--accent);
+      border-left: 3px solid var(--accent);
+    }
+
+    .contrast-box.yes .contrast-label {
+      color: var(--accent);
+    }
+
+    .contrast-label {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 0.6rem;
+      font-weight: 500;
+    }
+
+    .contrast-box p {
+      font-size: 1.05rem;
+      line-height: 1.5;
+    }
+
+    .hl-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    .hl-list li {
+      padding: 0.65rem 0;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: baseline;
+      gap: 1rem;
+    }
+
+    .hl-list li:last-child {
+      border-bottom: none;
+    }
+
+    .hl-list .bullet {
+      font-family: var(--font-mono);
+      color: var(--accent);
+      font-size: 0.8rem;
+      flex-shrink: 0;
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.8rem;
+      margin: 0.5rem 0;
+    }
+
+    /* Inline asciicast replay: a terminal overlay over the slide. Knows only
+       what docs/demo/module2.cast contains (SGR 0/1/2/32/92/96 and cargo's
+       CR + erase-line progress), so it needs no player library and no wifi. */
+    .cast-btn {
+      align-self: flex-start;
+      margin-top: 1rem;
+      background: none;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      padding: 0.5rem 0.9rem;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .cast-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      display: none;
+      flex-direction: column;
+      padding: 2.2rem 2.6rem;
+      background: #11111b;
+    }
+
+    .cast-overlay.on {
+      display: flex;
+    }
+
+    .cast-screen {
+      flex: 1;
+      margin: 0;
+      overflow: auto;
+      max-width: none;
+      background: none;
+      border: none;
+      padding: 0;
+      font-size: 0.95rem;
+      line-height: 1.4;
+      white-space: pre-wrap;
+      color: #cdd6f4;
+    }
+
+    .cast-screen .b { font-weight: 700; }
+    .cast-screen .d { opacity: 0.6; }
+    .cast-screen .g { color: #a6e3a1; }
+    .cast-screen .c { color: #89dceb; }
+
+    .cast-hint {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      margin-top: 0.8rem;
+    }
+
+    .stat {
+      font-family: var(--font-display);
+      font-size: 6rem;
+      line-height: 1;
+      color: var(--accent);
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .cta {
+      display: inline-block;
+      background: var(--accent);
+      color: var(--bg);
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 0.9rem 1.6rem;
+      border-radius: 4px;
+      margin-top: 1.5rem;
+      text-decoration: none;
+    }
+
+    .progress {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--surface-2);
+      z-index: 100;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: var(--accent);
+      transition: width 0.4s ease;
+    }
+
+    .nav {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 2rem;
+      display: flex;
+      gap: 0.8rem;
+      z-index: 100;
+    }
+
+    .nav-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      transition: all 0.2s;
+      font-family: var(--font-mono);
+    }
+
+    .nav-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .slide-counter {
+      position: fixed;
+      bottom: 1.8rem;
+      left: 2rem;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      z-index: 100;
+      letter-spacing: 0.1em;
+    }
+
+    .notes {
+      position: fixed;
+      bottom: 4rem;
+      left: 2rem;
+      right: 2rem;
+      max-width: 60ch;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--yellow);
+      border-radius: 8px;
+      padding: 1rem 1.4rem;
+      font-size: 0.9rem;
+      color: var(--text-dim);
+      z-index: 99;
+      display: none;
+    }
+
+    .notes.visible {
+      display: block;
+    }
+
+    .notes .notes-label {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--yellow);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      display: block;
+      margin-bottom: 0.4rem;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="deck">
+
+    <!-- 08:00 - 09:00 - DOORS -->
+    <!-- ═══ TITLE ═══ -->
+    <div class="slide title-slide diamond-bg active" data-notes="(8:00-9:00) Good morning RustConf!">
+      <div class="title-glow"></div>
+      <img class="title-qr" src="img/qr-code_white.png" alt="QR code: github.com/alycda/RustConf2026">
+      <span class="tag">RustConf 2026 — Montréal</span>
+      <h1>Using Advent of Code<br>as an <em>FFI Playground</em></h1>
+      <p class="subtitle">Alyssa Evans</p>
+      <a class="cta" href="https://github.com/alycda/RustConf2026" target="_blank"
+        rel="noopener">https://github.com/alycda/RustConf2026</a>
+    </div>
+
+    <!-- 09:00 - Part 1 -->
+
+    <!-- slot: speaker-card -->
+    <!-- ═══ SPEAKER CARD ═══ -->
+    <div class="slide image-slide"
+      data-notes="(30s) Welcome to RustConf 2026 Workshops. I want to thank you all for being here with me today. My name is Alyssa and I'm going to share with you my process on how to break things in Rust while talking to other languages and their runtimes; and to help you choose your own adventure with FFI and Advent of Code.">
+      <img src="workshop.png"
+        alt="RustConf 2026 speaker card: Alyssa Evans, Staff Software Engineer, Ditto — Using Advent of Code as an FFI Playground (Workshop)">
+    </div>
+
+    <!-- slot: backstory -->
+    <!-- ═══ WHAT IS THIS? ═══ -->
+    <div class="slide"
+      data-notes="This workshop evolved from my first public talk I gave at RustLA to a room of about 80-100 people and it was terrifying. Thankfully this is a much smaller audience and only slightly less intimidating than last time. (advance) And before that I began shipping my own library of tools that I called ornaments to help me solve advent of code puzzles faster and more consistently.">
+      <span class="slide-number">Background</span>
+      <h2>What is <em>this</em>?</h2>
+      <div class="two-col media">
+        <div class="photo-stack">
+          <img src="img/rustla-talk.jpg" alt="Alyssa presenting at Rust LA, January 2026">
+          <img src="img/rustla-room.jpg" data-step="1" alt="The packed room at Rust LA, January 2026">
+          <span class="credit" data-step="1">photo: <a
+              href="https://www.lawrenceharvey.com/newsroom/rust-la-kicks-off-2026-with-a-packed-community-meetup-in-los-angeles"
+              target="_blank" rel="noopener">Lawrence Harvey, Rust LA kicks off 2026</a></span>
+        </div>
+        <div>
+          <p class="lead">Prior Art</p>
+          <ul class="hl-list">
+            <li><span class="bullet">talk</span><a href="https://github.com/alycda/aoc-ffi" target="_blank"
+                rel="noopener">alycda/aoc-ffi</a></li>
+            <li><span class="bullet">puzzle pieces</span><a href="https://github.com/alycda/AoC-Ornaments"
+                target="_blank" rel="noopener">alycda/AoC-Ornaments</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- slot: who am I -->
+    <!-- ═══ WHO AM I? ═══ -->
+    <div class="slide"
+      data-notes="(15s+) Last year I joined Ditto as a Staff Software Engineer — FFI is literally my day job, where we ship a rust core to almost a dozen Native SDKS - each one of those is a different FFI boundary, sometimes disagreeing across OS-level and chipset matrices. Before Ditto I spent six years in Free Ad-Supported Streaming TV, building web applications for connected TVs and game consoles. Then I became that engineer who kept pushing to adopt Rust.">
+      <span class="slide-number">Today</span>
+      <h2>Who am <em>I</em>?</h2>
+      <div class="contrast">
+        <div class="contrast-box no">
+          <p class="contrast-label">before</p>
+          <p>Six years in Free Ad-Supported Streaming TV — web apps for connected TVs and game consoles.</p>
+        </div>
+        <div class="contrast-box yes">
+          <p class="contrast-label">now</p>
+          <p>Staff Software Engineer, <strong>SDKs</strong> at Ditto. FFI is <em>literally</em> my day job.</p>
+        </div>
+      </div>
+      <p class="lead">In between, I became <em>that engineer</em> who kept pushing to adopt Rust.</p>
+    </div>
+
+    <!-- slot: why are we here -->
+    <!-- ═══ WHY ARE WE HERE — CANDIDATE D (kicker) ═══ -->
+    <div class="slide section-slide grid-bg"
+      data-notes="(60s) We're using Advent of Code as the substrate: wrap a real AoC solution in a C glue layer and call it from other languages. The loop is learn, fail, iterate, repeat — and notice what's missing from it. We are not shipping today. That's the point: this is FFI, so we break things where the breakage is free and write down what broke. Unlike competitive programming, we are not here for the algorithm — we are here for the boundary.">
+      <span class="mountain-icon">LEARN · FAIL · ITERATE · <s style="opacity:.3">SHIP</s> · REPEAT</span>
+      <h2>To break things, <em>on purpose</em>.</h2>
+      <span class="section-sub">and document the messy middle</span>
+    </div>
+
+    <!-- ═══ WHY ARE WE HERE — CANDIDATE E (loop list) ═══ -->
+    <div class="slide"
+      data-notes="(30s) We're using Advent of Code as the substrate: wrap a real AoC solution in a C glue layer and call it from other languages. The loop is learn, fail, iterate, repeat — and notice what's missing from it. We are not shipping today. That's the point: this is FFI, so we break things where the breakage is free and write down what broke. Unlike competitive programming, we are not here for the algorithm — we are here for the boundary.">
+      <span class="slide-number">Why are we here?</span>
+      <h2>To break things, <em>on purpose</em>.</h2>
+      <ul class="hl-list">
+        <li><span class="bullet">learn</span><span>read the header, guess the contract</span></li>
+        <li><span class="bullet">fail</span><span>the other runtime disagrees — loudly, or silently</span></li>
+        <li><span class="bullet">iterate</span><span>narrow the treaty until both sides can hold it</span></li>
+        <li style="opacity:.3"><span class="bullet">ship</span><span><s>not today. this is practice.</s></span>
+        </li>
+        <li><span class="bullet">repeat</span><span>next day, next type, next runtime</span></li>
+      </ul>
+      <p class="lead">and document the messy middle.</p>
+    </div>
+    <!-- slot: agenda -->
+    <!-- ═══ AGENDA ═══ -->
+    <div class="slide"
+      data-notes="(15s) This workshop is in 3 parts with a couple of short breaks, and we stop at 12:30. If you did Exercise 1 as prework you'll be ahead — take the bonus, read ahead for Exercise 2, or help a neighbor; all three are the right answer.">
+      <span class="slide-number">Agenda</span>
+      <ul class="hl-list">
+        <li><span class="bullet">now</span><span>self-check + pick your day</span></li>
+        <li><span class="bullet">9:15</span><span>why FFI is harder than it looks</span></li>
+        <li><span class="bullet">9:35</span><span>Exercise 1 &middot; your day, pure Rust</span></li>
+        <li style="opacity:.55"><span class="bullet">9:55</span><span>break</span></li>
+        <li><span class="bullet">10:05</span><span>C as the bridge</span></li>
+        <li><span class="bullet">10:25</span><span>Exercise 2 &middot; wrap it in a C boundary</span></li>
+        <li style="opacity:.55"><span class="bullet">10:55</span><span>break</span></li>
+        <li><span class="bullet">11:05</span><span>one header, four runtimes</span></li>
+        <li><span class="bullet">11:30</span><span>Exercise 3 &middot; bindings in YOUR language</span></li>
+        <li><span class="bullet">12:00</span><span>debrief: what broke?</span></li>
+      </ul>
+    </div>
+
+    <!-- slot: self-check -->
+    <!-- ═══ SELF-CHECK ═══ -->
+    <div class="slide" data-notes="Did anyone solve their puzzle in rust beforehand?">
+      <span class="slide-number">Right now — 10 minutes</span>
+      <h2>Self-<em>check</em></h2>
+      <pre><code>git clone https://github.com/alycda/RustConf2026.git
+          cd &lt;repo&gt;
+          ./scripts/self-check.sh</code></pre>
+      <p style="margin-top:1.2rem;"><strong>✅ green</strong> → browse <code>days/README.md</code> and pick your day
+        &nbsp;·&nbsp; <strong>❌ red</strong> → the error names the fix; wave me over &nbsp;·&nbsp; you need
+        <strong>one</strong> optional track, not all four
+      </p>
+    </div>
+
+    <!-- slot: part-1 (why is FFI hard) -->
+    <!-- ═══ THESIS ═══ -->
+    <div class="slide grid-bg"
+      data-notes="This is the thesis of the whole morning. The compiler checks YOUR side of the treaty only — that's why we test from the OTHER side today.">
+      <span class="slide-number">01 — Why is this hard?</span>
+      <p class="lead">An <strong>FFI signature is a treaty</strong> between two runtimes that disagree about memory,
+        types, errors, and encoding — and neither side can enforce it.</p>
+    </div>
+
+    <!-- ═══ FOUR DISAGREEMENTS ═══ -->
+    <div class="slide"
+      data-notes="(5m) After 20 years of breaking things on the internet, encoding bugs are still the ones that ship silently. And errors — so what actually crosses the boundary? Integers. That's it.">
+      <span class="slide-number">01 — Why is this hard?</span>
+      <h2>Four <em>disagreements</em></h2>
+      <div class="principles">
+        <div class="principle p-accent">
+          <span class="p-num">01</span>
+          <p class="p-title">Memory</p>
+          <p>Who allocates, who frees, who is <em>sure</em>?</p>
+        </div>
+        <div class="principle">
+          <span class="p-num">02</span>
+          <p class="p-title">Types</p>
+          <p>Rust's <code>String</code> doesn't exist over there. Neither does <code>Result</code>.</p>
+        </div>
+        <div class="principle">
+          <span class="p-num">03</span>
+          <p class="p-title">Errors</p>
+          <p>Panics don't cross. Exceptions don't cross. <strong>Integers cross.</strong></p>
+        </div>
+        <div class="principle">
+          <span class="p-num">04</span>
+          <p class="p-title">Encoding</p>
+          <p>&ldquo;it's just a string&rdquo;</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ IT'S JUST A STRING ═══ -->
+    <div class="slide"
+      data-notes="(7m) Modified UTF-8: NUL encodes as TWO bytes, and supplementary characters differ too. It works with ASCII in every test you write — then someone's name has an emoji. Sometimes the failure is silent corruption, not a crash; the crash is the easy case. Rust's String CAN hold an interior NUL — CString is what refuses it. Swift's String has been UTF-8 internally since Swift 5; the UTF-16 lives in the ObjC bridge.">
+      <span class="slide-number">01 — Why is this hard?</span>
+      <h2>&ldquo;It's just a <em>string</em>&rdquo;</h2>
+      <ul class="hl-list">
+        <li><span class="bullet">rust</span><span>UTF-8; <code>CString</code> refuses interior NUL &mdash;
+            validation at the boundary</span></li>
+        <li><span class="bullet">c</span><span>bytes + NUL terminator, no promises whatsoever</span></li>
+        <li><span class="bullet">swift</span><span>UTF-8 inside (since Swift 5); the NSString bridge is UTF-16
+            &mdash; hidden work</span></li>
+        <li><span class="bullet">jvm</span><span><strong>modified</strong> UTF-8 via JNI. Not quite UTF-8.
+            Really.</span></li>
+        <li><span class="bullet">python</span><span>unicode object; you <code>.encode()</code> first &mdash;
+            explicit, honest</span></li>
+        <li><span class="bullet">dart</span><span>UTF-16 code units; <code>toNativeUtf8()</code> &mdash; and
+            <strong>you</strong> free it</span></li>
+      </ul>
+    </div>
+
+    <!-- ═══ FIGHT THE BOUNDARY ═══ -->
+    <div class="slide"
+      data-notes="(5m) This is how I reinforced FFI when I joined Ditto: onboarding onto a Rust core serving a dozen platform SDKs, I went back to my AoC solutions and wrapped them in increasingly cursed ways — in public. The puzzle is already solved, so every bug is a BOUNDARY bug. That narrows the debugging space to exactly the skill we're here to build.">
+      <span class="slide-number">01 — Why is this hard?</span>
+      <h2>Fight the <em>boundary</em>, not the puzzle</h2>
+      <div class="two-col">
+        <div>
+          <p class="lead">AoC gives you</p>
+          <ul class="hl-list">
+            <li><span class="bullet">01</span><span>pre-solved problems</span></li>
+            <li><span class="bullet">02</span><span>every I/O shape: ints, strings, structs, grids</span></li>
+            <li><span class="bullet">03</span>Zero production baggage — break it with joy</li>
+          </ul>
+        </div>
+        <div>
+          <p class="lead">Instead of</p>
+          <ul class="hl-list">
+            <li><span class="bullet">01</span><span>fighting the domain <em>and</em> the boundary</span></li>
+            <li><span class="bullet">02</span><span>asymptotic-notation anxiety</span></li>
+            <li><span class="bullet">03</span><span>you get to save Christmas instead</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- slot: exercise-1 (solve it in Rust) -->
+    <!-- ═══ EX 1: PICK YOUR DAY ═══ -->
+    <div class="slide" data-notes="(2m brief, then 20m yours) Any day works — the boundary steps are identical, and that is the whole methodology. The medal is earned, not decorative: only days that worked end to end in ALL four tracks get one, and the two golden days are the only ones that qualify — every track CI-verified against numbers the Rust tests pin. I walk through 2024-12-03 and 2015-12-06; the survey picked those two. Launch Ex 1, twenty minutes. Done early? Help a neighbour, or take the bonus. Break at 9:55 — be strict.">
+      <span class="slide-number">09:35 — 20 min &middot; <code>exercises/ex1-pure-rust</code></span>
+      <h2>Ex 1: pick your <em>day</em></h2>
+      <p class="lead">Keep the solver pure: <code>&amp;str</code> in, <code>i64</code> out &mdash; I/O stays
+        <strong>outside</strong> the library.</p>
+      <ul class="hl-list">
+        <li><span class="bullet">▶ 🥇 2024-12-03</span><span><em>Mull It Over</em> &mdash; raw string scan &rarr;
+            <code>usize</code>; stateful parse (<code>do()</code> / <code>don't()</code>)</span></li>
+        <li><span class="bullet">▶ 2015-12-06</span><span><em>Probably a Fire Hazard</em> &mdash; instruction lines
+            &rarr; enum + rectangle &rarr; <code>u32</code>; one 1000&times;1000 grid, walked twice</span></li>
+        <li><span class="bullet">🥇 2024-12-01</span><span><em>Historian Hysteria</em> &mdash; two int lists &rarr;
+            <code>i32</code>; sort-and-zip, then a frequency map</span></li>
+        <li><span class="bullet">2015-12-01</span><span><code>()</code> floor counting &nbsp;&middot;&nbsp;
+            <strong>2015-12-05</strong> nice-string rules</span></li>
+        <li><span class="bullet">2020-12-02</span><span>password policies &nbsp;&middot;&nbsp;
+            <strong>2021-12-02</strong> submarine course</span></li>
+        <li><span class="bullet">2022-12-01</span><span>calorie sums &nbsp;&middot;&nbsp;
+            <strong>2023-12-01</strong> calibration digits</span></li>
+      </ul>
+      <p style="margin-top:1rem;opacity:.6;font-size:.85rem;">▶ the two I walk through &nbsp;&middot;&nbsp; 🥇 golden:
+        verified end to end in all four tracks</p>
+    </div>
+
+    <!-- ═══ WALK-THROUGH: 2024-12-03 (placeholder) ═══ -->
+    <div class="slide"
+      data-notes="TODO: the 2024-12-03 walk-through — how long, what to show (the puzzle statement's example, the stateful do()/don't() parse, the &str in / i64 out shape), and where the boundary will bite it in Ex 2.">
+      <span class="slide-number">09:35 &mdash; walk-through 1 of 2 &middot; <code>days/2024-12-03</code></span>
+      <h2>▶ 🥇 2024-12-03: <em>Mull It Over</em></h2>
+      <p class="lead">raw string scan &rarr; <code>usize</code>; stateful parse (<code>do()</code> / <code>don't()</code>)</p>
+      <p style="opacity:.6;"><strong>TODO(walk-through):</strong> the example input, the parse, and the one line that
+        becomes the boundary.</p>
+    </div>
+
+    <!-- ═══ WALK-THROUGH: 2015-12-06 (placeholder) ═══ -->
+    <div class="slide"
+      data-notes="TODO: the 2015-12-06 walk-through — how long, what to show (the instruction lines to an enum plus a rectangle, the 1000x1000 grid walked twice, the per-light rule swapped by function pointer), and where the boundary will bite it in Ex 2.">
+      <span class="slide-number">09:35 &mdash; walk-through 2 of 2 &middot; <code>days/2015-12-06</code></span>
+      <h2>▶ 2015-12-06: <em>Probably a Fire Hazard</em></h2>
+      <p class="lead">instruction lines &rarr; enum + rectangle &rarr; <code>u32</code>; one 1000&times;1000 grid walked
+        twice, the per-light rule swapped by function pointer</p>
+      <p style="opacity:.6;"><strong>TODO(walk-through):</strong> the example input, the parse, and the one line that
+        becomes the boundary.</p>
+    </div>
+
+    <!-- slot: exercise-1-bonus (find a C library, try to load it) -->
+    <!-- ═══ AHEAD OF SCHEDULE? ═══ -->
+    <div class="slide" data-notes="(2m) This slide only exists if we're ahead — fast room, AI-assisted exercises. Skip it silently otherwise. Setup for the second line: all of Eric's puzzles are loosely based on real problems he hit, so the absurdity is licensed — if the puzzles get to be absurd, so do I. The punchline is not a joke: the absurd integration is exactly the thing that inevitably ends up in production. Crates exist for all of this — use them at work. Here, design the boundary yourself. That is the durable skill, and it is how you stop inheriting other people's boundary decisions.">
+      <span class="slide-number">Bonus &mdash; only if we're ahead</span>
+      <h2>Choose your <em>adventure</em></h2>
+      <p class="lead">Their boundary was designed for <strong>their</strong> solution &mdash; not yours. If these
+        puzzles get to be absurd, so can I &mdash; because guess what inevitably ends up in production?</p>
+      <ul class="hl-list">
+        <li><span class="bullet">banner</span><span>libcaca's FIGlet engine: opaque canvas, a <code>.flf</code> font
+            from 1993, a boundary you design</span></li>
+        <li><span class="bullet">jit</span><span>generate C from your own input, compile it at runtime with libtcc,
+            benchmark the absurdity</span></li>
+        <li><span class="bullet">race</span><span>Rust vs libc <code>qsort</code> vs C++ <code>std::sort</code> —
+            and the <code>a - b</code> comparator that overflows</span></li>
+        <li><span class="bullet">uthash</span><span>beat Rust's hash maps with C; it wins, and the reason is the
+            lesson</span></li>
+        <li><span class="bullet">2nd track</span><span>same day, another language's ceremony</span></li>
+        <li><span class="bullet">shapes</span><span>structs and arrays across the boundary, on a tougher day</span>
+        </li>
+      </ul>
+    </div>
+
+
+    <!-- 09:55 - 10:05 - BREAK -->
+
+    <!-- 10:05 - Part 2 -->
+
+    <!-- slot: lecture-2 (C as the bridge — live demo) -->
+    <!-- ═══ C AS THE BRIDGE ═══ -->
+    <div class="slide section-slide grid-bg" data-notes="(back from break — energy reset)">
+      <span class="mountain-icon">02 &mdash; 10:05</span>
+      <h2>C as the <em>bridge</em></h2>
+      <span class="section-sub">Module 2 &middot; live demo</span>
+    </div>
+
+    <!-- ═══ THE INCANTATION ═══ -->
+    <div class="slide"
+      data-notes="Read the signature aloud — every piece has a job. unsafe is honest labeling: C++ engineers write unsafe code constantly, they just don't label it. We label it and contain it to ONE file. Edition 2024 spells it unsafe(no_mangle): exporting a symbol is an unsafe promise too — a name collision is UB the linker arranges.">
+      <span class="slide-number">02 &mdash; C as the bridge</span>
+      <h2>The <em>incantation</em></h2>
+      <p class="lead">Every word has a job.</p>
+      <pre><code>#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ex_part1(input: *const c_char) -> i64</code></pre>
+      <p style="margin-top:1.2rem;">Design rule: expose the <strong>narrowest surface that works</strong> &mdash; what
+        crosses the boundary is what you maintain <em>forever</em>.</p>
+    </div>
+
+    <!-- ═══ LIVE: RUST → HEADER → C CALLER ═══ -->
+    <div class="slide"
+      data-notes="Demo: ex2 with 2024-12-03 as the Ex 1 solver — the crate and harness the room opens at 10:25. Read the generated header aloud — it's the demo's centrepiece. First run, the todo!() still inside: a panic across extern C aborts. Rust won't let a lie cross the border. Then the four steps, rebuild, and the money beat: invalid UTF-8 in, sentinel out, no crash — the boundary checks EARNED that. (Demo-gods fallback: asciinema play docs/demo/module2.cast — 27s, the same three acts)">
+      <span class="slide-number">02 &mdash; C as the bridge &middot; live</span>
+      <h2>Rust &rarr; header &rarr; <em>C caller</em></h2>
+      <p class="lead">Four commands, one boundary &mdash; from <code>exercises/ex2-c-glue</code>.</p>
+      <pre><code>cargo build                              # Rust → shared library
+cbindgen --output include/ex2_c_glue.h   # Rust → C header (read it!)
+cc tests/c/test_glue.c -L../target/debug -lex2_c_glue \
+   -Wl,-rpath,"$PWD/../target/debug" -o test_glue
+./test_glue</code></pre>
+      <p style="margin-top:1.2rem;">&hellip;then we feed it <strong>garbage</strong> and watch the contract hold.</p>
+      <button class="cast-btn" data-cast="cast-module2">&#9654; replay the recording &mdash; docs/demo/module2.cast</button>
+      <div class="cast-overlay"><pre class="cast-screen"></pre><span class="cast-hint">space pauses &middot; esc closes</span></div>
+      <script type="application/json" id="cast-module2">
+{"version":3,"term":{"cols":110,"rows":32},"timestamp":1788829305,"command":"docs/demo/module2.sh /tmp/rustconf-demo","title":"RustConf 2026 — Module 2 demo: Rust → header → C caller","env":{"SHELL":"/nix/store/q1nq6fylbczrsj7k9bqc9dzf660q63v3-bash-interactive-5.3p9/bin/bash"}}
+[0.019, "o", "\r\n\u001b[2m# Rust → shared library\u001b[0m\r\n"]
+[1.203, "o", "\u001b[1;32m$\u001b[0m cargo build\r\n"]
+[1.020, "o", "\u001b[1m\u001b[92m   Compiling\u001b[0m ex1-pure-rust v0.1.0 (/tmp/rustconf-demo/exercises/ex1-pure-rust)\r\n\u001b[1m\u001b[96m    Building\u001b[0m [                             ] 0/2: ex1-pure-rust                                             \r"]
+[0.066, "o", "\u001b[K\u001b[1m\u001b[92m   Compiling\u001b[0m ex2-c-glue v0.1.0 (/tmp/rustconf-demo/exercises/ex2-c-glue)\r\n\u001b[1m\u001b[96m    Building\u001b[0m [=============>               ] 1/2: ex2-c-glue                                                \r"]
+[0.072, "o", "\u001b[K\u001b[1m\u001b[92m    Finished\u001b[0m `dev` profile [unoptimized + debuginfo] target(s) in 0.22s\r\n"]
+[1.409, "o", "\r\n\u001b[2m# Rust → C header (this is the artifact worth reading)\u001b[0m\r\n"]
+[1.207, "o", "\u001b[1;32m$\u001b[0m cbindgen --output include/ex2_c_glue.h\r\n"]
+[2.356, "o", "\u001b[1;32m$\u001b[0m cat include/ex2_c_glue.h\r\n"]
+[0.907, "o", "#ifndef EX2_C_GLUE_H\r\n#define EX2_C_GLUE_H\r\n\r\n/* Auto-generated by cbindgen — run `cbindgen --output include/ex2_c_glue.h` to regenerate. */\r\n\r\n#include <stdarg.h>\r\n#include <stdbool.h>\r\n#include <stdint.h>\r\n#include <stdlib.h>\r\n\r\n/**\r\n * Error convention: return -1 when the input is null or not valid UTF-8.\r\n * In-band errors are the simplest possible convention — Module 4 discusses\r\n * what production code does instead (out-params, error codes, last-error).\r\n */\r\n#define INVALID_INPUT -1\r\n\r\n/**\r\n * # Safety\r\n * `input` must be a valid NUL-terminated C string or null.\r\n */\r\nint64_t ex_part1(const char *input);\r\n\r\n/**\r\n * # Safety\r\n * `input` must be a valid NUL-terminated C string or null.\r\n */\r\nint64_t ex_part2(const char *input);\r\n\r\n#endif  /* EX2_C_GLUE_H */\r\n"]
+[1.405, "o", "\r\n\u001b[2m# compile the C caller against it\u001b[0m\r\n"]
+[1.206, "o", "\u001b[1;32m$\u001b[0m cc tests/c/test_glue.c -L../target/debug -lex2_c_glue -Wl,-rpath,\"$PWD/../target/debug\" -o test_glue\r\n"]
+[2.394, "o", "\r\n\u001b[2m# run it — with the todo!() still inside\u001b[0m\r\n"]
+[1.205, "o", "\u001b[1;32m$\u001b[0m ./test_glue\r\n"]
+[0.910, "o", "\r\nthread '<unnamed>' (26505) panicked at ex2-c-glue/src/lib.rs:39:5:\r\nnot yet implemented: cross the boundary: null check → CStr → UTF-8 → ex1_pure_rust::part1\r\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\r\n\r\nthread '<unnamed>' (26505) panicked at /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/panicking.rs:225:5:\r\npanic in a function that cannot unwind\r\nstack backtrace:\r\n"]
+[0.000, "o", "   0:     0xffffa07b4be0 - <<std[b054967c338fbd64]::sys::backtrace::BacktraceLock>::print::DisplayBacktrace as core[a9c7e2611521c4f1]::fmt::Display>::fmt\r\n   1:     0xffffa07c5160 - core[a9c7e2611521c4f1]::fmt::write\r\n   2:     0xffffa07b60ac - std[b054967c338fbd64]::io::default_write_fmt::<std[b054967c338fbd64]::sys::stdio::unix::Stderr>\r\n   3:     0xffffa07b1c60 - std[b054967c338fbd64]::panicking::default_hook::{closure#0}\r\n   4:     0xffffa07b361c - std[b054967c338fbd64]::panicking::default_hook\r\n   5:     0xffffa07b380c - std[b054967c338fbd64]::panicking::panic_with_hook\r\n   6:     0xffffa07b1d34 - std[b054967c338fbd64]::panicking::panic_handler::{closure#0}\r\n"]
+[0.000, "o", "   7:     0xffffa07b1b60 - std[b054967c338fbd64]::sys::backtrace::__rust_end_short_backtrace::<std[b054967c338fbd64]::panicking::panic_handler::{closure#0}, !>\r\n   8:     0xffffa07b20d4 - __rustc[d8ff9d08a1174409]::rust_begin_unwind\r\n   9:     0xffffa07964dc - core[a9c7e2611521c4f1]::panicking::panic_nounwind_fmt\r\n  10:     0xffffa0796464 - core[a9c7e2611521c4f1]::panicking::panic_nounwind\r\n  11:     0xffffa07965bc - core[a9c7e2611521c4f1]::panicking::panic_cannot_unwind\r\n"]
+[0.000, "o", "  12:     0xffffa07968b8 - ex_part1\r\n                               at "]
+[0.000, "o", "/tmp/rustconf-demo/exercises/ex2-c-glue/src/lib.rs:26:1\r\n"]
+[0.000, "o", "  13:     0xaaaad01d0890 - main\r\n"]
+[0.001, "o", "  14:     0xffffa05d6574 - __libc_start_call_main\r\n  15:     0xffffa05d6658 - __libc_start_main@GLIBC_2.17\r\n  16:     0xaaaad01d09b0 - _start\r\n  17:                0x0 - <unknown>\r\nthread caused non-unwinding panic. aborting.\r\n"]
+[0.000, "o", "docs/demo/module2.sh: line 64: 26505 Aborted                    ./test_glue\r\n"]
+[1.405, "o", "\r\n\u001b[2m# a panic across extern \"C\" aborts the process. No return value, no stack trace for the caller.\u001b[0m\r\n"]
+[1.211, "o", "\r\n\u001b[2m# now the four steps: null check → CStr → UTF-8 → the solver\u001b[0m\r\n"]
+[1.232, "o", "\u001b[1;32m$\u001b[0m sed -n \"/^pub unsafe extern \\\"C\\\" fn ex_part1/,/^}/p\" src/lib.rs\r\n"]
+[0.906, "o", "pub unsafe extern \"C\" fn ex_part1(input: *const c_char) -> i64 {\r\n    if input.is_null() {\r\n        return INVALID_INPUT; // 1. never deref a null\r\n    }\r\n    let cstr = unsafe { CStr::from_ptr(input) }; // 2. the pointer contract, asserted\r\n    let Ok(s) = cstr.to_str() else {\r\n        return INVALID_INPUT; // 3. C strings promise nothing about UTF-8\r\n    };\r\n    ex1_pure_rust::part1(s) // 4. the pure solver, untouched\r\n"]
+[0.000, "o", "}\r\n"]
+[1.408, "o", "\u001b[1;32m$\u001b[0m cargo build\r\n"]
+[0.948, "o", "\u001b[1m\u001b[92m   Compiling\u001b[0m ex2-c-glue v0.1.0 (/tmp/rustconf-demo/exercises/ex2-c-glue)\r\n\u001b[1m\u001b[96m    Building\u001b[0m [=============>               ] 1/2: ex2-c-glue                                                \r"]
+[0.089, "o", "\u001b[K\u001b[1m\u001b[92m    Finished\u001b[0m `dev` profile [unoptimized + debuginfo] target(s) in 0.11s\r\n"]
+[1.408, "o", "\r\n\u001b[2m# NULL and invalid UTF-8 go in first — the contract holds, or nothing else runs\u001b[0m\r\n"]
+[1.209, "o", "\u001b[1;32m$\u001b[0m ./test_glue\r\n"]
+[0.910, "o", "part1(example) = 161 (expected 161)\r\nAll Ex 2 checks passed.\r\n"]
+[1.404, "x", "0"]
+      </script>
+    </div>
+
+    <!-- slot: part-2 (wrap it in C) -->
+    <!-- ═══ EX 2: PANICS DON'T CROSS ═══ -->
+    <div class="slide"
+      data-notes="Ex 2 is exactly this: four TODO steps, C harness provided. Step 0 is running the harness before implementing anything — watch the abort once, on purpose. Spend one minute reading the generated header — knowing what cbindgen produced is the difference between using it and trusting it. Done early? Help a neighbour. Timing valve: this block can run +10 by trimming M3.">
+      <span class="slide-number">10:25 &mdash; 30 min &middot; <code>exercises/ex2-c-glue</code></span>
+      <h2>Ex 2: panics <em>don't cross</em></h2>
+      <div class="contrast">
+        <div class="contrast-box no">
+          <p class="contrast-label">✗ let it panic</p>
+          <p>A panic crossing <code>extern "C"</code> <strong>aborts the process</strong> (Rust &ge; 1.81). No stack
+            trace for the caller. Just gone.</p>
+        </div>
+        <div class="contrast-box yes">
+          <p class="contrast-label">✓ validate + sentinel</p>
+          <p>null check &rarr; <code>CStr</code> &rarr; UTF-8 check &rarr; call &rarr; in-band error value</p>
+        </div>
+      </div>
+      <p class="lead">A sentinel is only a sentinel if your day's answers can never <strong>be</strong> it &mdash; that proof
+        is about your puzzle, not about C.</p>
+    </div>
+
+    <!-- 10:55 - 11:05 - BREAK -->
+
+    <!-- 11:05 - Part 3 -->
+
+    <!-- slot: lecture-3 (one header, four runtimes) -->
+    <!-- ═══ ONE HEADER, FOUR RUNTIMES ═══ -->
+    <div class="slide section-slide grid-bg" data-notes="(back from break — the header hasn't changed since Ex 2. Only the caller does.)">
+      <span class="mountain-icon">03 &mdash; 11:05</span>
+      <h2>One header, <em>four runtimes</em></h2>
+      <span class="section-sub">Module 3 &middot; bindings</span>
+    </div>
+
+    <!-- ═══ LOAD, THEN LOOK UP ═══ -->
+    <div class="slide"
+      data-notes="(6m) The header is a treaty about calls. Two things happen before any call and the header is silent on both. Python/Dart: three filenames because three OSes name a cdylib three ways — Windows drops the lib prefix. No if-platform: try all three, whichever exists is the one cargo built. Kotlin: JNA does that mapping itself from the bare name — you only tell it where to look. Swift: -L answers the linker, -rpath answers the loader — link time and run time are different questions; skip -rpath and the link succeeds and the run doesn't. Lookup: Python parses the header as data; JNA matches your method NAMES to symbols; Dart looks up a literal string; Swift asked clang and got a typed function. That gradient is the debrief-two slide — hold it.">
+      <span class="slide-number">03 &mdash; One header, four runtimes</span>
+      <h2>Load, then <em>look up</em></h2>
+      <p class="lead">Two questions the header can't answer: <strong>where</strong> is the library, and <strong>what</strong> is it called here?</p>
+      <ul class="hl-list">
+        <li><span class="bullet">python / dart</span><span>you compute the path: <code>../../target/{debug,release}/</code> &times; three names
+            &mdash; <code>libex2_c_glue.so</code> &middot; <code>libex2_c_glue.dylib</code> &middot; <code>ex2_c_glue.dll</code>. No platform check.</span></li>
+        <li><span class="bullet">kotlin / jna</span><span><code>Native.load("ex2_c_glue")</code>: bare name in, JNA does the three-name mapping. You give it
+            <code>jna.library.path</code>.</span></li>
+        <li><span class="bullet">swift</span><span>no runtime search at all. <code>-L</code> finds it for the link, <code>-rpath</code> for the run. Same search, spelled to the linker.</span></li>
+        <li><span class="bullet">lookup</span><span>cffi reads the header &middot; JNA matches method names to symbols &middot; Dart looks up a string &middot; Swift got typed functions from clang</span></li>
+      </ul>
+      <p class="lead">Nothing in <code>ex2_c_glue.h</code> says where <code>libex2_c_glue</code> lives. It never will.</p>
+    </div>
+
+    <!-- ═══ THE STRING CROSSES — THEN WHAT? ═══ -->
+    <div class="slide"
+      data-notes="(7m) Ex 2 made you do the conversion by hand — null check, CStr, UTF-8 check. Every runtime does it again on its side, and they disagree about how much to show you. Swift: the bridge is free-looking, not free — a NUL-terminated copy still gets made, valid only for the call. Hidden work still fails, just further from your code. Kotlin: JNA's default is the platform charset, not UTF-8 — the justfile pins it; the M1 modified-UTF-8 story lives next door. Python: explicit and honest — cffi adds the NUL, so what does a string with a NUL in the middle become? Rust's String can hold one; CString refuses it. Dart: nothing hidden — you allocate, you free, you hold the pointer. Closing: four spellings of NULL, one answer: -1, not a crash. Launch is the next slide. (unverified in-repo: Swift nil, Dart nullptr.)">
+      <span class="slide-number">03 &mdash; One header, four runtimes</span>
+      <h2>The string crosses &mdash; <em>then what?</em></h2>
+      <p class="lead">One <code>const char *</code>, four prices &mdash; and four spellings of NULL.</p>
+      <ul class="hl-list">
+        <li><span class="bullet">swift</span><span><code>String</code> &rarr; <code>UnsafePointer&lt;CChar&gt;</code> bridged for you. UTF-8 inside since Swift 5, so what's left to pay?
+            NULL: the imported parameter is Optional &mdash; <code>nil</code></span></li>
+        <li><span class="bullet">kotlin / jna</span><span><code>String</code> &rarr; <code>const char*</code> for you, in the <strong>platform charset</strong> unless
+            <code>-Djna.encoding=UTF-8</code>. NULL: declare <code>String?</code>, pass <code>null</code></span></li>
+        <li><span class="bullet">python / cffi</span><span><code>.encode("utf-8")</code> yourself; cffi adds the terminator. What about an embedded NUL?
+            NULL: <code>ffi.NULL</code></span></li>
+        <li><span class="bullet">dart / ffi</span><span><code>toNativeUtf8()</code> allocates. <code>calloc.free</code> in a <code>finally</code> &mdash; that's yours.
+            NULL: <code>nullptr</code></span></li>
+      </ul>
+      <p class="lead">Every track ends the same way: <code>ex_part1(NULL) == -1</code>. The contract you wrote in Ex 2 &mdash; proved from the outside.</p>
+    </div>
+
+    <!-- ═══ EX 3: ONE HEADER, FOUR RUNTIMES ═══ -->
+    <div class="slide"
+      data-notes="The spectrum IS the lesson: Swift hides everything, Dart hides nothing. Neither end is better — but you must KNOW what's hidden, because hidden work still fails. It just fails further from your code. Launch Ex 3. Collect your debrief answer as you go: what did your runtime need that the header couldn't say? Golden-day branches are the safety net. Done early? The Ex 3 bonus — a second track. Timing valve: shrink to 25 if the room is behind.">
+      <span class="slide-number">11:30 &mdash; 30 min &middot; <code>exercises/ex3-bindings</code></span>
+      <h2>Ex 3: one header, <em>four runtimes</em></h2>
+      <p class="lead">In <strong>your</strong> language.</p>
+      <ul class="hl-list">
+        <li><span class="bullet">swift</span><span>auto-bridges <code>String</code> &rarr; <code>const char*</code>. Free
+            lunch? Hidden work.</span></li>
+        <li><span class="bullet">kotlin / jna</span><span>interface + <code>Native.load()</code>. Mind the default
+            encoding.</span></li>
+        <li><span class="bullet">python / cffi</span><span>paste the header, <code>.encode()</code> yourself. Explicit,
+            honest.</span></li>
+        <li><span class="bullet">dart / ffi</span><span>typedef pairs, hand-transcribed signatures,
+            <code>toNativeUtf8()</code>, you free. Maximum honesty.</span></li>
+      </ul>
+    </div>
+
+    <!-- slot: part-3 (bindings) -->
+    <!-- ═══ ×4 ═══ -->
+    <div class="slide section-slide grid-bg" data-notes="(point at the room — this number is theirs, not mine)">
+      <div class="stat">&times;4</div>
+      <p class="stat-label">languages calling the same Rust &mdash; before lunch</p>
+    </div>
+
+    <!-- slot: exercise-3-bonus (try another language) -->
+    <!-- ═══ AHEAD OF SCHEDULE? TRY ANOTHER LANGUAGE ═══ -->
+    <div class="slide"
+      data-notes="(2m) Only if we're ahead — skip it silently otherwise. The point is the comparison, not the second binding: two runtimes against one header is the whole of lecture 3, in your own hands. Pick the far end of the spectrum from the one you just did. The second track needs its toolchain — just check says which rows are green.">
+      <span class="slide-number">Bonus &mdash; only if we're ahead</span>
+      <h2>Try another <em>language</em></h2>
+      <p class="lead">Same header, same day &mdash; a second runtime's ceremony.</p>
+      <ul class="hl-list">
+        <li><span class="bullet">spectrum</span><span>Did Swift hide it? Do it in Dart. Did Dart make you free it? See
+            what Swift did for you.</span></li>
+        <li><span class="bullet">todos</span><span>Same four steps &mdash; load, look up, convert the string, prove the
+            hostile-input contract &mdash; different runtime, different answers</span></li>
+        <li><span class="bullet">answer key</span><span>The golden days carry all four tracks against one header
+            (<code>days/2024-12-01</code>, <code>days/2024-12-03</code>) &mdash; the worked answer is one directory
+            over</span></li>
+      </ul>
+      <p class="lead">Your debrief answer, twice: what did the <strong>second</strong> runtime need that the header
+        couldn't say?</p>
+    </div>
+
+    <!-- 12:00 - Wrap -->
+
+    <!-- slot: debrief -->
+    <!-- ═══ DEBRIEF: WHAT BROKE? ═══ -->
+    <div class="slide"
+      data-notes="Facilitate, don't lecture. Harvest 3–4 stories; connect each to its pattern — encoding, ownership, hidden bridging.">
+      <span class="slide-number">12:00 &mdash; Debrief &middot; all of us</span>
+      <h2>Debrief: what <em>broke</em>?</h2>
+      <ul class="hl-list">
+        <li><span class="bullet">01</span><span>What broke &mdash; and what did the error <strong>actually tell
+              you</strong>?</span></li>
+        <li><span class="bullet">02</span><span>What did your language <strong>hide</strong> from you?</span></li>
+        <li><span class="bullet">03</span><span>What surprised you in the <strong>generated</strong> code?</span></li>
+      </ul>
+      <p class="lead">Best bug in the room gets a retelling.</p>
+    </div>
+
+    <!-- ═══ WHO ACTUALLY READ THE HEADER? ═══ -->
+    <div class="slide"
+      data-notes="Debrief, part two. You told me what your runtime needed that the header couldn't say — now: did your runtime read the header at all? Only one did. Swift handed it to clang and got typed functions back; a stale header is a compile error. Python read it as data at runtime — it can't drift, but nobody verified it. Dart and Kotlin never opened it: the header sat there as documentation while the treaty got re-typed by hand. Segue: the only way to buy Swift's guarantee for the other three is to generate the binding from the source of truth — UniFFI. Not today.">
+      <span class="slide-number">12:10 &mdash; Debrief &middot; part two</span>
+      <h2>Who actually <em>read</em> the header?</h2>
+      <p class="lead">One header, four treaties &mdash; enforced, consumed, copied, remembered.</p>
+      <ul class="hl-list">
+        <li><span class="bullet">swift</span><span>clang compiles against it. Drift is a compile error.
+            <strong>Enforced.</strong></span></li>
+        <li><span class="bullet">python / cffi</span><span>reads it at runtime, derives every call. Can't drift &mdash;
+            but trusts it blind. <strong>Consumed.</strong></span></li>
+        <li><span class="bullet">dart / ffi</span><span>never opens it. Typedefs hand-transcribed, header as reference.
+            <strong>Copied.</strong></span></li>
+        <li><span class="bullet">kotlin / jna</span><span>never opens it either. Interface hand-mapped, kept in sync by
+            care. <strong>Remembered.</strong></span></li>
+      </ul>
+      <p style="margin-top:1rem;">Only one track keeps the guarantee your Ex 2 C harness had: <code>#include</code>, then a
+        compiler.</p>
+    </div>
+
+    <!-- ═══ DEBRIEF SEED: WHAT WINDOWS HID (skip) ═══ -->
+    <div class="slide" data-skip
+      data-notes="My own answer to question two, if the room is quiet. The tracks were green on linux for weeks. The merge put them on the full grid — first Windows run ever. [next: Scripts] the venv is the same venv; the interpreter moved. [next: sha256sum] bash on Windows is a different bash. [next: classpath] the one that fails silently — nothing loads, no error. [next: dll] same cdylib, different name — three filenames, no platform check. [next: cp1252] Dart and Kotlin printed the same snake and crab. Python asked the console. None of these are FFI. All of them sit on the boundary. [??s]">
+      <span class="slide-number">Debrief seed &mdash; backup</span>
+      <h2>What <em>Windows</em> hid</h2>
+      <p class="lead">First full three-OS run of the merged tree: <strong>red only on Windows</strong> &mdash; and not
+        one failure was in the days.</p>
+      <ul class="hl-list">
+        <li><span class="bullet">Scripts</span><span><code>.venv/bin/python</code> &rarr; <code>.venv/Scripts/python</code>
+            &mdash; same venv, the interpreter moved</span></li>
+        <li><span class="bullet">sha256sum</span><span><code>shasum</code> &rarr; <code>sha256sum</code> &mdash;
+            Git-for-Windows bash is a different bash</span></li>
+        <li><span class="bullet">classpath</span><span><code>java -cp "a.jar:b.jar"</code> &rarr; <code>;</code> &mdash;
+            with <code>:</code> the JVM loads neither and says nothing</span></li>
+        <li><span class="bullet">dll</span><span><code>libaoc_2015_12_05.so</code> / <code>.dylib</code> &rarr;
+            <code>aoc_2015_12_05.dll</code> &mdash; no <code>lib</code> prefix</span></li>
+        <li><span class="bullet">cp1252</span><span><code>print("Part 1 🐍(🦀): …")</code> &rarr;
+            <code>UnicodeEncodeError: 'charmap'</code> &mdash; stdout inherited <strong>cp1252</strong></span></li>
+      </ul>
+      <pre><code>for name in ("libaoc_2015_12_05.so", "libaoc_2015_12_05.dylib", "aoc_2015_12_05.dll"):</code></pre>
+      <p style="margin-top:.8rem;">No platform check &mdash; whichever file cargo produced is the one that exists.</p>
+    </div>
+
+    <!-- ═══ DEBRIEF SEED: GLOBAL STATE, TWICE (skip) ═══ -->
+    <div class="slide" data-skip
+      data-notes="The day's README already says it: ask whether a library's state is per-handle or global before you design around it. The lock was there. The tests still went red. [next: table] alone: green. serial: green. together: four in ten. That's not a race in my code — every espeak call was already under one lock. [next: code] espeak_Initialize isn't a reset. Every call reloads the phoneme data — frees it, reallocates it — and pointers into the old block survive. Single-threaded, the block comes back at the same address, so it works. Add nineteen other tests allocating and it doesn't. Initialise once. The bool lives inside the mutex because is-it-initialised is global state too. [next: measure] YARA next door: fresh rules per solve, no lock, no once. Same puzzle, opposite answer. [??s]">
+      <span class="slide-number">Debrief seed &mdash; backup</span>
+      <h2>Global state, <em>twice</em></h2>
+      <p class="lead"><code>cargo test</code> with every C library on &mdash; first run of the new job</p>
+      <ul class="hl-list">
+        <li><span class="bullet">0/10</span><span>espeak tests alone, parallel</span></li>
+        <li><span class="bullet">0/10</span><span>all 26, <code>--test-threads=1</code></span></li>
+        <li><span class="bullet"><strong>4/10</strong></span><span>all 26, parallel</span></li>
+        <li><span class="bullet">0/20</span><span>all 26, parallel, initialise once</span></li>
+      </ul>
+      <pre data-step="1"><code>let mut guard = lock()?;            // Mutex&lt;bool&gt;: is espeak initialised?
+if !*guard {
+    espeak_Initialize(AUDIO_OUTPUT_SYNCHRONOUS, 0, std::ptr::null(), 0);
+    espeak_SetVoiceByName(english.as_ptr());
+    *guard = true;
+}</code></pre>
+      <p class="lead" data-step="2">Measure, don't assume.</p>
+    </div>
+
+    <!-- ═══ WHEN IS FFI THE RIGHT CALL? ═══ -->
+    <div class="slide"
+      data-notes="You can totally write this in Rust — and someone maybe already did. But it's probably already written in C, so why wait? The figlet story: the standard.flf font in this repo is from 1993. The pure-Rust rewrite started in 2019 and hit 1.0 this March — seven years. The libcaca boundary landed the same day it was started. Rewrites are best-case, and when one matures, adopt it — FFI is the bridge that doesn't bet against the future. Honest caveat both ways: production bindings cost more than the rewrite estimate says, too. Big-O lies — benchmark your actual data. No, FFI wasn't faster — except the time it was, and the difference was how often we crossed. Migration: strangler fig, not big bang.">
+      <span class="slide-number">12:15 &mdash; Debrief</span>
+      <h2>When is FFI the <em>right call</em>?</h2>
+      <div class="principles">
+        <div class="principle p-accent">
+          <span class="p-num">01</span>
+          <p class="p-title">Team</p>
+          <p>Who maintains the boundary in two years?</p>
+        </div>
+        <div class="principle">
+          <span class="p-num">02</span>
+          <p class="p-title">Timeline</p>
+          <p>The ecosystem's rewrite arrives on <strong>its</strong> schedule, not yours.</p>
+        </div>
+        <div class="principle">
+          <span class="p-num">03</span>
+          <p class="p-title">Consistency</p>
+          <p>Same logic on six platforms? FFI earns its keep.</p>
+        </div>
+        <div class="principle">
+          <span class="p-num">04</span>
+          <p class="p-title">Performance</p>
+          <p><strong>Measure it.</strong> No, FFI wasn't faster. It's fun, though.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ YES, AI HELPED BUILD THIS ═══ -->
+    <div class="slide"
+      data-notes="Full transparency — this is what AI did here, and what it didn't. Use it the same way during exercises: delegate the boring, own the boundary.">
+      <span class="slide-number">Debrief</span>
+      <h2>Yes, <em>AI</em> helped build this</h2>
+      <div class="two-col">
+        <div>
+          <p class="lead">Delegated to AI</p>
+          <ul class="hl-list">
+            <li><span class="bullet">01</span><span>C test boilerplate, makefiles</span></li>
+            <li><span class="bullet">02</span><span>glibc archaeology</span></li>
+            <li><span class="bullet">03</span><span>&ldquo;suggest a day to abuse&rdquo;</span></li>
+          </ul>
+        </div>
+        <div>
+          <p class="lead">Kept human</p>
+          <ul class="hl-list">
+            <li><span class="bullet">01</span><span>boundary design, ownership contracts</span></li>
+            <li><span class="bullet">02</span><span>reading the segfault</span></li>
+            <li><span class="bullet">03</span><span>knowing when the answer is wrong</span></li>
+          </ul>
+        </div>
+      </div>
+      <p class="lead" style="margin-top:1rem;">AI writes any binding in a minute. It can't build your intuition for
+        <strong>where to look when it breaks.</strong> That was today.</p>
+    </div>
+
+    <!-- ═══ TAKE THE PLAYGROUND HOME ═══ -->
+    <div class="slide"
+      data-notes="The methodology is the takeaway, not the code. Reference branches just went public — everything you fought with has a worked answer now. The comparison is where the second half of the learning lives. Timing valve: wrap compresses to 8 min if the room ran long.">
+      <span class="slide-number">Wrap</span>
+      <h2>Take the <em>playground</em> home</h2>
+      <ul class="hl-list">
+        <li><span class="bullet">01</span><span>Pick a solved problem &rarr; progress the boundary: <strong>primitives
+              &rarr; strings &rarr; structs &rarr; errors &rarr; async</strong></span></li>
+        <li><span class="bullet">02</span><span>Reference solutions unlocked <strong>today</strong> &mdash; compare, argue,
+            learn twice</span></li>
+        <li><span class="bullet">03</span><span>Add a day. Add a language. Break something new.</span></li>
+        <li><span class="bullet">04</span><span>Bring it to your team &mdash; <strong>the compiler errors become the
+              curriculum</strong></span></li>
+      </ul>
+    </div>
+
+    <!-- ═══ NOTHING IS WASTED ═══ -->
+    <div class="slide title-slide diamond-bg"
+      data-notes="(End with energy — thank them, take questions in the hall) Q&A runs to 12:30; the wrap slide stays up.">
+      <div class="title-glow"></div>
+      <img class="title-qr" src="img/qr-code_white.png" alt="QR code: github.com/alycda/RustConf2026">
+      <span class="tag">Nothing is wasted</span>
+      <h1>when you document<br>the <em>messy middle</em></h1>
+      <a class="cta" href="https://github.com/alycda/RustConf2026" target="_blank"
+        rel="noopener">https://github.com/alycda/RustConf2026</a>
+    </div>
+
+    <!-- 12:30 - END -->
+
+  </div>
+
+  <!-- ── Progress bar ── -->
+  <div class="progress">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+
+  <!-- ── Navigation ── -->
+  <!-- Both values are computed at runtime from slides.length; the dashes are
+       placeholders for the pre-script paint, not a slide count to maintain. -->
+  <div class="slide-counter"><span id="currentSlide">--</span> / <span id="totalSlides">--</span></div>
+  <div class="nav">
+    <button class="nav-btn" onclick="navigate(-1)" aria-label="Previous slide">←</button>
+    <button class="nav-btn" onclick="navigate(1)" aria-label="Next slide">→</button>
+  </div>
+
+  <!-- ── Speaker notes panel ── -->
+  <div class="notes" id="notes"><span class="notes-label">Speaker note (press N to hide)</span><span
+      id="notesText"></span></div>
+
+  <script>
+    // data-skip: presenterm's skip_slide — the slide stays in the file and in
+    // DOM order, but out of the run. Remove the attribute to unskip.
+    const slides = document.querySelectorAll('.slide:not([data-skip])');
+    const total = slides.length;
+    let current = 0;
+    let notesOn = false;
+
+    let activeCast = null; // the open replay overlay's close(), if any
+
+    function showSlide(index) {
+      if (activeCast) activeCast();
+      slides.forEach(s => s.classList.remove('active'));
+      slides[index].classList.add('active');
+      steps(index).forEach(el => el.classList.remove('on'));
+      document.getElementById('currentSlide').textContent = String(index + 1).padStart(2, '0');
+      document.getElementById('totalSlides').textContent = String(total).padStart(2, '0');
+      document.getElementById('progressBar').style.width = ((index + 1) / total * 100) + '%';
+      const note = slides[index].getAttribute('data-notes') || '';
+      document.getElementById('notesText').textContent = note;
+      document.getElementById('notes').classList.toggle('visible', notesOn && !!note);
+    }
+
+    function steps(index) {
+      return Array.from(slides[index].querySelectorAll('[data-step]'))
+        .sort((a, b) => Number(a.dataset.step) - Number(b.dataset.step));
+    }
+
+    function navigate(dir) {
+      const st = steps(current);
+      if (dir > 0) {
+        const pending = st.filter(el => !el.classList.contains('on'));
+        if (pending.length) {
+          const n = pending[0].dataset.step;
+          pending.filter(el => el.dataset.step === n).forEach(el => el.classList.add('on'));
+          return;
+        }
+      }
+      if (dir < 0) {
+        const shown = st.filter(el => el.classList.contains('on'));
+        if (shown.length) {
+          const n = shown[shown.length - 1].dataset.step;
+          shown.filter(el => el.dataset.step === n).forEach(el => el.classList.remove('on'));
+          return;
+        }
+      }
+      current = Math.max(0, Math.min(total - 1, current + dir));
+      showSlide(current);
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ' || e.key === 'Enter') {e.preventDefault(); navigate(1);}
+      if (e.key === 'ArrowLeft' || e.key === 'PageUp' || e.key === 'Backspace') {e.preventDefault(); navigate(-1);}
+      if (e.key === 'Home') {e.preventDefault(); current = 0; showSlide(0);}
+      if (e.key === 'End') {e.preventDefault(); current = total - 1; showSlide(current);}
+      if (e.key === 'n' || e.key === 'N') {notesOn = !notesOn; showSlide(current);}
+    });
+
+    let touchStartX = 0;
+    document.addEventListener('touchstart', e => {touchStartX = e.touches[0].clientX;});
+    document.addEventListener('touchend', e => {
+      const diff = touchStartX - e.changedTouches[0].clientX;
+      if (Math.abs(diff) > 50) navigate(diff > 0 ? 1 : -1);
+    });
+
+    // ── asciicast replay (see .cast-overlay) ──
+    document.querySelectorAll('.cast-btn').forEach(btn => btn.addEventListener('click', () => {
+      const slide = btn.closest('.slide');
+      const overlay = slide.querySelector('.cast-overlay');
+      const screen = slide.querySelector('.cast-screen');
+      const events = document.getElementById(btn.dataset.cast).textContent.trim().split('\n').slice(1)
+        .map(l => JSON.parse(l)).filter(e => e[1] === 'o');
+      let lines = [[]], style = {b: 0, d: 0, col: ''}, paused = false, timer = null, i = 0, stopped = false, done = false;
+      const esc = t => t.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+      const paint = () => {
+        screen.innerHTML = lines.map(l => l.map(s =>
+          `<span class="${(s.b ? 'b ' : '') + (s.d ? 'd ' : '') + s.col}">${esc(s.t)}</span>`).join('')).join('\n');
+        screen.scrollTop = screen.scrollHeight;
+      };
+      const feed = text => {
+        const re = /\x1b\[([0-9;]*)([A-Za-z])|\r\n|\r|\n|[^\x1b\r\n]+/g;
+        let m;
+        while ((m = re.exec(text))) {
+          const tok = m[0];
+          if (tok === '\n' || tok === '\r\n') lines.push([]);
+          else if (tok === '\r') { /* cargo: CR then erase-line */ }
+          else if (tok[0] === '\x1b') {
+            if (m[2] === 'K') lines[lines.length - 1] = [];
+            else if (m[2] === 'm') for (const n of (m[1] || '0').split(';')) {
+              if (n === '0') style = {b: 0, d: 0, col: ''};
+              else if (n === '1') style.b = 1;
+              else if (n === '2') style.d = 1;
+              else if (n === '32' || n === '92') style.col = 'g';
+              else if (n === '96') style.col = 'c';
+            }
+          } else lines[lines.length - 1].push({t: tok, ...style});
+        }
+      };
+      const step = () => {
+        if (stopped || paused) return;
+        if (i >= events.length) return;
+        feed(events[i][2]); paint();
+        i += 1;
+        if (i < events.length) timer = setTimeout(step, Math.min(events[i][0], 2) * 1000);
+        else done = true;
+      };
+      const close = () => {
+        stopped = true; clearTimeout(timer);
+        overlay.classList.remove('on');
+        document.removeEventListener('keydown', keys, true);
+        if (activeCast === close) activeCast = null;
+      };
+      const keys = e => {
+        // Finished: any key closes, and the key falls through to the deck —
+        // one forward press on a clicker closes and advances.
+        if (done) { close(); return; }
+        e.stopPropagation(); e.preventDefault();
+        if (e.key === 'Escape') close();
+        else if (e.key === ' ') {
+          paused = !paused;
+          clearTimeout(timer); // no second chain on a quick pause-and-resume
+          if (!paused) step();
+        }
+      };
+      if (activeCast) activeCast();
+      activeCast = close;
+      document.addEventListener('keydown', keys, true);
+      overlay.classList.add('on');
+      screen.innerHTML = '';
+      timer = setTimeout(step, 400);
+    }));
+
+    showSlide(0);
+  </script>
+
+</body>
+
+</html>

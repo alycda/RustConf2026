@@ -4,7 +4,14 @@ Before anything else, your machine has to be able to run the workshop.
 Everything lives in a single file at the repo root: `shell.nix` — but only
 five tools are *required*: `rustc`, `cargo`, `cbindgen`, a C compiler, and
 `just`. The one extra in the box, `cheat`, is cheatsheets for the FFI
-patterns we'll hit — useful, and safe to ignore. How the required
+patterns we'll hit — useful, and safe to ignore.
+
+That is all `nix-shell` gives you, on purpose. Some of the sample days link
+real C libraries — a physics engine, a database, a malware scanner — behind
+cargo features that are off by default, and those libraries are a far bigger
+download than the workshop itself. They live behind a flag,
+`nix-shell --arg full true`, so nobody pays for them just to get to the
+starting line. How the required
 five get onto your machine is your choice; the
 [repo README](https://github.com/alycda/RustConf2026#readme) walks each
 path in detail. In brief:
@@ -46,5 +53,5 @@ This runs `scripts/self-check.sh`, which verifies every required tool *and*
 compiles and links a real C executable before declaring your machine ready. Red
 rows come with the fix command inline.
 
-Once the required rows are green, step -1 is done. The `○` rows belong to
+Once the required rows are green, step -1 — steps 1 and 2 of the README — is done. The `○` rows belong to
 the next step.

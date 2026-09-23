@@ -2,12 +2,13 @@
 # Workshop environment self-check.
 #
 # Verifies the REQUIRED toolchain (Rust + C + cbindgen) and reports on
-# OPTIONAL language tracks (Swift, Kotlin/JNA, Python/cffi, Dart).
+# OPTIONAL language tracks (Swift, Kotlin/JNA, Python/cffi, Dart, Fortran, R,
+# Godot).
 # Exit code is non-zero only when a REQUIRED tool is missing or broken —
 # pick ONE optional track; you do not need them all.
 #
 # Usage: ./scripts/self-check.sh            (or: just check)
-#        ./scripts/self-check.sh --track <swift|kotlin|python|dart>
+#        ./scripts/self-check.sh --track <swift|kotlin|python|dart|fortran|r|godot>
 #
 # --track probes ONE optional track and says nothing else: exit 0 ready,
 # exit 1 not. It exists for CI (.github/workflows/env-check.yml), which
@@ -58,6 +59,30 @@ check_optional() { # track, command, install hint
 # and by --track. Keep the printf rows free-form; only the return codes
 # are contract.
 
+# check_floor <required|optional> <label> <command> <sed-expr> <prefix> <floor> <what> <hint>
+# Parses `<command> --version` with <sed-expr> (which must print the minor
+# version), compares it to <floor>, and prints the verdict with <prefix> in
+# front of the minor (1. for rustc, 0. for cbindgen). Merely existing is not
+# enough for these tools: an old one passes the check above and then fails
+# at the first real command. Parse failures skip silently — a tool that can't
+# report a version was already flagged as broken by its existence check. A
+# miss counts as a required failure, or returns 1 for an optional track.
+check_floor() {
+  local kind=$1 label=$2 cmd=$3 expr=$4 prefix=$5 floor=$6 what=$7 hint=$8 minor
+  command -v "$cmd" >/dev/null 2>&1 || return 0
+  minor=$("$cmd" --version 2>/dev/null | sed -nE "$expr")
+  [ -n "$minor" ] || return 0
+  if [ "$minor" -ge "$floor" ]; then
+    printf ' %s %-10s %s%s meets the %s%s floor (%s)\n' "$PASS" "$label" "$prefix" "$minor" "$prefix" "$floor" "$what"
+    return 0
+  fi
+  printf ' %s %-10s %s %s%s is older than %s%s (%s) — %s\n' "$FAIL" "$label" "$cmd" "$prefix" "$minor" "$prefix" "$floor" "$what" "$hint"
+  if [ "$kind" = required ]; then
+    required_failures=$((required_failures + 1))
+  fi
+  return 1
+}
+
 # `swiftc --version` instead of `command -v swiftc`: /usr/bin/swiftc is the
 # same OS-image xcrun stub as /usr/bin/java — present even without the CLT,
 # runnable only once a real toolchain is installed.
@@ -92,18 +117,13 @@ probe_kotlin() {
 # its own python3 to the inherited PATH, shadowing an activated .venv — the
 # probe must not turn a completed `just setup-python` into a false "not ready".
 probe_python() {
-  local py venv_py cand activate
-  py=python3
+  local py venv_py activate
+  # scripts/venv-python.sh owns the layout rule (bin/ vs Scripts/, .exe or
+  # not) and prints python3 when there is no venv; the justfiles and the
+  # Verify workflow ask it the same question.
+  py="$("$(dirname "$0")/venv-python.sh")"
   venv_py=""
-  # bin/ is the POSIX venv layout (and WSL2's); Scripts/ is what a native
-  # Windows python builds, probed with and without the .exe suffix because
-  # Git Bash's -x test is not consistent about executable extensions.
-  for cand in "$(dirname "$0")/../.venv/bin/python" \
-              "$(dirname "$0")/../.venv/Scripts/python.exe" \
-              "$(dirname "$0")/../.venv/Scripts/python"; do
-    if [ -x "$cand" ]; then venv_py="$cand" && break; fi
-  done
-  [ -n "$venv_py" ] && py="$venv_py"
+  [ "$py" != python3 ] && venv_py="$py"
   if command -v "$py" >/dev/null 2>&1; then
     if "$py" -c 'import cffi' 2>/dev/null; then
       if [ -n "$venv_py" ] && [ "$py" = "$venv_py" ] && [ -z "${VIRTUAL_ENV:-}" ]; then
@@ -124,8 +144,72 @@ probe_python() {
   return 1
 }
 
+# The Dart floor is whatever the exercise pubspec pins (`sdk: ^3.x.0`) —
+# read from there rather than copied here, so the number lives in one place.
 probe_dart() {
-  check_optional "Dart" "dart" "run: just setup-dart"
+  local pubspec floor
+  check_optional "Dart" "dart" "run: just setup-dart" || return 1
+  pubspec="$(dirname "$0")/../exercises/ex3-bindings/dart/pubspec.yaml"
+  floor=$(sed -nE 's/^[[:space:]]*sdk: \^3\.([0-9]+)\..*/\1/p' "$pubspec" 2>/dev/null)
+  [ -n "$floor" ] || return 0
+  check_floor optional "Dart floor" dart 's/^Dart SDK version: 3\.([0-9]+)\..*/\1/p' "3." "$floor" "exercises/ex3-bindings/dart/pubspec.yaml" "https://dart.dev/get-dart"
+}
+
+# The plainest probe here, and that is the track's point: C interop is in
+# the Fortran standard (ISO_C_BINDING, Fortran 2003), so there is no
+# runtime, no package manager and no version floor to check — every
+# gfortran anyone can still install has it. `gfortran` rather than a
+# generic name because there is no `fortran` binary; LLVM's `flang` would
+# serve as well, and gfortran is what nixpkgs and the runner images ship,
+# so it is the one this repo's recipes name.
+probe_fortran() {
+  check_optional "Fortran" "gfortran" "run: just setup-fortran"
+}
+
+# The shortest probe here, and for once that is the whole story rather than a
+# shortcut: `.C()` is in base R and has been for its entire life, the track
+# fetches no package, and `Rscript` is the only binary it runs. So there is no
+# floor to check (unlike Dart), no second tool that has to be runnable (unlike
+# Kotlin's java), and no stub on any image to catch out an existence test
+# (unlike Swift's /usr/bin/swiftc). `Rscript`, not `R`: it is what the recipe
+# and the Verify cell invoke, and a broken install can ship one without the
+# other.
+probe_r() {
+  check_optional "R" "Rscript" "run: just setup-r"
+}
+
+# Godot has no fixed binary name (scripts/godot-bin.sh owns that rule), and
+# the wrong *major* is the failure worth catching: `godot` on Debian is 3.x,
+# reports its version cheerfully, and cannot load a GDExtension at all. So
+# this checks the major by hand rather than through check_floor, whose silent
+# skip on an unparsed version would turn that into a green "ready".
+#
+# The 4.6 floor is also written in days/2015-12-01/Cargo.toml (the `api-4-6`
+# feature) and in days/2015-12-01/godot/aoc.gdextension
+# (compatibility_minimum). Nothing here can derive it from either.
+probe_godot() {
+  local godot version major minor
+  if ! godot="$("$(dirname "$0")/godot-bin.sh")"; then
+    printf ' %s %-12s not installed %s(only needed for this track — run: just setup-godot)%s\n' "$SKIP" "Godot" "$DIM" "$NC"
+    return 1
+  fi
+  version=$("$godot" --version 2>/dev/null | head -1)
+  major=$(printf '%s' "$version" | sed -nE 's/^([0-9]+)\..*/\1/p')
+  minor=$(printf '%s' "$version" | sed -nE 's/^[0-9]+\.([0-9]+).*/\1/p')
+  if [ -z "$major" ]; then
+    printf ' %s %-12s %s ran but reported no version %s(expected e.g. 4.6.3.stable)%s\n' "$SKIP" "Godot" "$godot" "$DIM" "$NC"
+    return 1
+  fi
+  if [ "$major" -ne 4 ]; then
+    printf ' %s %-12s %s is Godot %s %s(GDExtension needs 4.6+ — run: just setup-godot)%s\n' "$SKIP" "Godot" "$godot" "$version" "$DIM" "$NC"
+    return 1
+  fi
+  if [ "${minor:-0}" -lt 6 ]; then
+    printf ' %s %-12s %s is %s, older than the 4.6 this track declares %s(days/2015-12-01/godot/aoc.gdextension)%s\n' "$SKIP" "Godot" "$godot" "$version" "$DIM" "$NC"
+    return 1
+  fi
+  printf ' %s %-12s ready %s(%s %s)%s\n' "$PASS" "Godot" "$DIM" "$godot" "$version" "$NC"
+  return 0
 }
 
 # --track <name>: probe one optional track, exit with its status. Handled
@@ -136,7 +220,10 @@ if [ "${1:-}" = "--track" ]; then
     kotlin) probe_kotlin; exit $? ;;
     python) probe_python; exit $? ;;
     dart)   probe_dart;   exit $? ;;
-    *) echo "unknown track '${2:-}' — one of: swift kotlin python dart" >&2; exit 2 ;;
+    fortran) probe_fortran; exit $? ;;
+    r)      probe_r;      exit $? ;;
+    godot)  probe_godot;  exit $? ;;
+    *) echo "unknown track '${2:-}' — one of: swift kotlin python dart fortran r godot" >&2; exit 2 ;;
   esac
 fi
 
@@ -153,17 +240,20 @@ check_required "cbindgen" "cbindgen" "nix shell provides it: direnv allow (no ni
 # channel's rustc passes the check above and then every cargo command in days/
 # fails at manifest parse. Parse failures here skip silently — a rustc that
 # can't even report a 1.x version was already flagged as broken above.
-if command -v rustc >/dev/null 2>&1; then
-  rust_minor=$(rustc --version 2>/dev/null | sed -nE 's/^rustc 1\.([0-9]+)\..*/\1/p')
-  if [ -n "$rust_minor" ]; then
-    if [ "$rust_minor" -ge 85 ]; then
-      printf ' %s %-10s 1.%s meets the 1.85 floor (edition 2024)\n' "$PASS" "rust floor" "$rust_minor"
-    else
-      printf ' %s %-10s rustc 1.%s is older than 1.85 (edition 2024) — rustup update stable (nix: newer channel)\n' "$FAIL" "rust floor" "$rust_minor"
-      required_failures=$((required_failures + 1))
-    fi
-  fi
-fi
+check_floor required "rust floor" rustc 's/^rustc 1\.([0-9]+)\..*/\1/p' "1." 85 "edition 2024" "rustup update stable (nix: newer channel)" || true
+
+# cbindgen floor: every export in days/*/src/c_api.rs and Exercise 2's
+# lib.rs is spelled #[unsafe(no_mangle)], the edition-2024 form, and cbindgen
+# parses it only from 0.28 (0.26: "expected path"; 0.27: "expected
+# identifier, found keyword unsafe"). Ubuntu 24.04 LTS packages 0.26, so a
+# distro cbindgen passes the existence check above and then Exercise 2's
+# build script dies at the header step. Same shape as the rust floor.
+check_floor required "cbindgen floor" cbindgen 's/^cbindgen 0\.([0-9]+)(\..*)?$/\1/p' "0." 28 "#[unsafe(no_mangle)]" "cargo install cbindgen --locked (nix: newer channel)" || true
+
+# just floor: the root justfile's `mod?` needs just 1.31 (README says so), and
+# an older distro `just` cannot even parse it — the one required tool this
+# script otherwise never looks at, because `just check` is how it is run.
+check_floor required "just floor" just 's/^just 1\.([0-9]+)(\..*)?$/\1/p' "1." 31 "mod? in the justfile" "https://just.systems/man/en/installation.html (nix: newer channel)" || true
 
 # C compiler: accept cc, clang, or gcc.
 c_compiler=""
@@ -209,6 +299,9 @@ if probe_swift;  then tracks_ready=$((tracks_ready + 1)); fi
 if probe_kotlin; then tracks_ready=$((tracks_ready + 1)); fi
 if probe_python; then tracks_ready=$((tracks_ready + 1)); fi
 if probe_dart;   then tracks_ready=$((tracks_ready + 1)); fi
+if probe_fortran; then tracks_ready=$((tracks_ready + 1)); fi
+if probe_r;      then tracks_ready=$((tracks_ready + 1)); fi
+if probe_godot;  then tracks_ready=$((tracks_ready + 1)); fi
 
 # Track readiness shapes the banner only, never the exit code: one ready
 # track is plenty, and an attendee with one track must never be blocked.
@@ -217,7 +310,7 @@ if [ "$required_failures" -eq 0 ]; then
   if [ "$tracks_ready" -gt 0 ]; then
     echo "${GREEN}✅ You're ready for the workshop!${NC} (One ready track is plenty — the other ○ rows can stay grey.)"
   else
-    echo "${GREEN}✅ Required toolchain ready (step -1 done).${NC} Step 0: pick ONE language track above and run its setup recipe, e.g. just setup-python"
+    echo "${GREEN}✅ Required toolchain ready — README step 2 done.${NC} Step 3: pick ONE language track above and run its setup recipe, e.g. just setup-python"
   fi
   exit 0
 else

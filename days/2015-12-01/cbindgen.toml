@@ -1,6 +1,6 @@
 # Config for `cbindgen` (Exercise 2). Regenerate with:
 #   just days bindgen 2015-12-01
-# The header isn't committed (see days/.gitignore) — cbindgen is required
+# The header isn't committed (see .gitignore) — cbindgen is required
 # workshop tooling (scripts/self-check.sh), so regenerating it is always a
 # `just` call away rather than a file to keep in sync by hand.
 

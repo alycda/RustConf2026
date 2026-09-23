@@ -1,4 +1,4 @@
-// Base variant. The sibling variants (jj, kotlin, flutter) are copies of this
+// Base variant. The sibling variants (jj, kotlin, flutter, swift, godot) are copies of this
 // file plus a name and a WORKSHOP_HOME_NIX override — devcontainer.json has no
 // "extends", so edits here need mirroring there.
 {
@@ -50,6 +50,9 @@
             }
         }
     },
-    "postCreateCommand": "bash ${containerWorkspaceFolder}/.devcontainer/setup.sh",
+    // onCreateCommand, not postCreateCommand: the switch setup.sh runs briefly
+    // empties the profile, and this hook finishes before the extension host
+    // (and rust-analyzer) starts. The full story is in setup.sh.
+    "onCreateCommand": "bash ${containerWorkspaceFolder}/.devcontainer/setup.sh",
     "postStartCommand": "bash ${containerWorkspaceFolder}/.devcontainer/poststart.sh"
 }

@@ -6,8 +6,9 @@
 |-----|---------|----------------|--------|
 | [2024-12-01](2024-12-01/) 🥇 | Historian Hysteria | two int lists in → `i32` out; sort-and-zip, then a frequency map | Golden — Rust reference here |
 | [2024-12-03](2024-12-03/) 🥇 | Mull It Over | raw string scan → `usize`; stateful parse (`do()` / `don't()`) | Golden (in progress) — Rust reference here |
-| [2015-12-01](2015-12-01/) | Not Quite Lisp | char stream → `i32`; part 2 returns a position, not a total | Rust reference — the live-demo day |
+| [2015-12-01](2015-12-01/) | Not Quite Lisp | char stream → `i32`; part 2 returns a position, not a total | Rust reference + libtcc + libcaca + cbindgen C API + Python, Fortran, R and Godot tracks |
 | [2015-12-05](2015-12-05/) | Doesn't He Have Intern-Elves For This? | lines → `usize` count; one predicate per line, the ruleset swapped by function pointer | Rust reference |
+| [2015-12-06](2015-12-06/) | Probably a Fire Hazard | instruction lines → enum + rectangle → `u32`; one 1000×1000 grid walked twice, the per-light rule swapped by function pointer | Rust reference |
 | [2020-12-02](2020-12-02/) | Password Philosophy | `1-3 a: abcde` lines → struct → `usize` count | Rust reference |
 | [2021-12-02](2021-12-02/) | Dive! | command lines → enum → `i32`, the product of two accumulators | Rust reference |
 | [2022-12-01](2022-12-01/) | Calorie Counting | blank-line groups → `usize`; part 2 sums a top-3 internally, so the array is the thing worth exposing at the boundary | Rust reference |
@@ -18,9 +19,11 @@
 - **Never commit real puzzle inputs or full puzzle text**
   ([AoC's request](https://adventofcode.com/about#faq_copying)). Only the small example
   inputs from the problem statement live in tests; the doc header of each day paraphrases
-  the puzzle rather than quoting it. `.gitignore` here ignores `**/inputs/*`, so drop your
-  own input at `days/inputs/<YYYY-MM-DD>.txt` — every `main` reads it from there at
-  runtime rather than with `include_str!`, so a day still builds and tests without one.
+  the puzzle rather than quoting it. There is one inputs/ folder, at the repo root, and
+  the root `.gitignore` ignores its contents — so drop your own input at
+  `<repo>/inputs/<YYYY-MM-DD>.txt`. Every `main` anchors that path to its own crate
+  directory, so it resolves the same however cargo is invoked, and reads it at runtime
+  rather than with `include_str!`, so a day still builds and tests without one.
 - **Days are named `YYYY-MM-DD`**, the full date, because `2015-01` reads as January to
   everyone who hasn't been told otherwise and sorts wrong the moment a second event year
   shows up.
@@ -52,7 +55,7 @@ cargo bench -p aoc-2015-12-05 --bench nice --features hyperscan,icu
 
 The `day` bench times the parse and the parts separately, over the statement examples, a
 generated input at roughly the scale of a real one, and — only if you have dropped one at
-`days/inputs/<day>.txt` — your own. The generated input exists because puzzle inputs
+`inputs/<day>.txt` — your own. The generated input exists because puzzle inputs
 cannot be committed here and the examples are far too small to time; it is built from a
 fixed seed, so two runs are comparable.
 

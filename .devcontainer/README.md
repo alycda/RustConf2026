@@ -7,7 +7,8 @@ One variant per track. Pick one — they are alternatives, not layers:
 | `git/` | the base. Everything except a track-specific toolchain |
 | `jj/` | the base plus jujutsu, and the jj cheatsheets |
 | `kotlin/` | the Kotlin/JNA track — kotlinc, JDK 17, and `JNA_JAR` |
-| `flutter/` | the Flutter/Dart track — the Flutter SDK, which ships `dart` |
+| `flutter/` | the Dart track — the Dart SDK (`dart`; the name predates dropping the Flutter SDK, which no longer builds on aarch64-linux) |
+| `godot/` | the Godot track — the engine from nixpkgs, headless (`godot`/`godot4` on PATH; ~1.3 GiB from the binary cache) |
 
 The Swift track's container arrives later in the history, with its own README;
 add a row here when it does.
@@ -41,7 +42,7 @@ pass the same `--config` to every subsequent command.
 The CLI honours everything that builds the container: the base image, the Nix
 feature, the mounts, `containerEnv` (which is how the variants select their own
 `home.nix`), `remoteEnv` (the `PATH` fix that puts the home-manager profile
-where tools can find it), and both `postCreateCommand` and `postStartCommand` —
+where tools can find it), and both `onCreateCommand` and `postStartCommand` —
 so `setup.sh` and `poststart.sh` run exactly as they do under VS Code, and
 home-manager installs your profile.
 

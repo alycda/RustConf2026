@@ -26,6 +26,8 @@ use nom::{
 pub mod c_api;
 #[cfg(feature = "cpp")]
 mod cpp;
+#[cfg(feature = "lapack")]
+pub mod lapack;
 #[cfg(feature = "qsort")]
 mod qsort;
 #[cfg(feature = "uthash")]
@@ -52,6 +54,13 @@ pub fn sort_via_qsort(column: &mut [i32]) {
 #[cfg(feature = "cpp")]
 pub fn sort_via_cpp(column: &mut [i32]) {
     cpp::sort(column);
+}
+
+/// Sorts one column with LAPACK's `DLASRT` — a Fortran subroutine, reached
+/// through gfortran's ABI. See [`lapack`] and [`sort_pure_rust`].
+#[cfg(feature = "lapack")]
+pub fn sort_via_lapack(column: &mut [i32]) {
+    lapack::sort(column);
 }
 
 /// Part 2's similarity score as the baseline computes it — the naive scan,
@@ -114,6 +123,17 @@ impl Sorter for CppSort {
     }
 }
 
+/// Marker type for LAPACK's `DLASRT`.
+#[cfg(feature = "lapack")]
+pub struct LapackSort;
+
+#[cfg(feature = "lapack")]
+impl Sorter for LapackSort {
+    fn sort(column: &mut [i32]) {
+        sort_via_lapack(column);
+    }
+}
+
 /// Solution for comparing and matching numbers between two lists
 ///
 /// This implementation solves a puzzle where:
@@ -144,6 +164,12 @@ impl FromStr for Day1 {
         // several features are on: qsort (the talk's headline crossing),
         // then the C++ shim, then plain Rust — every backend stays
         // reachable by name via parse_with either way.
+        //
+        // `LapackSort` is deliberately not in this chain. It widens to f64
+        // and narrows back, so it is the one backend that does not merely
+        // reorder the caller's integers, and making it the day's default
+        // answer-producing sort would bury that behind a feature flag. It is
+        // reachable by name, and the benches and tests below name it.
         #[cfg(feature = "qsort")]
         {
             Self::parse_with::<CSort>(input)
@@ -407,6 +433,69 @@ mod tests {
         sort_pure_rust(&mut pure);
 
         assert_eq!(via_cpp, pure);
+    }
+
+    /// Same agreement over the Fortran marker: `parse_with::<LapackSort>`
+    /// must build the same ranked columns as the native sort, which is the
+    /// claim the f64 round trip has to survive on real puzzle values.
+    #[cfg(feature = "lapack")]
+    #[test]
+    fn test_day1_lapack_parse_agrees() -> miette::Result<()> {
+        let input = "3   4
+    4   3
+    2   5
+    1   3
+    3   9
+    3   3";
+        let mut native = Day1::parse_with::<NativeSort>(input)?;
+        let mut lapack = Day1::parse_with::<LapackSort>(input)?;
+
+        assert_eq!(native.solve(Part::One)?, lapack.solve(Part::One)?);
+        assert_eq!(native.solve(Part::Two)?, lapack.solve(Part::Two)?);
+        Ok(())
+    }
+
+    /// The same vector every other backend is pinned against, so the four
+    /// rows of the bench are four routes to one order. `i32::MAX` and
+    /// `i32::MIN` are doing more work here than in the qsort and cpp tests:
+    /// this backend widens to f64 and narrows back, and these are the two
+    /// values that would expose a lossy round trip. (They survive because
+    /// f64's 53-bit significand covers all 32 bits; the same code over i64
+    /// would not be safe, which is worth knowing before anyone reuses it.)
+    #[cfg(feature = "lapack")]
+    #[test]
+    fn test_day1_lapack_sort_agrees() {
+        let mut via_lapack = vec![3, 1, 4, 1, 5, 9, 2, 6, i32::MAX, i32::MIN];
+        let mut pure = via_lapack.clone();
+
+        sort_via_lapack(&mut via_lapack);
+        sort_pure_rust(&mut pure);
+
+        assert_eq!(via_lapack, pure);
+        assert_eq!(vec![i32::MIN, 1, 1, 2, 3, 4, 5, 6, 9, i32::MAX], via_lapack);
+    }
+
+    /// The two sizes where the crossing is all edge and no algorithm.
+    /// DLASRT's own N = 0 path returns immediately, but the binding never
+    /// lets it find out: an empty slice's `as_mut_ptr` is dangling, and the
+    /// early return is what this pins. One element goes across for real.
+    #[cfg(feature = "lapack")]
+    #[test]
+    fn test_day1_lapack_sort_edges() {
+        let mut empty: Vec<i32> = vec![];
+        sort_via_lapack(&mut empty);
+        assert!(empty.is_empty());
+
+        let mut single = vec![7];
+        sort_via_lapack(&mut single);
+        assert_eq!(vec![7], single);
+
+        // Zero and negatives: not in any real puzzle input, but the f64
+        // route is the only backend where the sign lives somewhere other
+        // than the value's own bits, so it is worth one line.
+        let mut signs = vec![0, -1, 1, 0];
+        sort_via_lapack(&mut signs);
+        assert_eq!(vec![-1, 0, 0, 1], signs);
     }
 
     /// Both counters over the same columns, same score — including a key

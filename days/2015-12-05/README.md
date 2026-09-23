@@ -27,7 +27,8 @@ Five solves of the same puzzle live in this one branch (each was built and verif
 
 Both C libraries are default-off cargo features. A bare `cargo build`
 needs neither them nor `pkg-config`, which is what keeps CI and the
-manual-setup path green; the nix shell carries both. `hyperscan` is the
+manual-setup path green; `nix-shell --arg full true` carries both (the
+default shell does not — see shell.nix). `hyperscan` is the
 module and feature name, `vectorscan` the package that provides it —
 the maintained fork of Intel's Hyperscan, same API.
 
@@ -77,7 +78,7 @@ handled as data. Built on the pure-Rust functions specifically, not on
 whichever variant `Solution::part1` currently runs: this exercise is
 about the export direction, and the exported library needs no C
 dependency of its own. `just days bindgen 2015-12-05` generates the
-header (not committed — see `days/.gitignore`).
+header (not committed — see `.gitignore`).
 
 **Dart via dart:ffi (`dart/solve.dart`, Exercise 3).** Day 1 did this
 step in Python; each day demonstrates a different track. The contrast is
