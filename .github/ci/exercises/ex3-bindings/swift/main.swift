@@ -6,6 +6,8 @@
 //       -L ../../target/debug -lex2_c_glue \
 //       -Xlinker -rpath -Xlinker "$PWD/../../target/debug" -o ex3 \
 //   && ./ex3
+// (target/release in place of target/debug, both places, if you built Ex 2
+// with --release; `just exercises swift` picks whichever exists, debug first)
 
 import Foundation
 

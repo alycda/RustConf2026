@@ -13,6 +13,8 @@
 //       -L ../../target/debug -lex2_c_glue \
 //       -Xlinker -rpath -Xlinker "$PWD/../../target/debug" -o ex3 \
 //   && ./ex3
+// (target/release in place of target/debug, both places, if you built Ex 2
+// with --release; `just exercises swift` picks whichever exists, debug first)
 //
 // (Why is this file named main.swift? Multi-file swiftc only allows
 // top-level code in main.swift — a rule you now know that most Swift

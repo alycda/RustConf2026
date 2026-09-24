@@ -763,3 +763,23 @@ jobs:
           out="$(just exercises swift)"
           echo "$out"
           echo "$out" | grep -qF 'Ex 3 (Swift) passed.'
+      # The same Ex 3 track again with only a release library in target/:
+      # every loader searches debug then release, so an attendee who builds
+      # Ex 2 with --release must still get a green run. Deleting the debug
+      # library (not target/debug) is what makes this a release-only run —
+      # otherwise the debug copy from the step above wins.
+      - name: exercises Ex 3 ${{ matrix.track }}, release-only library
+        if: contains(fromJSON('["python", "dart", "kotlin", "swift"]'), matrix.track) && runner.os != 'Windows' && hashFiles('.github/ci/exercises/**') != ''
+        shell: bash
+        env:
+          TRACK: ${{ matrix.track }}
+        run: |
+          rm -f exercises/target/debug/libex2_c_glue.so exercises/target/debug/libex2_c_glue.dylib
+          cargo build --release --locked --manifest-path exercises/Cargo.toml -p ex2-c-glue
+          case "$TRACK" in
+            python) label=Python ;; dart) label=Dart ;;
+            kotlin) label=Kotlin ;; swift) label=Swift ;;
+          esac
+          out="$(just exercises "$TRACK")"
+          echo "$out"
+          echo "$out" | grep -qF "Ex 3 (${label}) passed."
