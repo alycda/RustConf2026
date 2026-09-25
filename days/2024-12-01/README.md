@@ -138,6 +138,31 @@ drawn from a range where matches actually occur:
 | `ahash` (bench-only dependency) | ~13.1 µs | ~7.6× faster |
 | uthash via FFI | ~10.6 µs | ~9.4× faster |
 
+Both axes of that race are knobs — `LOOKUP_LEN` for the column length,
+`LOOKUP_RANGE` for the key range, so roughly the number of distinct keys —
+because the ordering is a property of the workload, not of the structures.
+The two Rust maps and the C table are within about 10% of each other at a
+thousand lines and the top two swap between machines (on an Apple Silicon
+laptop under the full nix shell, ahash edged uthash, 13.6 µs to 14.8 µs).
+Twenty times the size settles it the other way:
+
+```sh
+LOOKUP_LEN=20000 LOOKUP_RANGE=10000 cargo bench --bench lookup --features uthash
+```
+
+| structure | time at 20000 | vs naive |
+|---|---|---|
+| naive scan | ~42.8 ms | — |
+| std `HashMap` | ~521 µs | ~82× faster |
+| `ahash` | ~257 µs | ~166× faster |
+| uthash via FFI | ~583 µs | ~73× faster |
+
+uthash now trails both Rust maps: a malloc per entry and a pointer chase per
+lookup cost little while the table fits in cache and a lot once it does not.
+Predict the ordering before running either size; the crossing frequency
+lesson below is only half of what this bench has to say, and the other half is
+that the winner moved when the data did.
+
 `benches/day.rs` times the day's own pipeline; its parse row is where the
 sort lives, so it is the number that moves with a backend feature on
 (~30.4 µs pure → ~32.2 µs cpp → ~60.6 µs qsort at generated/1000).

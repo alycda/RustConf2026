@@ -19,6 +19,21 @@
 //! matches actually occur — a map benched on all-missing keys only ever
 //! times its miss path. The resulting score still means nothing as a puzzle
 //! answer; see benches/day.rs on generated inputs and counting.
+//!
+//! Both numbers are knobs, because the ordering is a property of the
+//! workload and not of the structures. `LOOKUP_LEN` sets the column length
+//! and `LOOKUP_RANGE` the key range (so `LOOKUP_RANGE` is roughly the number
+//! of distinct keys the map holds):
+//!
+//! ```sh
+//! LOOKUP_LEN=10000 LOOKUP_RANGE=5000 cargo bench --bench lookup --features uthash
+//! ```
+//!
+//! Predict the ordering before you run it. At ten times the size uthash
+//! trails ahash, and at twenty times it trails std's `HashMap` too: a malloc
+//! per entry and pointer-chasing lookups meet a table that no longer fits in
+//! cache. The C table's lead at a thousand lines is not a law — see the
+//! README.
 
 use std::collections::HashMap;
 use std::hint::black_box;
@@ -27,8 +42,22 @@ use ahash::AHashMap;
 use aoc_2024_12_01::{similarity_pure_rust, similarity_via_uthash};
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 
-/// Both columns at real scale — a Day 1 input is a thousand lines.
+/// Both columns at real scale — a Day 1 input is a thousand lines. Override
+/// with `LOOKUP_LEN`.
 const COLUMN_LEN: usize = 1000;
+
+/// Keys draw from `0..KEY_RANGE`, so this is about how many distinct keys
+/// the map ends up holding. Override with `LOOKUP_RANGE`.
+const KEY_RANGE: u64 = 500;
+
+/// A knob from the environment, or its default: benches take no arguments
+/// of their own, and criterion owns the command line.
+fn knob(name: &str, default: usize) -> usize {
+    std::env::var(name)
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(default)
+}
 
 /// xorshift64: deterministic across runs, machines, and this repo's absence
 /// of a `rand` dependency, so two benchmark runs are comparable.
@@ -39,10 +68,10 @@ fn xorshift(state: &mut u64) -> u64 {
     *state
 }
 
-fn column(len: usize, seed: u64) -> Vec<i32> {
+fn column(len: usize, range: u64, seed: u64) -> Vec<i32> {
     let mut seed = seed;
     (0..len)
-        .map(|_| (xorshift(&mut seed) % 500) as i32)
+        .map(|_| (xorshift(&mut seed) % range) as i32)
         .collect()
 }
 
@@ -76,8 +105,11 @@ fn similarity_ahash(left: &[i32], right: &[i32]) -> i32 {
 type Counter = fn(&[i32], &[i32]) -> i32;
 
 fn bench_lookups(c: &mut Criterion) {
-    let left = column(COLUMN_LEN, 0x2024_1201);
-    let right = column(COLUMN_LEN, 0x2024_1203);
+    let len = knob("LOOKUP_LEN", COLUMN_LEN);
+    let range = knob("LOOKUP_RANGE", KEY_RANGE as usize) as u64;
+    eprintln!("lookup: {len} entries per column, keys in 0..{range}");
+    let left = column(len, range, 0x2024_1201);
+    let right = column(len, range, 0x2024_1203);
     let mut group = c.benchmark_group("2024-12-01/lookup");
 
     let contenders: [(&str, Counter); 4] = [
@@ -95,7 +127,7 @@ fn bench_lookups(c: &mut Criterion) {
     }
 
     for (name, counter) in contenders {
-        group.bench_function(BenchmarkId::new(name, COLUMN_LEN), |b| {
+        group.bench_function(BenchmarkId::new(name, len), |b| {
             b.iter(|| black_box(counter(black_box(&left), black_box(&right))))
         });
     }
