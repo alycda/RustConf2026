@@ -165,8 +165,9 @@ dwarfs the work on both sides of it, in both directions.
   Rust (`tcc.rs`, `caca.rs`) is a library-discovery problem: find the
   headers, link the symbols, keep the FFI surface `unsafe extern "C" {
   }`. Exposing Rust to C (`c_api.rs`) is an ABI-safety problem: a panic
-  crossing that boundary is UB, so the design has to route every failure
-  through data (status codes) instead of Rust's usual `Result`/`panic!`.
+  crossing that boundary aborts the process (UB before Rust 1.81), so the
+  design has to route every failure through data (status codes) instead of
+  Rust's usual `Result`/`panic!`.
 - **Not every C "library" is a library.** `figlet` (the classic CLI tool)
   ships no `.so` and no header in nixpkgs — nothing to link against.
   `libcaca`, which looks unrelated, happens to embed a real FIGlet-font
@@ -251,8 +252,9 @@ dwarfs the work on both sides of it, in both directions.
   asserts that with a `stopifnot` rather than only saying it. Who
   allocates is, once again, not the library.
 - **Three boundaries, three answers to "what does a panic do?"** Exercise
-  2's C API cannot let one out at all — unwinding across `extern "C"` is
-  UB, so `c_api.rs` is written so nothing in it can panic. wasm traps and
+  2's C API cannot let one out at all — unwinding across `extern "C"`
+  aborts the process (UB before Rust 1.81), so `c_api.rs` is written so
+  nothing in it can panic. wasm traps and
   takes the instance with it. extendr catches the unwind in its generated
   wrapper and raises an ordinary R error: `tryCatch` sees a `simpleError`,
   and the session carries on. `boundary_panic` in `src/extendr.rs` exists
@@ -289,8 +291,9 @@ dwarfs the work on both sides of it, in both directions.
   6 bytes to Rust, `(é)` is 3 and 4 — so this is a measurement, and ASCII
   hides it completely.
 - **A third panic semantics, and the docs were optimistic about it.**
-  Exercise 2's C API cannot panic at all (unwinding across `extern "C"` is
-  UB, so every failure is a status code); wasm turns a panic into a trap
+  Exercise 2's C API cannot panic at all (unwinding across `extern "C"`
+  aborts the process, UB before Rust 1.81, so every failure is a status
+  code); wasm turns a panic into a trap
   that kills the instance. gdext catches the unwind, prints the Rust message
   as an engine error with a GDScript backtrace, and carries on — which reads
   like the friendliest of the three until you ask what the caller got back.
