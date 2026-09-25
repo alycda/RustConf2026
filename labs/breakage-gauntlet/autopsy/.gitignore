@@ -1,0 +1,15 @@
+# Build outputs from each flaw's check.sh — regenerated on every run, never
+# committed. Only the source (native lib, binding, proof, check.sh, worksheets)
+# is tracked.
+*.o
+*.out
+*.dylib
+*.so
+*.dSYM/
+proof_plain
+proof_ubsan
+proof_asan
+encoding_proof
+readpast_asan
+# check.sh copies the binding to main.swift so swiftc will accept top-level code.
+main.swift

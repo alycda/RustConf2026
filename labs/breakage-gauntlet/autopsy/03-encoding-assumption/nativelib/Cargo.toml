@@ -1,0 +1,12 @@
+[package]
+name = "nativelib"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[profile.release]
+# Small, quick — this is a demo boundary, not a shipping artifact.
+opt-level = 1
