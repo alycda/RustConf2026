@@ -102,8 +102,9 @@ if (!is.null(answer)) {
   cat(sprintf("Part 2 📊(🦀): %d\n", answer))
 }
 
-# The panic exhibit. Exercise 2's C API cannot let a panic out at all (it is
-# UB across `extern "C"`, so c_api.rs is written so nothing can panic) and
+# The panic exhibit. Exercise 2's C API cannot let a panic out at all (one
+# that reaches `extern "C"` aborts the process since Rust 1.81, and was UB
+# before, so c_api.rs is written so nothing can panic) and
 # the wasm track's answer is a trap that takes the instance with it. Here
 # extendr's generated wrapper catches the unwind and raises an ordinary R
 # error: catchable, classed, and survivable. The stderr noise above this

@@ -223,13 +223,13 @@ mod tests {
             .collect();
         let course = CString::new(course).expect("no NUL bytes in a generated course");
 
-        let mut answer: c_int = 0;
+        let mut answer: c_int = 7;
         // SAFETY: `course` is a live NUL-terminated string and `answer` is
         // writable for one `c_int`; both outlive the call.
         let status = unsafe { aoc_2021_12_02_part1(course.as_ptr(), &raw mut answer) };
 
         assert_eq!(status, -3, "expected the overflow status code");
-        assert_eq!(answer, 0, "out_product must be left alone when we refuse");
+        assert_eq!(answer, 7, "out_product must be left alone when we refuse");
     }
 
     /// The ordinary path, as the counterweight: the same entry point still

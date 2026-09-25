@@ -247,7 +247,8 @@ a second reason — see the overflow Learning below.
   something that is, from the C side, an ordinary error. Arithmetic that
   cannot overflow is the only version that doesn't depend on how you were
   built. The `catch_unwind` stays as a backstop, since being wrong about
-  "nothing here panics" across an `extern "C"` frame costs UB.
+  "nothing here panics" across an `extern "C"` frame costs an abort
+  (UB before Rust 1.81).
 - **cbindgen's scope has to be aimed, and this day proves why twice.** The
   crate contains two modules full of `extern "C"` *imports* — Chipmunk's
   handful and DuckDB's twenty-odd. Pointed at the crate root, cbindgen would
