@@ -41,20 +41,40 @@ kotlin:
     #!/usr/bin/env bash
     set -euo pipefail
     jna="$(../scripts/fetch-jna.sh)"
+    # Debug first, then release: the order python/bindings.py and dart/ex3.dart
+    # search in, so a `cargo build --release` library works on every track.
+    # Named files only — target/*/libex2_c_glue.d exists too and is no library.
+    profile=""
+    for p in debug release; do
+        for f in libex2_c_glue.so libex2_c_glue.dylib ex2_c_glue.dll; do
+            if [ -z "$profile" ] && [ -e "target/$p/$f" ]; then profile="$p"; fi
+        done
+    done
+    [ -n "$profile" ] || { echo "no Ex 2 library found — run \`just exercises ex2\` first" >&2; exit 1; }
     cd ex3-bindings/kotlin
     # -Djna.encoding: JNA's default is the platform charset, not UTF-8; the
     # C side reads UTF-8, so say so rather than let cp1252 or ASCII transcode.
-    kotlinc -script ex3.kts -classpath "$jna" -J-Djna.library.path=../../target/debug -J-Djna.encoding=UTF-8
+    kotlinc -script ex3.kts -classpath "$jna" -J-Djna.library.path="../../target/$profile" -J-Djna.encoding=UTF-8
 
 # Ex 3, Swift track: the header's swiftc line (scripts/swift-corelibs-flags.sh covers the Swift devcontainer)
 swift:
     #!/usr/bin/env bash
     set -euo pipefail
+    # Debug first, then release: the order python/bindings.py and dart/ex3.dart
+    # search in, so a `cargo build --release` library works on every track.
+    # Named files only — target/*/libex2_c_glue.d exists too and is no library.
+    profile=""
+    for p in debug release; do
+        for f in libex2_c_glue.so libex2_c_glue.dylib ex2_c_glue.dll; do
+            if [ -z "$profile" ] && [ -e "target/$p/$f" ]; then profile="$p"; fi
+        done
+    done
+    [ -n "$profile" ] || { echo "no Ex 2 library found — run \`just exercises ex2\` first" >&2; exit 1; }
     cd ex3-bindings/swift
     # scripts/swift-corelibs-flags.sh prints the Foundation flags the Swift
     # devcontainer needs and nothing elsewhere; days/justfile says why.
     swiftc main.swift -import-objc-header ../../ex2-c-glue/include/ex2_c_glue.h \
         $(../../../scripts/swift-corelibs-flags.sh) \
-        -L ../../target/debug -lex2_c_glue \
-        -Xlinker -rpath -Xlinker "$PWD/../../target/debug" -o ex3
+        -L "../../target/$profile" -lex2_c_glue \
+        -Xlinker -rpath -Xlinker "$PWD/../../target/$profile" -o ex3
     ./ex3

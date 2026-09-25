@@ -10,6 +10,8 @@
 // bare name to libex2_c_glue.so / .dylib / ex2_c_glue.dll itself):
 //   kotlinc -script ex3.kts -classpath "$jna" \
 //       -J-Djna.library.path=../../target/debug -J-Djna.encoding=UTF-8
+// (target/release in place of target/debug if you built Ex 2 with --release;
+// `just exercises kotlin` picks whichever exists, debug first)
 
 import com.sun.jna.Library
 import com.sun.jna.Native
