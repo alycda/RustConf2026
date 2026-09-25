@@ -1,0 +1,105 @@
+# CI for the Breakage Gauntlet (labs/breakage-gauntlet).
+#
+# Station B — AI Binding Autopsy: one job per planted flaw. Each job runs the
+# flaw's check.sh, which ASSERTS the flaw manifests (a wrong answer, or a
+# sanitizer abort) and exits 0 only when it does. The flaws are the fixture;
+# this workflow proves they are real and deterministic on both runners.
+#
+# Sanitizers (-fsanitize=address / -fsanitize=undefined) are enabled HERE ONLY.
+# They run against the C-side proof harness with the runner's stock clang — not
+# the Nix shell, no nightly Rust, no -Zsanitizer — so the attendee toolchain
+# (rust.yml, env-check.yml, `just check`) stays vanilla. See
+# labs/breakage-gauntlet/README.md for the decision.
+
+name: gauntlet
+
+on:
+  push:
+    paths:
+      - 'labs/breakage-gauntlet/**'
+      - '.github/workflows/gauntlet.yml'
+  pull_request:
+    paths:
+      - 'labs/breakage-gauntlet/**'
+      - '.github/workflows/gauntlet.yml'
+
+concurrency:
+  group: gauntlet-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  # Make the alloc/dealloc-mismatch check deterministic across platforms.
+  ASAN_OPTIONS: alloc_dealloc_mismatch=1
+  # Pin to clang on both runners (AppleClang on macOS, LLVM clang on ubuntu) so
+  # the sanitizer diagnostics match what was verified locally. Both are
+  # preinstalled on GitHub runners; this keeps the C-side proofs identical
+  # across OSes and avoids gcc-libasan wording/behaviour drift.
+  CC: clang
+  CXX: clang++
+
+jobs:
+  autopsy-01-comparator-overflow:
+    name: autopsy 01 · comparator a-b overflow (UBSan) / ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - name: Assert the flaw manifests
+        working-directory: labs/breakage-gauntlet/autopsy/01-comparator-overflow
+        run: bash check.sh
+
+  autopsy-02-cross-allocator-free:
+    name: autopsy 02 · cross-allocator free (ASan) / ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - name: Assert the flaw manifests
+        working-directory: labs/breakage-gauntlet/autopsy/02-cross-allocator-free
+        run: bash check.sh
+
+  autopsy-03-encoding-assumption:
+    name: autopsy 03 · encoding mismatch (wrong answer) / macos
+    # Swift binding — macOS runner, like the Ex 3 Swift track.
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: labs/breakage-gauntlet/autopsy/03-encoding-assumption/nativelib
+      - name: Assert the flaw manifests
+        working-directory: labs/breakage-gauntlet/autopsy/03-encoding-assumption
+        run: bash check.sh
+
+  autopsy-04-embedded-nul:
+    name: autopsy 04 · missing/embedded NUL (truncation + ASan) / ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: labs/breakage-gauntlet/autopsy/04-embedded-nul/nativelib
+      - name: Assert the flaw manifests
+        working-directory: labs/breakage-gauntlet/autopsy/04-embedded-nul
+        run: bash check.sh
