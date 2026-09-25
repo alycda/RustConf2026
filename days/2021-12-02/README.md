@@ -68,10 +68,11 @@ fails the suite if it regresses.
 **cbindgen C API (`src/c_api.rs`, Exercise 2).** The direction reverses: Rust
 exposes itself *as* a C library. Two `extern "C"` functions,
 `aoc_2021_12_02_part1`/`part2`, built around out-parameters and status codes
-rather than `Result`, because a panic unwinding across an `extern "C"` frame is
-undefined behavior. They are built on the pure-Rust functions specifically —
-Exercise 2 is about the export direction, and wiring it to either library would
-make the header's meaning depend on a cargo feature. `just days bindgen
+rather than `Result`, because a panic that reaches an `extern "C"` frame aborts
+the process (undefined behavior before Rust 1.81). They are built on the
+pure-Rust functions specifically — Exercise 2 is about the export direction,
+and wiring it to either library would make the header's meaning depend on a
+cargo feature. `just days bindgen
 2021-12-02` generates the header (not committed — see `.gitignore`).
 
 **Kotlin via JNA (`kotlin/solve.kt`, Exercise 3).** Loads the built `cdylib`
@@ -246,7 +247,8 @@ a second reason — see the overflow Learning below.
   something that is, from the C side, an ordinary error. Arithmetic that
   cannot overflow is the only version that doesn't depend on how you were
   built. The `catch_unwind` stays as a backstop, since being wrong about
-  "nothing here panics" across an `extern "C"` frame costs UB.
+  "nothing here panics" across an `extern "C"` frame costs an abort
+  (UB before Rust 1.81).
 - **cbindgen's scope has to be aimed, and this day proves why twice.** The
   crate contains two modules full of `extern "C"` *imports* — Chipmunk's
   handful and DuckDB's twenty-odd. Pointed at the crate root, cbindgen would

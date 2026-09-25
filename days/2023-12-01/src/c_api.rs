@@ -9,10 +9,12 @@
 //! variant yet and will grow one; Exercise 2 is about the export *direction*,
 //! and tying the header's meaning to a cargo feature would muddy both.
 //!
-//! Plain status codes and out-parameters, not `Result`: a Rust panic
-//! unwinding across an `extern "C"` frame is undefined behavior, so nothing
-//! here can panic — bad input (a null pointer, invalid UTF-8) is a real
-//! possibility from a C caller and is handled as data, not asserted away.
+//! Plain status codes and out-parameters, not `Result`: a Rust panic that
+//! reaches an `extern "C"` frame aborts the process (Rust 1.81 and later —
+//! before that it was undefined behavior), so nothing here may panic — bad
+//! input (a null pointer, invalid UTF-8) is a real possibility from a C caller
+//! and is handled as data, not asserted away. The codes are the repo-wide
+//! table in `days/README.md` ("C API status codes").
 //!
 //! The panic that mattered on this day was not a hypothetical one. Until the
 //! commit before this module existed, `calibration_value` walked the line by
@@ -21,17 +23,47 @@
 //! [`read_input`] promises to *accept*. The Rust binary could never reach it
 //! (real puzzle inputs are ASCII); a C caller reaches it by typing.
 
+#![warn(clippy::pedantic)]
+#![warn(missing_docs)]
+#![deny(unsafe_op_in_unsafe_fn)]
+// Power of Ten rule 10: this module is the shim, so it carries the pedantic
+// setting even though the day crate around it does not. Scoped here on
+// purpose — crate-wide `pedantic` reports 17-39 findings per day, nearly all
+// in puzzle code, and burying two real casts in ~150 style notes is how a
+// lint stops being read. `-D warnings` belongs in CI, never in source.
+
 use std::ffi::{CStr, c_char, c_int, c_uint};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::str::FromStr;
 
 use crate::{Day, checked_sum_calibration_pure_rust, checked_sum_calibration_with_words_pure_rust};
 
+// The repo-wide status codes (days/README.md, "C API status codes").
+const INVALID_INPUT: c_int = -1;
+const OVERFLOW: c_int = -3;
+const INTERNAL: c_int = -4;
+
 /// Reads `input` as a `&str`, or `None` if it's null or not valid UTF-8.
 ///
 /// # Safety
 /// `input` must be null or point to a NUL-terminated C string valid for the
 /// duration of the call.
+///
+/// The scan for that terminator is unbounded. `CStr::from_ptr` reads forward
+/// until it meets a NUL byte. A caller that passes an unterminated buffer
+/// reads past the end of its own allocation. The terminator is the only
+/// limit that exists here.
+///
+/// Power of Ten rule 2 wants every loop bounded, and at an FFI boundary that
+/// means the caller supplies a length. The C string protocol carries no
+/// length, so this bound is the caller's promise rather than a parameter.
+/// A length parameter would change the signature every Exercise 3 track is
+/// written against, so the limit is named here rather than skipped.
+///
+/// The returned lifetime `'a` is not tied to `input`. The caller chooses it
+/// and `'static` type-checks. Every caller in this module reads the result
+/// before it returns, which is what makes the present code correct. A new
+/// caller must do the same.
 unsafe fn read_input<'a>(input: *const c_char) -> Option<&'a str> {
     if input.is_null() {
         return None;
@@ -41,7 +73,7 @@ unsafe fn read_input<'a>(input: *const c_char) -> Option<&'a str> {
 
 /// Shared body of both entry points: parse, sum, write the answer.
 ///
-/// `solve` returns `Option` because the header promises `-2` for a total too
+/// `solve` returns `Option` because the header promises `-3` for a total too
 /// large for a `uint32_t`, and a promise kept by "the arithmetic would have
 /// panicked" is only kept where `overflow-checks` is on — the dev profile,
 /// not the release one, and `days/Cargo.toml` overrides neither. That was
@@ -52,37 +84,46 @@ unsafe fn read_input<'a>(input: *const c_char) -> Option<&'a str> {
 /// though. There, a genuine puzzle input landed within ~10% of `i32::MAX` and
 /// `forward 100000\ndown 100000` overflowed it — the `-3` was a status code
 /// callers would actually see, and there is a test that sees it. Here a line
-/// is worth at most 99, so `-2` needs ~43 million lines, at least 86 MB of
+/// is worth at most 99, so `-3` needs ~43 million lines, at least 86 MB of
 /// input. The arithmetic behind it is pinned (`crate::tests::
-/// the_total_refuses_to_wrap`); this path through the FFI boundary is not,
-/// because constructing the input costs more than the guard is worth. An
-/// FFI contract you cannot afford to exercise is a weaker promise than one
-/// you can, and saying so here is cheaper than discovering it later.
+/// the_total_refuses_to_wrap`), and so is the step from its `None` to `-3`
+/// at this boundary, by injecting a solver that returns one
+/// (`tests::an_overflowing_total_reports_minus_three`). A real input taking
+/// that path is not pinned, because constructing it costs more than the
+/// guard is worth. An FFI contract you cannot afford to exercise end to end
+/// is a weaker promise than one you can, and saying so here is cheaper than
+/// discovering it later.
 ///
-/// The `catch_unwind` is a backstop, not the guard, and it folds into the
-/// same `-2` — same shape as 2021-12-02's `-3`. Nothing on this path panics:
-/// the parse is infallible, the scan is by character, the arithmetic is
-/// checked. But this is an `extern "C"` frame, where being wrong about that
-/// costs undefined behavior rather than a bad answer, and a caller that
-/// somehow got here has learned the only thing the code can honestly tell
-/// it — no answer, don't read `*out_value`.
-fn solve_into(
+/// The `catch_unwind` is a backstop, not the guard. Nothing on this path
+/// panics: the parse is infallible, the scan is by character, the arithmetic
+/// is checked. But this is an `extern "C"` frame, where being wrong about
+/// that costs an abort rather than a bad answer. It reports `-4`, its own
+/// code: this module used to fold it into the overflow code, which told a
+/// caller "your input was too large" about a bug in here.
+///
+/// # Safety
+/// The contract of [`aoc_2023_12_01_part1`]. It dereferences both pointers,
+/// so it is an `unsafe fn` even though it is not exported.
+unsafe fn solve_into(
     input: *const c_char,
     out_value: *mut c_uint,
     solve: fn(&[String]) -> Option<u32>,
 ) -> c_int {
     if out_value.is_null() {
-        return -1;
+        return INVALID_INPUT;
     }
     let Some(text) = (unsafe { read_input(input) }) else {
-        return -1;
+        return INVALID_INPUT;
     };
     let Ok(day) = Day::from_str(text) else {
-        return -1;
+        return INVALID_INPUT;
     };
 
-    let Ok(Some(total)) = catch_unwind(AssertUnwindSafe(|| solve(&day))) else {
-        return -2;
+    let Ok(computed) = catch_unwind(AssertUnwindSafe(|| solve(&day))) else {
+        return INTERNAL;
+    };
+    let Some(total) = computed else {
+        return OVERFLOW;
     };
 
     unsafe { *out_value = total };
@@ -94,7 +135,9 @@ fn solve_into(
 /// `*out_value`.
 ///
 /// Returns `0` on success, `-1` if `input`/`out_value` is null or `input`
-/// isn't valid UTF-8, `-2` if the total doesn't fit in a `uint32_t`.
+/// isn't valid UTF-8, `-3` if the total doesn't fit in a `uint32_t`, `-4`
+/// if the computation panicked. On any nonzero return `*out_value` is left
+/// untouched.
 ///
 /// # Safety
 /// `input` must point to a NUL-terminated C string. `out_value` must point to
@@ -104,12 +147,17 @@ pub unsafe extern "C" fn aoc_2023_12_01_part1(
     input: *const c_char,
     out_value: *mut c_uint,
 ) -> c_int {
-    solve_into(input, out_value, checked_sum_calibration_pure_rust)
+    // SAFETY: the caller's contract is exactly `solve_into`'s.
+    unsafe { solve_into(input, out_value, checked_sum_calibration_pure_rust) }
 }
 
 /// Parses `input` and writes part two's answer — the same sum, with
 /// spelled-out digits (`one` through `nine`, overlaps included) counting too
 /// — into `*out_value`.
+///
+/// Returns the same codes as [`aoc_2023_12_01_part1`], under the same
+/// conditions, and likewise leaves `*out_value` untouched on any nonzero
+/// return.
 ///
 /// # Safety
 /// Same contract as [`aoc_2023_12_01_part1`], for `out_value`.
@@ -118,17 +166,68 @@ pub unsafe extern "C" fn aoc_2023_12_01_part2(
     input: *const c_char,
     out_value: *mut c_uint,
 ) -> c_int {
-    solve_into(
-        input,
-        out_value,
-        checked_sum_calibration_with_words_pure_rust,
-    )
+    // SAFETY: the caller's contract is exactly `solve_into`'s.
+    unsafe {
+        solve_into(
+            input,
+            out_value,
+            checked_sum_calibration_with_words_pure_rust,
+        )
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::ffi::CString;
+
+    /// See 2015-12-05's copy: the panic hook is process-global, so a test
+    /// that provokes a panic on purpose silences and restores it.
+    fn without_panic_noise<T>(f: impl FnOnce() -> T) -> T {
+        let previous = std::panic::take_hook();
+        std::panic::set_hook(Box::new(|_| {}));
+        let out = f();
+        std::panic::set_hook(previous);
+        out
+    }
+
+    fn overflowing_solve(_lines: &[String]) -> Option<u32> {
+        None
+    }
+
+    fn panicking_solve(_lines: &[String]) -> Option<u32> {
+        panic!("a solver an attendee edited into something fallible");
+    }
+
+    /// The `-3` path through this frame. A real input needs ~86 MB to get
+    /// here (see `solve_into`), so the overflow is injected instead: what
+    /// this pins is that the checked sum's `None` becomes `-3`, the arithmetic
+    /// itself being pinned in `crate::tests`.
+    #[test]
+    fn an_overflowing_total_reports_minus_three() {
+        let text = CString::new("1abc2").expect("no NULs");
+        let mut answer: c_uint = 7;
+        // SAFETY: `text` is a live NUL-terminated string and `answer` is
+        // writable for one `c_uint`; both outlive the call.
+        let status = unsafe { solve_into(text.as_ptr(), &raw mut answer, overflowing_solve) };
+
+        assert_eq!(status, -3, "the total does not fit a uint32_t");
+        assert_eq!(answer, 7, "out_value must be left alone on overflow");
+    }
+
+    /// A panic is `-4`, no longer folded into the overflow code.
+    #[test]
+    fn a_panicking_solver_reports_minus_four() {
+        let text = CString::new("1abc2").expect("no NULs");
+        let mut answer: c_uint = 7;
+        // SAFETY: as above.
+        let status = without_panic_noise(|| unsafe {
+            solve_into(text.as_ptr(), &raw mut answer, panicking_solve)
+        });
+
+        assert_eq!(status, -4, "a caught panic must arrive as the status code");
+        assert_eq!(answer, 7, "out_value must be left alone when we refuse");
+    }
 
     /// Both entry points against the puzzle's own examples, through the C
     /// boundary rather than through the Rust functions they wrap — the trip
@@ -140,7 +239,7 @@ mod tests {
         // SAFETY: `part1` is a live NUL-terminated string and `answer` is
         // writable for one `c_uint`; both outlive the call.
         assert_eq!(
-            unsafe { aoc_2023_12_01_part1(part1.as_ptr(), &mut answer) },
+            unsafe { aoc_2023_12_01_part1(part1.as_ptr(), &raw mut answer) },
             0
         );
         assert_eq!(answer, 142);
@@ -152,7 +251,7 @@ mod tests {
         let mut answer: c_uint = 0;
         // SAFETY: as above.
         assert_eq!(
-            unsafe { aoc_2023_12_01_part2(part2.as_ptr(), &mut answer) },
+            unsafe { aoc_2023_12_01_part2(part2.as_ptr(), &raw mut answer) },
             0
         );
         assert_eq!(answer, 281);
@@ -168,7 +267,7 @@ mod tests {
         // SAFETY: a null `input` is explicitly part of this function's
         // contract; `answer` is writable for one `c_uint`.
         assert_eq!(
-            unsafe { aoc_2023_12_01_part1(std::ptr::null(), &mut answer) },
+            unsafe { aoc_2023_12_01_part1(std::ptr::null(), &raw mut answer) },
             -1
         );
         assert_eq!(answer, 7, "out_value must be left alone when we refuse");
@@ -185,7 +284,7 @@ mod tests {
     /// Valid UTF-8 that is not ASCII. This is the case the commit before this
     /// module fixed, and it is here rather than only in `lib.rs` because the
     /// difference between the two is the whole reason it was worth fixing:
-    /// in `lib.rs` a panic is a backtrace, and across this frame it is UB.
+    /// in `lib.rs` a panic is a backtrace, and across this frame it aborts.
     #[test]
     fn a_multibyte_input_is_answered_not_a_panic() {
         let text = CString::new("1é9\nfourété2").expect("no NULs");
@@ -193,7 +292,7 @@ mod tests {
         // SAFETY: `text` is a live NUL-terminated string and `answer` is
         // writable for one `c_uint`.
         assert_eq!(
-            unsafe { aoc_2023_12_01_part2(text.as_ptr(), &mut answer) },
+            unsafe { aoc_2023_12_01_part2(text.as_ptr(), &raw mut answer) },
             0
         );
         assert_eq!(answer, 19 + 42);

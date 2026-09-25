@@ -70,8 +70,9 @@ private func call(
     let status = text.withCString { function($0, &slot) }
     guard status == 0 else {
         fail(
-            "\(name) failed with status \(status) (-1: input was null, not valid UTF-8, "
-                + "or not two integers per line; -2: a total overflowed an int32_t)")
+            "\(name) failed with status \(status) "
+                + "(-1 bad input, -2 no answer, -3 overflow, -4 internal error; "
+                + "see days/README.md)")
     }
     return slot
 }

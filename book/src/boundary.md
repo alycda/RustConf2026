@@ -47,16 +47,23 @@ least checked.
 The boundary reports failure as a status code and writes the answer through an
 out-parameter — never as a magic value folded into the answer itself, because
 any value a sentinel could use is a value some input could legitimately
-produce. Two kinds of code, because these are different problems with
-different owners:
+produce. Four codes, the same on every day (the table is in
+`days/README.md`, "C API status codes"), because these are different problems
+with different owners:
 
-- `-1` — the boundary refused your input: a NULL pointer, or bytes that are
-  not valid UTF-8.
-- a day-specific code (`-2`, `-3`) — the input was fine and the solver failed
-  on it: no digits on a line, an overflowing product.
+- `-1` bad input — the boundary refused your input: a NULL pointer, bytes that
+  are not valid UTF-8, text that is not this day's format.
+- `-2` no answer — the input was fine and the puzzle has no answer for it
+  (2015-12-01: Santa never reaches the basement).
+- `-3` overflow — the answer does not fit the out-parameter's type.
+- `-4` internal error — a panic was caught at the boundary. That is a bug on
+  the Rust side, not a problem with your input.
 
-Collapsing them would tell a caller to check their encoding when the real
-answer is "your input is corrupt in a way this code can't survive."
+Collapsing any two sends someone looking in the wrong place. Several days
+once folded a caught panic into their overflow code, which told a caller
+"your input was too large" about a bug in the library. On any nonzero code the
+out-parameter is left exactly as the caller set it. R's `.C()` throws the
+status away, so that promise is the R track's only way to see a failure.
 
 The day that earned this section is 2021-12-02, which promises `-3` when the
 product overflows an `i32` — and shipped a version that only kept that promise
@@ -76,15 +83,17 @@ because nothing else will hold it.
 
 ## Panics don't cross — they detonate
 
-A Rust panic unwinding across an `extern "C"` frame is undefined behavior.
-The caller doesn't get an exception, it gets a corpse — or worse, it gets
-nothing and keeps running.
+A Rust panic that reaches an `extern "C"` frame aborts the process. That is
+defined behavior since Rust 1.81; before it, unwinding into C was undefined,
+and older FFI material still says so. Either way the caller doesn't get an
+exception or a status code. It gets a dead process, and whatever it was doing
+alongside the call dies with it.
 
 This repo's answer is not "catch it." It is: the C surface must not panic,
 by construction — every fallible step returns `Result`, every overflow is
-checked — and on the days whose solvers can fail at all, `catch_unwind` sits
-*behind* that as a seatbelt, because this is a frame where being wrong about
-"cannot panic" costs undefined behavior rather than a bad answer.
+checked — and on every day, `catch_unwind` sits *behind* that as a seatbelt
+and reports `-4`, because this is a frame where being wrong about "cannot
+panic" costs an abort rather than a bad answer.
 
 The receipt that this is worth the trouble: 2023-12-01's solver scanned lines
 by byte offset and sliced at every position. On a line containing any
