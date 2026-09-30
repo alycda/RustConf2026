@@ -116,7 +116,8 @@ impl Aoc20151201 {
     /// Deliberately the shape nobody should ship: `expect` on the input the
     /// other two methods answer honestly. What happens next is the point.
     /// Exercise 2's C API cannot panic at all (unwinding across an
-    /// `extern "C"` frame is UB, so every failure is data); wasm turns a
+    /// `extern "C"` frame aborts the process since Rust 1.81, and was UB
+    /// before, so every failure is data); wasm turns a
     /// panic into a trap that kills the instance. gdext does a third thing —
     /// it catches the unwind, prints the Rust panic message as an engine
     /// error with a GDScript backtrace, and lets the caller continue.

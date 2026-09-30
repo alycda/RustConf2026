@@ -100,7 +100,8 @@ func _init() -> void:
 	print("part2_unwrapped — the third panic semantics")
 	check_eq(day.part2_unwrapped("()())"), 5, "no panic when there is an answer")
 	# The next call panics inside Rust. Exercise 2's C API cannot do this at
-	# all (unwinding across extern "C" is UB); wasm turns it into a trap that
+	# all (unwinding across extern "C" aborts since Rust 1.81, UB before);
+	# wasm turns it into a trap that
 	# kills the instance. gdext does a third thing: it catches the unwind and
 	# the engine prints the Rust panic message as an ERROR — the one you can
 	# see in the output just above this line, which is expected here and is

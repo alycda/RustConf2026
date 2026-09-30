@@ -71,10 +71,11 @@ macros do their job; the shim exports two functions under names we chose.
 **cbindgen C API (`src/c_api.rs`, Exercise 2).** The direction reverses:
 instead of Rust calling into a C library, Rust exposes itself *as* one.
 Two `extern "C"` functions, `aoc_2015_12_05_part1`/`part2`, built around
-out-parameters and status codes rather than `Result` — a panic unwinding
-across an `extern "C"` frame is undefined behavior, so nothing in this
-module can panic; a null pointer or invalid UTF-8 from a C caller is
-handled as data. Built on the pure-Rust functions specifically, not on
+out-parameters and status codes rather than `Result` — a panic that
+reaches an `extern "C"` frame aborts the process (undefined behavior before
+Rust 1.81), so nothing in this module may panic; a null pointer or
+invalid UTF-8 from a C caller is handled as data. Built on the pure-Rust
+functions specifically, not on
 whichever variant `Solution::part1` currently runs: this exercise is
 about the export direction, and the exported library needs no C
 dependency of its own. `just days bindgen 2015-12-05` generates the

@@ -51,7 +51,8 @@ fn part2(input: &str) -> std::result::Result<i32, String> {
 /// Deliberately panics, and exists to be called: "what does a panic do at
 /// this boundary?" is a question every track in this workshop has to
 /// answer, and the answers differ (Exercise 2's C API cannot let one out at
-/// all — a panic across `extern "C"` is UB — while wasm traps and takes the
+/// all — a panic across `extern "C"` aborts the process since Rust 1.81,
+/// and was UB before — while wasm traps and takes the
 /// instance with it).
 ///
 /// extendr's generated wrapper catches the unwind and raises an R error, so

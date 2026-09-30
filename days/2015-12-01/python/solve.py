@@ -73,7 +73,11 @@ def call(ffi, fn, name: str, text: str) -> int:
     out = ffi.new("int *")
     status = fn(text.encode(), out)
     if status != 0:
-        sys.exit(f"{name} failed with status {status} (-1 bad input, -2 domain error)")
+        sys.exit(
+            f"{name} failed with status {status} "
+            "(-1 bad input, -2 no answer, -3 overflow, -4 internal error; "
+            "see days/README.md)"
+        )
     return out[0]
 
 

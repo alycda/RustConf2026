@@ -127,11 +127,31 @@ fn compile(patterns: &[String]) -> Database {
     };
 
     if rc != HS_SUCCESS {
-        let msg = unsafe { std::ffi::CStr::from_ptr((*error).message) }
-            .to_string_lossy()
-            .into_owned();
-        unsafe { hs_free_compile_error(error) };
-        panic!("hs_compile_multi failed: {msg}");
+        // hyperscan sets `error` on failure, but "should" is not "does": a
+        // null here would make the old `(*error).message` a null dereference
+        // while reporting another error, which is the worst moment to lose
+        // the message. Check both levels and degrade to the status code.
+        //
+        // SAFETY: on the non-null paths, `error` points to an
+        // `HsCompileError` hyperscan allocated for this failure, and
+        // `message` is its own NUL-terminated buffer. Both stay valid until
+        // `hs_free_compile_error`, which runs after the copy below.
+        let msg = if error.is_null() {
+            "(hyperscan set no error)".to_string()
+        } else {
+            let message = unsafe { (*error).message };
+            if message.is_null() {
+                "(hyperscan set no message)".to_string()
+            } else {
+                unsafe { std::ffi::CStr::from_ptr(message) }
+                    .to_string_lossy()
+                    .into_owned()
+            }
+        };
+        if !error.is_null() {
+            unsafe { hs_free_compile_error(error) };
+        }
+        panic!("hs_compile_multi failed (rc {rc}): {msg}");
     }
 
     Database(db)

@@ -84,7 +84,11 @@ private fun call(name: String, fn: (String, LongByReference) -> Int, text: Strin
     val slot = LongByReference()
     val status = fn(text, slot)
     if (status != 0) {
-        err.println("$name failed with status $status (-1: input was null or not valid UTF-8)")
+        err.println(
+            "$name failed with status $status " +
+                "(-1 bad input, -2 no answer, -3 overflow, -4 internal error; " +
+                "see days/README.md)"
+        )
         kotlin.system.exitProcess(1)
     }
     return slot.value

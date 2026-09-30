@@ -63,8 +63,8 @@ int _call(_PartFnDart fn, String name, String text) {
 
   if (status != 0) {
     stderr.writeln('$name failed with status $status '
-        '(-1: input was null, not valid UTF-8, or a line was not an '
-        'instruction the 1000×1000 grid can hold)');
+        '(-1 bad input, -2 no answer, -3 overflow, -4 internal error; '
+        'see days/README.md)');
     exit(1);
   }
   return value;

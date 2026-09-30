@@ -84,8 +84,9 @@ private fun call(name: String, fn: (String, IntByReference) -> Int, text: String
     val status = fn(text, slot)
     if (status != 0) {
         err.println(
-            "$name failed with status $status (-1: input was null, not valid UTF-8, " +
-                "or not two integers per line; -2: a total overflowed an int32_t)"
+            "$name failed with status $status " +
+                "(-1 bad input, -2 no answer, -3 overflow, -4 internal error; " +
+                "see days/README.md)"
         )
         kotlin.system.exitProcess(1)
     }

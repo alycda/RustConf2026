@@ -87,8 +87,8 @@ impl Day {
     /// ASCII the two iterators produce the same offsets, so no answer
     /// changes; the difference only shows on input this crate cannot
     /// currently receive — and is about to, once it has a C-callable
-    /// surface, where an unwinding panic is undefined behavior rather than
-    /// a backtrace.
+    /// surface, where an unwinding panic is an abort rather than a
+    /// backtrace.
     fn calibration_value(line: &str, words: bool) -> u32 {
         let digits: Vec<u32> = line
             .char_indices()
@@ -326,7 +326,7 @@ zoneight234
         Ok(())
     }
 
-    /// The refusal behind [`c_api`]'s `-2`, exercised where it is cheap to
+    /// The refusal behind [`c_api`]'s `-3`, exercised where it is cheap to
     /// exercise. Reaching it through a real input means ~43 million lines;
     /// reaching the arithmetic means two numbers.
     ///
