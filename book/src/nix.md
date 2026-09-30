@@ -20,7 +20,8 @@ path in detail. In brief:
 
 1. **macOS / Linux — Nix.** Install Nix (the
    [Determinate installer](https://install.determinate.systems) is the least
-   fuss), then `nix-shell` in the repo root. Optionally add
+   fuss), then `nix-shell` in the repo root (or `nix develop`, if you have
+   flakes on — same shell, pinned by the repo's `flake.lock`). Optionally add
    [direnv](https://direnv.net) + nix-direnv so the environment loads
    automatically on `cd` — that's what the repo's `.envrc` is for.
 

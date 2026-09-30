@@ -32,7 +32,9 @@ curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix 
 
 (The [upstream installer](https://nixos.org/download) works too.) Then open a
 new shell, `cd` into the repo, and run `nix-shell`. The first run downloads
-the toolchain; after that it's instant. That shell is deliberately just the
+the toolchain; after that it's instant. The toolchain is pinned by
+`flake.lock`, so the whole room gets the same versions; if you have flakes
+enabled, `nix develop` opens the same shell. That shell is deliberately just the
 five required tools — the C libraries a few days link behind default-off
 cargo features are a separate, much larger download you almost certainly
 don't want on venue Wi-Fi. If you do want them, it's
@@ -72,9 +74,10 @@ Linux: `sudo apt install build-essential`, or
 `dnf groupinstall "Development Tools"`), and `just` via `cargo install just`,
 brew, or a [release binary](https://github.com/casey/just/releases) — it
 needs **≥ 1.31**, and apt/dnf ship older versions that cannot parse this
-repo's justfile. Versions are on you: `shell.nix` is unpinned, so the Nix
-paths track your channel, but at least they agree with each other. This works;
-it's just the option where drift is your problem.
+repo's justfile. Versions are on you: the Nix paths are pinned by
+`flake.lock`, so everyone on them has the same toolchain, and this is the one
+path that does not. It works; it's just the option where drift is your
+problem.
 
 **Rust experience:** you should be comfortable writing basic Rust (functions,
 structs, error handling). Deep expertise is *not* required, and neither is

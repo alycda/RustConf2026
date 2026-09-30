@@ -197,10 +197,10 @@ jobs:
   # only thing standing between it and silent rot. Drop the flag and the
   # pkg-config roll call is the step that tells you, in one line.
   #
-  # shell.nix reads <nixpkgs> unpinned; nixpkgs-unstable is the nix
-  # installer's default channel, which the devcontainer's nix feature
-  # leaves in place (setup.sh adds home-manager and touches no other
-  # channel).
+  # shell.nix reads the nixpkgs revision flake.lock names, so this job runs
+  # the pin, not a channel. The nix_path below is therefore not load-bearing
+  # for shell.nix any more; it stays because it costs nothing and still
+  # gives `<nixpkgs>` a meaning for anything ad hoc run in this shell.
   #
   # macOS is in the matrix because this job was Linux-only until #1: an
   # attendee's first `nix-shell` on aarch64-darwin died evaluating
